@@ -1,0 +1,358 @@
+# Topaz
+
+
+## Setup
+
+### Dependencies 
+
+Tested with python version 3.6, should work with python 2 but untested
+
+- pytorch (0.2.0)
+- torchvision (0.1.9)
+- pillow (4.2.1)
+- numpy (1.13.1)
+- pandas (0.20.3) 
+- scipy (0.19.1)
+- scikit-learn (0.19.0)
+- cython (0.26)
+
+Easy installation
+```
+conda install numpy pandas scikit-learn cython
+conda install -c soumith pytorch torchvision
+```
+
+### Build the cython files
+```
+python setup.py build_ext --inplace
+```
+
+## Image preprocessing
+
+### Downsampling
+
+It is recommened to downsample and normalize images prior to model training and prediction.
+
+The downsample script uses the discrete Fourier transform to reduce the spacial resolution of images. It can be used as
+```
+python scripts/downsample.py --scale={downsampling factor} --output={output image path} {input image path} 
+```
+```
+usage: downsample.py [-h] [-s SCALE] [-o OUTPUT] [-v] file
+
+positional arguments:
+  file
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -s SCALE, --scale SCALE
+                        downsampling factor
+  -o OUTPUT, --output OUTPUT
+                        output file
+  -v, --verbose         print info
+```
+
+### Normalization
+
+The normalize script can then be used to normalize the images. This script fits a two component Gaussian mixture model with an additional scaling multiplier per image to capture carbon pixels and account for differences in exposure. The pixel values are then adjusted by dividing each image by its scaling factor and then subtracting the mean and dividing by the standard deviation of the dominant Gaussian mixture component. It can be used as
+```
+python scripts/normalize.py --destdir={directory to put normalized images} [list of image files]
+```
+```
+usage: Script for normalizing a list of images using a per image scaled 2-component Gaussian mixture model
+       [-h] [-s SAMPLE] [--niters NITERS] [--seed SEED] [-o DESTDIR] [-v]
+       files [files ...]
+
+positional arguments:
+  files
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -s SAMPLE, --sample SAMPLE
+                        image sampling factor for model fit (default: 100)
+  --niters NITERS       number of iterations to run for model fit (default:
+                        200)
+  --seed SEED           random seed for model initialization (default: 1)
+  -o DESTDIR, --destdir DESTDIR
+                        output directory
+  -v, --verbose         verbose output
+```
+
+### Full preprocessing
+
+Both downsampling and normalization can be performed in one step with the preprocess script.
+```
+python scripts/preprocess.py --scale={downsampling factor} --destdir={directory to put processed images} [list of image files]
+```
+```
+usage: Script for performing image downsampling and normalization in one step
+       [-h] [-s SCALE] [-t NUM_WORKERS] [--pixel-sampling PIXEL_SAMPLING]
+       [--niters NITERS] [--seed SEED] [-o DESTDIR] [-v]
+       files [files ...]
+
+positional arguments:
+  files
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -s SCALE, --scale SCALE
+                        rescaling factor for image downsampling (default: 4)
+  -t NUM_WORKERS, --num-workers NUM_WORKERS
+                        number of processes to use for parallel image
+                        downsampling (default: 0)
+  --pixel-sampling PIXEL_SAMPLING
+                        pixel sampling factor for model fit (default: 100)
+  --niters NITERS       number of iterations to run for model fit (default:
+                        200)
+  --seed SEED           random seed for model initialization (default: 1)
+  -o DESTDIR, --destdir DESTDIR
+                        output directory
+  -v, --verbose         verbose output
+
+```
+
+## Model training
+
+### File formats
+The training script requires a file listing the image file paths and another listing the particle coordinates. Coordinates index images from the top left. These files should be tabe delimited with headers as follows:
+
+image file list
+```
+image_name	path
+...
+
+```
+
+particle coordinates
+```
+image_name	x_coord	y_coord
+...
+```
+
+### Training script 
+Models can be trained using the train.py script.
+```
+usage: train.py [-h] [--train-images TRAIN_IMAGES]
+                [--train-targets TRAIN_TARGETS] [--test-images TEST_IMAGES]
+                [--test-targets TEST_TARGETS] [-k K_FOLD] [--fold FOLD]
+                [--cross-validation-seed CROSS_VALIDATION_SEED]
+                [--radius RADIUS] [-m MODEL] [--units UNITS]
+                [--dropout DROPOUT] [--bn {on,off}] [--pooling POOLING]
+                [--unit-scaling UNIT_SCALING] [--ngf NGF]
+                [--method {PN,GE-KL,GE-binomial,PU}]
+                [--autoencoder AUTOENCODER] [--pi PI] [--slack SLACK]
+                [--l2 L2] [--learning-rate LEARNING_RATE] [--natural]
+                [--minibatch-size MINIBATCH_SIZE]
+                [--minibatch-balance MINIBATCH_BALANCE]
+                [--epoch-size EPOCH_SIZE] [--num-epochs NUM_EPOCHS]
+                [--num-workers NUM_WORKERS]
+                [--test-batch-size TEST_BATCH_SIZE] [-d DEVICE]
+                [--save-prefix SAVE_PREFIX] [--output OUTPUT] [--describe]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --train-images TRAIN_IMAGES
+                        path to file listing the training images
+  --train-targets TRAIN_TARGETS
+                        path to file listing the training particle coordinates
+  --test-images TEST_IMAGES
+                        path to file listing the test images, optional
+  --test-targets TEST_TARGETS
+                        path to file listing the testing particle coordinates,
+                        optional
+  -k K_FOLD, --k-fold K_FOLD
+                        option to split the training set into K folds for
+                        cross validation (default: not used)
+  --fold FOLD           when using K-fold cross validation, sets which fold is
+                        used as the heldout test set (default: 0)
+  --cross-validation-seed CROSS_VALIDATION_SEED
+                        random seed for partitioning data into folds (default:
+                        42)
+  --radius RADIUS       pixel radius around particle centers to consider
+                        positive (default: 0)
+  -m MODEL, --model MODEL
+                        model type to fit (default: resnet8)
+  --units UNITS         number of units model parameter (default: 32)
+  --dropout DROPOUT     dropout rate model parameter(default: 0.0)
+  --bn {on,off}         use batch norm in the model (default: on)
+  --pooling POOLING     pooling method to use (default: none)
+  --unit-scaling UNIT_SCALING
+                        scale the number of units up by this factor every
+                        layer (default: 1)
+  --ngf NGF             scaled number of units per layer in generative model
+                        if used (default: 32)
+  --method {PN,GE-KL,GE-binomial,PU}
+                        objective function to use for learning the region
+                        classifier (default: GE-binomial)
+  --autoencoder AUTOENCODER
+                        option to augment method with autoencoder. weight on
+                        reconstruction error (default: 0)
+  --pi PI               parameter specifying fraction of data that is expected
+                        to be positive
+  --slack SLACK         weight on GE penalty (default: 10 x number of
+                        particles for GE-KL, 1 for GE-binomial)
+  --l2 L2               l2 regularizer on the model parameters (default: 0)
+  --learning-rate LEARNING_RATE
+                        learning rate for the optimizer (default: 0.001)
+  --natural             sample unbiasedly from the data to form minibatches
+                        rather than sampling particles and not particles at
+                        ratio given by minibatch-balance parameter
+  --minibatch-size MINIBATCH_SIZE
+                        number of data points per minibatch (default: 256)
+  --minibatch-balance MINIBATCH_BALANCE
+                        fraction of minibatch that is positive data points
+                        (default: 1/16)
+  --epoch-size EPOCH_SIZE
+                        number of parameter updates per epoch (default: 5000)
+  --num-epochs NUM_EPOCHS
+                        maximum number of training epochs (default: 10)
+  --num-workers NUM_WORKERS
+                        number of worker processes for data augmentation
+                        (default: 0)
+  --test-batch-size TEST_BATCH_SIZE
+                        batch size for calculating test set statistics
+                        (default: 1)
+  -d DEVICE, --device DEVICE
+                        which device to use, set to -1 to force CPU (default:
+                        0)
+  --save-prefix SAVE_PREFIX
+                        path prefix to save trained models each epoch
+  --output OUTPUT       destination to write the train/test curve
+  --describe            only prints a description of the model, does not train
+
+```
+
+### Model choices
+Currently, there are several model architechtures available for use as the region classifier
+- resnet8 [receptive field = 75]
+
+- conv127 [receptive field = 127]
+- conv63 [receptive field = 63]
+- conv31 [receptive field = 31]
+
+ResNet8 gives a good balance of performance and receptive field size. Conv63 and Conv31 can be better choices when less complex models are needed.
+
+The number of units in the base layer can be set with the --units flag. ResNet8 always doubles the number of units when the image is strided during processing. Conv31, Conv63, and Conv127 do not by default, but the --unit-scaling flag can be used to set a multiplicative factor on the number of units when striding occurs. 
+
+The pooling scheme can be changed for the conv\* models. The default is not to perform any pooling, but max pooling and average pooling can be used by specifying "--pooling=max" or "--pooling=avg".
+
+For a detailed layout of the architectures, use the --describe flag.
+
+### Training method, criteria, and parameters
+
+#### Methods
+
+The PN method option treats every coordinate not labeled as positive (y=1) as negative (y=0) and then optimizes the standard classification objective:
+$$ \piE_{y=1}[L(g(x),1)] + (1-\pi)E_{y=0}[L(g(x),0)] $$
+where $\pi$ is a parameter weighting the positives and negatives, $L$ is the misclassifiaction cost function, and $g(x)$ is the model output.
+
+The GE-binomial method option instead treats coordinates not labeled as positive (y=1) as unlabeled (y=?) and then optimizes an objective including a generalized expectation criteria designed to work well with minibatch SGD.
+
+The GE-KL method option instead treats coordinates not labeled as positive (y=1) as unlabeled (y=?) and then optimizes the objective:
+$$ E_{y=1}[L(g(x),1)] + \lambdaKL(\pi, E_{y=?}[g(x)]) $$ 
+where $\lambda$ is a slack parameter (--slack flag) that specifies how strongly to weight the KL divergence of the expecation of the classifier over the unlabeled data from $\pi$.
+
+The PU method uses an objective function proposed by Kiryo et al. (2017) 
+
+#### Radius
+This sets how many pixels around each particle coordinate are treated as positive, acting as a form of data augmentation. These coordinates follow a distribution that results from which pixel was selected as the particle center when the data was labeled. The radius should be chosen to be large enough that it covers a reasonable region of pixels likely to have been selected but not so large that pixels outside of the particles are labeled as positives.
+
+
+## Segmentation and particle extraction
+
+### Segmention (optional)
+Images can be segmented using the segment.py script and a trained model.
+```
+usage: Script for segmenting images using a trained model. [-h] [-m MODEL]
+                                                           [-o DESTDIR]
+                                                           [-d DEVICE] [-v]
+                                                           paths [paths ...]
+
+positional arguments:
+  paths                 paths to image files for processing
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -m MODEL, --model MODEL
+                        path to trained classifier
+  -o DESTDIR, --destdir DESTDIR
+                        output directory
+  -d DEVICE, --device DEVICE
+                        which device to use, <0 corresponds to CPU (default:
+                        GPU if available)
+  -v, --verbose         verbose mode
+```
+
+### Particle extraction
+Predicted particle coordinates can be extracted directly from saved segmented images (see above) or images can be segmented and particles extracted in one step given a trained model using the extract.py script.
+```
+usage: Script for extracting particles from segmented images or images processed with a trained model. Uses a non maxima suppression algorithm.
+       [-h] [-m MODEL] [-r RADIUS] [-t THRESHOLD]
+       [--assignment-radius ASSIGNMENT_RADIUS] [--min-radius MIN_RADIUS]
+       [--max-radius MAX_RADIUS] [--step-radius STEP_RADIUS]
+       [--num-workers NUM_WORKERS] [--targets TARGETS] [--only-validate]
+       [-d DEVICE] [-o OUTPUT]
+       paths [paths ...]
+
+positional arguments:
+  paths                 paths to image files for processing
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -m MODEL, --model MODEL
+                        path to trained subimage classifier, if no model is
+                        supplied input images must already be segmented
+  -r RADIUS, --radius RADIUS
+                        radius of the regions to extract
+  -t THRESHOLD, --threshold THRESHOLD
+                        score quantile giving threshold at which to
+                        terminate region extraction (default: 0.5)
+  --assignment-radius ASSIGNMENT_RADIUS
+                        maximum distance between prediction and labeled target
+                        allowed for considering them a match (default: same as
+                        extraction radius)
+  --min-radius MIN_RADIUS
+                        minimum radius for region extraction when tuning
+                        radius parameter (default: 5)
+  --max-radius MAX_RADIUS
+                        maximum radius for region extraction when tuning
+                        radius parameters (default: 100)
+  --step-radius STEP_RADIUS
+                        grid size when searching for optimal radius parameter
+                        (default: 5)
+  --num-workers NUM_WORKERS
+                        number of processes to use for searching over radii
+                        (default: 0)
+  --targets TARGETS     path to file specifying particle coordinates. used to
+                        find extraction radius that maximizes the AUPRC
+  --only-validate       flag indicating to only calculate validation metrics.
+                        does not report full prediction list
+  -d DEVICE, --device DEVICE
+                        which device to use, <0 corresponds to CPU
+  -o OUTPUT, --output OUTPUT
+                        file path to write
+```
+
+This script uses the non maxima suppression algorithm to greedily select particle coordinates and remove nearby coordinates from the candidates list. Two additional parameters are involved in this process.
+- radius: coordinates within this parameter of selected coordinates are removed from the candidates list
+- threshold: specifies the score quantile below which extraction stops
+
+The radius parameter can be tuned automatically given a set of known particle coordinates by finding the radius which maximizes the average precision score. In this case, predicted coordinates must be assigned to target coordinates which requires an additional distance threshold (--assignment-radius). 
+
+### Choosing a final particle list threshold
+Particles extracted using the extract.py script still have scores associated with them and a final particle list should be determined by choosing particles above some score threshold. The script precision_recall_curve.py can facilitate this by reporting the precision-recall curve given a list of predicted particle coordinates and a list of known target coordinates. A threshold can then be chosen to optimize the F1 score or for specific recall/precision levels. The precision_recall_curve.py script can be used as
+```
+usage: Script for calculating the precision-recall curve for a set of predicted particle coordinates and a set of target coordinates.
+       [-h] [--predicted PREDICTED] [--targets TARGETS]
+       [--assignment-radius ASSIGNMENT_RADIUS]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --predicted PREDICTED
+                        path to file containing predicted particle coordinates
+  --targets TARGETS     path to file specifying target particle coordinates
+  --assignment-radius ASSIGNMENT_RADIUS
+                        maximum distance between prediction and labeled target
+                        allowed for considering them a match
+```
+
