@@ -1,0 +1,85 @@
+## Setup
+
+Sample particles for using the eman2 pickers (gives ~1500 particles)
+```
+python scripts/subsample_particle_micrographs.py -n5 data/EMPIAR-10096/picks_4a_train.txt > data/EMPIAR-10096/picks_4a_train_eman2.txt
+```
+
+Make the results directory
+```
+mkdir -p results/EMPIAR-10096_eman2
+```
+
+Convert the .tiff images to hdf for eman2
+```
+mkdir results/EMPIAR-10096_eman2/micrographs
+cd results/EMPIAR-10096_eman2
+
+ln -s $PWD/data/EMPIAR-10096/images/4a/*.tiff results/EMPIAR-10096_eman2/micrographs/
+e2proc2d.py micrographs/*.tiff micrographs/@.hdf
+```
+
+## Load training particles to use as EMAN2 refs
+
+Convert the particle coordinates to eman2 info
+_delete everything in the info directory if running for new particles_
+```
+python scripts/coordinates_to_eman2_json.py [PARTICLE FILE] --destdir=results/EMPIAR-10096_eman2/info --imagedir=data/EMPIAR-10096/images/4a
+```
+
+Dump the particles as an hdf image stack
+The concatenate those stacks together as info/boxrefs.hdf
+```
+cd results/EMPIAR_10096_eman2
+e2boxer.py micrographs/*.hdf --write_ptcl --boxsize=32 --apix=4 --no_ctf --ptclsize=15
+e2proc2d.py particles/*.hdf info/boxrefs.hdf
+```
+
+The particles are now saved as references and autoboxing can be used to produce test set predictions
+
+
+## Generate test set predictions
+
+Make a list of the test set images
+```
+tail -n+2 data/EMPIAR-10096/images_4a_test.txt | awk '{print "micrographs/" $1 ".tiff"}' > results/EMPIAR-10096_eman2/test_images.txt
+```
+
+Run the by ref method, puts predictions into the boxfiles/ directory, rename it to run more thresholds
+Clear the picks in info before every step
+```
+rm info/*.json
+e2boxer.py --boxsize=32 --apix=4 --no_ctf --ptclsize=15 --write_dbbox --autopick=auto_ref:threshold=0 $(cat test_images.txt)
+mv boxfiles boxfiles_ref_t0
+
+rm info/*.json
+e2boxer.py --boxsize=32 --apix=4 --no_ctf --ptclsize=15 --write_dbbox --autopick=auto_ref:threshold=2 $(cat test_images.txt)
+mv boxfiles boxfiles_ref_t2
+
+rm info/*.json
+e2boxer.py --boxsize=32 --apix=4 --no_ctf --ptclsize=15 --write_dbbox --autopick=auto_ref:threshold=4 $(cat test_images.txt)
+mv boxfiles boxfiles_ref_t4
+
+rm info/*.json
+e2boxer.py --boxsize=32 --apix=4 --no_ctf --ptclsize=15 --write_dbbox --autopick=auto_ref:threshold=6 $(cat test_images.txt)
+mv boxfiles boxfiles_ref_t6
+
+```
+
+Convert the box files into a combined coordinates file compatible with the test particles list
+```
+python scripts/boxes_to_coordinates.py --imagedir=data/EMPIAR-10096/images/4a results/EMPIAR-10096_eman2/boxfiles_ref_t0/*.box > results/EMPIAR-10096_eman2/ref_t0_particles_test.txt
+
+python scripts/boxes_to_coordinates.py --imagedir=data/EMPIAR-10096/images/4a results/EMPIAR-10096_eman2/boxfiles_ref_t2/*.box > results/EMPIAR-10096_eman2/ref_t2_particles_test.txt
+
+python scripts/boxes_to_coordinates.py --imagedir=data/EMPIAR-10096/images/4a results/EMPIAR-10096_eman2/boxfiles_ref_t4/*.box > results/EMPIAR-10096_eman2/ref_t4_particles_test.txt
+
+python scripts/boxes_to_coordinates.py --imagedir=data/EMPIAR-10096/images/4a results/EMPIAR-10096_eman2/boxfiles_ref_t6/*.box > results/EMPIAR-10096_eman2/ref_t6_particles_test.txt
+```
+
+
+
+
+
+
+
