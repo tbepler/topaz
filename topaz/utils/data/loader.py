@@ -64,24 +64,45 @@ def load_pil(path, standardize=False):
         image = Image.fromarray(image)
     return image
 
-def load_image(source, name, rootdir, standardize=False):
-    path = os.path.join(rootdir, source, name) + '.*'
-    path = glob.glob(path)[0]
+
+def load_image(path, standardize=False):
     ext = os.path.splitext(path)[1]
     if ext == 'mrc':
-        im = load_mrc(path, standardize=standardize)
+        image = load_mrc(path)
     else:
-        im = load_pil(path, standardize=standardize)
-    return im
+        image = load_pil(path)
+    return image
 
-def load_images(sources, names, rootdir, standardize=False):
-    root = {}
-    for source,name in zip(sources, names):
-        branch = root.get(source, {})
-        image = load_image(source, name, rootdir, standardize=standardize)
-        branch[name] = image
-        root[source] = branch
-    return root
+
+def load_images_from_directory(names, rootdir, sources=None, standardize=False):
+    images = {}
+    if sources is not None:
+        for source,name in zip(sources, names):
+            path = os.path.join(rootdir, source, name) + '.*'
+            path = glob.glob(path)[0]
+            im = load_image(path, standardize=standardize)
+            images.setdefault(source, {})[name] = im
+    else:
+        for name in names:
+            path = os.path.join(rootdir, name) + '.*'
+            path = glob.glob(path)[0]
+            im = load_image(path, standardize=standardize)
+            images[name] = im
+    return images 
+
+
+def load_images_from_list(names, paths, sources=None, standardize=False):
+    images = {}
+    if sources is not None:
+        for source,name,path in zip(sources, names, paths):
+            im = load_image(path, standardize=standardize)
+            images.setdefault(source, {})[name] = im
+    else:
+        for name,path in zip(names, paths):
+            im = load_image(path, standardize=standardize)
+            images[name] = im
+    return images
+
 
 class LabeledImageCropDataset:
     def __init__(self, images, labels, crop):

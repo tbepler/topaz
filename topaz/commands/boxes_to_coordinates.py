@@ -6,7 +6,7 @@ import pandas as pd
 from PIL import Image
 
 name = 'boxes_to_coordinates'
-help = 'Script for converting box file coordinates to tab delimited coordinates table'
+help = 'convert .box format coordinates to tab delimited coordinates table'
 
 def add_arguments(parser):
     parser.add_argument('files', nargs='+', help='path to input box files')
@@ -15,6 +15,8 @@ def add_arguments(parser):
     parser.add_argument('-o', '--output', help='destination file (default: stdout)')
 
 def main(args):
+    from topaz.utils.conversions import boxes_to_coordinates
+
     tables = []
 
     for path in args.files:
@@ -22,27 +24,13 @@ def main(args):
             continue
 
         image_name = os.path.splitext(os.path.basename(path))[0]
-
         im = Image.open(args.imagedir + '/' + image_name + '.' + args.image_ext)
-        im_height = im.height
+        shape = im.shape
+        box = pd.read_csv(path, sep='\t', header=None).values
 
-        box = pd.read_csv(path, sep='\t', header=None) 
-        ## first 2 columns are x and y coordinates of lower left box corners
-        ## requires knowing image size to inver y-axis
-        ## to conform with origin in upper-left rather than lower-left
-        ## next 2 columns are width and height
-        x_lo = box[0]
-        y_lo = box[1]
-        width = box[2]
-        height = box[3]
-        x_coord = x_lo + width//2
-        y_coord = (im_height-1-y_lo) - height//2
+        coords = boxes_to_coordinates(box, shape, image_name=image_name)
 
-        table = pd.DataFrame({'image_name': [image_name]*len(box)})
-        table['x_coord'] = x_coord
-        table['y_coord'] = y_coord
-
-        tables.append(table)
+        tables.append(coords)
 
     table = pd.concat(tables, axis=0)
 

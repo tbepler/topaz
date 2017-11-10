@@ -9,10 +9,10 @@ def boxes_to_coordinates(boxes, shape, image_name=None):
     ## next 2 columns are width and height
     ## requires knowing image size to invert y-axis (shape parameter)
     ## to conform with origin in upper-left rather than lower-left
-    x_lo = boxex[0]
-    y_lo = boxes[1]
-    width = boxes[2]
-    height = boxes[3]
+    x_lo = boxes[:,0]
+    y_lo = boxes[:,1]
+    width = boxes[:,2]
+    height = boxes[:,3]
     x_coord = x_lo + width//2
     y_coord = (shape[0]-1-y_lo) - height//2
 
