@@ -25,7 +25,7 @@ def main(args):
 
         image_name = os.path.splitext(os.path.basename(path))[0]
         im = Image.open(args.imagedir + '/' + image_name + '.' + args.image_ext)
-        shape = im.shape
+        shape = (im.height,im.width)
         box = pd.read_csv(path, sep='\t', header=None).values
 
         coords = boxes_to_coordinates(box, shape, image_name=image_name)

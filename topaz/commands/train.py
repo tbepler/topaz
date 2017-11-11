@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function, division
 
+import os
 import sys
 
 import numpy as np
@@ -16,7 +17,7 @@ from topaz.utils.data.loader import load_images_from_list
 from topaz.utils.data.coordinates import match_coordinates_to_images
 
 name = 'train'
-help = 'train region classifiers from images with labeled coordinates'
+help = 'train region classifier from images with labeled coordinates'
 
 def add_arguments(parser):
 
@@ -468,8 +469,11 @@ def main(args):
     
     ## fit the model, report train/test stats, save model if required
     output = sys.stdout if args.output is None else open(args.output, 'w')
+    save_prefix = args.save_prefix
+    #if not os.path.exists(os.path.dirname(save_prefix)):
+    #    os.makedirs(os.path.dirname(save_prefix))
     fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs
-              , save_prefix=args.save_prefix, use_cuda=use_cuda, output=output)
+              , save_prefix=save_prefix, use_cuda=use_cuda, output=output)
 
     report('Done!')
 

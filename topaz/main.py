@@ -4,12 +4,15 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter)
 
-
     import topaz.commands.train
+    import topaz.commands.segment
+    import topaz.commands.extract
     import topaz.commands.boxes_to_coordinates 
 
     module_groups = [('Particle picking',
                       [topaz.commands.train,
+                       topaz.commands.segment,
+                       topaz.commands.extract,
                       ]
                      ),
                      ('Conversion utilities',

@@ -1,130 +1,28 @@
 from __future__ import print_function, division
 
 import numpy as np
-
-import torch
-import torch.nn.functional as F
-from torch.autograd import Variable
-
-def point_masked(x, mask, i, j, output):
-    width = mask.size(2)
-    M,N = x.size(1), x.size(2)
-    imi = i - width//2
-    ima = i + width//2 + 1
-    jmi = j - width//2
-    jma = j + width//2 + 1
-
-    ci = (max(0,-imi), min(width,width-(ima-M)))
-    cj = (max(0,-jmi), min(width,width-(jma-N)))
-    xi = (max(0,imi), min(M,ima))
-    xj = (max(0,jmi), min(N,jma))
-
-    xc = x[:,xi[0]:xi[1],xj[0]:xj[1]] 
-    mask = mask[0,:,ci[0]:ci[1],cj[0]:cj[1]]
-
-    output[:,xi[0]:xi[1],xj[0]:xj[1]][mask > 0] = xc[mask > 0]
-
-    return output
-
-def point_value(value, mask, i, j, output):
-    width = mask.size(2)
-    M,N = output.size(1), output.size(2)
-    imi = i - width//2
-    ima = i + width//2 + 1
-    jmi = j - width//2
-    jma = j + width//2 + 1
-
-    ci = (max(0,-imi), min(width,width-(ima-M)))
-    cj = (max(0,-jmi), min(width,width-(jma-N)))
-    xi = (max(0,imi), min(M,ima))
-    xj = (max(0,jmi), min(N,jma))
-
-    mask = mask[0,:,ci[0]:ci[1],cj[0]:cj[1]]
-    output[:,xi[0]:xi[1],xj[0]:xj[1]][mask > 0] = value
-
-    return output
-
-def greedy_set_cover(x, d, scale=1.0, threshold=0, masked=False, value=None):
-    ## form the shape filter
-    r = scale*d/2
-    width = int(np.ceil(d*scale))
-
-    span = width//2
-    I = np.arange(-span, span+1)[:,np.newaxis]
-    J = np.arange(-span, span+1)[np.newaxis]
-    dist = np.sqrt(I**2 + J**2)
-    #mask = (dist <= r).astype(np.float32)
-    ## to torch
-    mask = x.new(*dist.shape)
-    mask[:] = torch.from_numpy((dist <= r).view(np.uint8)).float()
-    mask = mask.unsqueeze(0).unsqueeze(0)
-    mask /= mask.sum()
-    #Z = mask.sum()
-
-    ndim = len(x.size())
-    if ndim == 2:
-        x = x.unsqueeze(0).unsqueeze(0)
-    elif ndim == 3:
-        x = x.unsqueeze(1)
-       
-    M,N = x.size(2), x.size(3)
-    if not masked:
-        sets = F.conv2d(Variable(x, volatile=True), Variable(mask, volatile=True), padding=span)
-        sets = sets.data
-    else:
-        sets = x.clone()
-
-    B = sets.size(0)
-    L = sets.view(B,-1).size(1)
-    y,k = sets.view(B,-1).max(1)
-    #y /= Z
-    y = y[:,0]
-    k = k[:,0]
-    y = y.cpu().numpy()
-    k = k.cpu().numpy()
-
-    scores = np.zeros((B,L), dtype=np.float32)
-    coords = np.zeros((B,L,2), dtype=np.int32)
-
-    ## iterate extracting sets in order
-    i = 0
-    xmasked = x.new(*x.size())
-    while np.any(y > threshold) and i < L:
-        scores[:,i] = y
-        coords[:,i,0] = k % N  # X coord
-        coords[:,i,1] = k // N # Y coord
-
-        ## subtract these sets
-        xmasked[:] = 0
-        for j in range(B):
-            ii = coords[j,i,0] ## column coordinate
-            jj = coords[j,i,1] ## row coordinate
-            if not masked:
-                xj = point_masked(x[j], mask, jj, ii, xmasked[j])
-            else:
-                v = -np.inf # float(y[j])
-                if value is not None:
-                    v = value
-                _ = point_value(v, mask, jj, ii, sets[j])
-                #xmasked[j,:,jj,ii] = v
-                #xj = point_value(float(y[j]), mask, jj, ii, xmasked[j])
-        if not masked:
-            delta = F.conv2d(Variable(xmasked, volatile=True), Variable(mask, volatile=True), padding=width//2).data
-            sets -= delta
-
-        ## extract next best regions
-        y,k = sets.view(B,-1).max(1)
-        #y /= Z
-        y = y[:,0]
-        k = k[:,0]
-        y = y.cpu().numpy()
-        k = k.cpu().numpy()
-        i += 1
-
-    return scores[:,:i], coords[:,:i]
+from scipy.optimize import linear_sum_assignment
 
 
-def non_maxima_suppression(x, r, threshold=-np.inf):
+def match_coordinates(targets, preds, radius):
+    d2 = np.sum((preds[:,np.newaxis] - targets[np.newaxis])**2, 2)
+    cost = d2 - radius*radius
+    cost[cost > 0] = 0
+
+    pred_index,target_index = linear_sum_assignment(cost)
+
+    cost = cost[pred_index, target_index]
+    dist = np.zeros(len(preds))
+    dist[pred_index] = np.sqrt(d2[pred_index, target_index])
+
+    pred_index = pred_index[cost < 0]
+    assignment = np.zeros(len(preds), dtype=np.float32)
+    assignment[pred_index] = 1
+
+    return assignment, dist
+
+
+def non_maximum_suppression(x, r, threshold=-np.inf):
     ## enumerate coordinate deltas within d
     width = r
     ii,jj = np.meshgrid(np.arange(-width,width+1), np.arange(-width,width+1))
@@ -165,7 +63,7 @@ def non_maxima_suppression(x, r, threshold=-np.inf):
     return scores[:j], coords[:j]
 
 
-def non_maxima_suppression_3d(x, d, scale=1.0, threshold=-np.inf):
+def non_maximum_suppression_3d(x, d, scale=1.0, threshold=-np.inf):
     ## enumerate coordinate deltas within d
     r = scale*d/2
     width = int(np.ceil(r))
