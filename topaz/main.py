@@ -7,12 +7,23 @@ def main():
     import topaz.commands.train
     import topaz.commands.segment
     import topaz.commands.extract
+
+    import topaz.commands.downsample
+    import topaz.commands.normalize
+    import topaz.commands.preprocess
+
     import topaz.commands.boxes_to_coordinates 
 
     module_groups = [('Particle picking',
                       [topaz.commands.train,
                        topaz.commands.segment,
                        topaz.commands.extract,
+                      ]
+                     ),
+                     ('Image processing',
+                      [topaz.commands.downsample,
+                       topaz.commands.normalize,
+                       topaz.commands.preprocess,
                       ]
                      ),
                      ('Conversion utilities',
