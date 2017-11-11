@@ -24,5 +24,23 @@ def boxes_to_coordinates(boxes, shape, image_name=None):
     return coords
 
 
+def coordinates_to_boxes(coords, shape, box_width, box_height):
+    x_coord = coords[:,0]
+    y_coord = shape[0]-1-coords[:,1]
+    box_width = np.array([box_width]*len(x_coord), dtype=np.int32)
+    box_height = np.array([box_height]*len(x_coord), dtype=np.int32)
+
+    boxes = np.stack([x_coord, y_coord, box_width, box_height], 1)
+
+    return boxes
+
+
+def coordinates_to_eman2_json(coords, shape, tag='manual'):
+    entries = []
+    x_coords = coords[:,0]
+    y_coords = shape[0]-1-coords[:,1]
+    for i in range(len(x_coords)):
+        entries.append([int(x_coords[i]), int(y_coords[i]), tag])
+    return entries
 
 

@@ -13,6 +13,9 @@ def main():
     import topaz.commands.preprocess
 
     import topaz.commands.boxes_to_coordinates 
+    import topaz.commands.star_to_coordinates 
+    import topaz.commands.coordinates_to_boxes
+    import topaz.commands.coordinates_to_eman2_json
 
     module_groups = [('Particle picking',
                       [topaz.commands.train,
@@ -28,6 +31,9 @@ def main():
                      ),
                      ('Conversion utilities',
                       [topaz.commands.boxes_to_coordinates,
+                       topaz.commands.star_to_coordinates,
+                       topaz.commands.coordinates_to_boxes,
+                       topaz.commands.coordinates_to_eman2_json,
                       ]
                      ),
                     ]
