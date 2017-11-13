@@ -3,6 +3,18 @@
 
 ## Installation
 
+### Docker image
+A Dockerfile is provided to build images with CUDA support. Build from the github repo:
+```
+docker build -t topaz https://github.com/tbepler/topaz
+```
+
+or download the source code and build from the source directory
+```
+git clone https://github.com/tbepler/topaz
+cd topaz
+docker build -t topaz .
+```
 
 ### From source
 

@@ -1,5 +1,55 @@
 from __future__ import print_function,division
 
+def generate_description(module_groups, linewidth=78, indent='  ', delim='  '):
+
+    """
+    description = []
+    for group,module_list in module_groups:
+        description.append(group + ':')
+        for module in module_list:
+            description.append('  ' + module.name + '\t' + module.help)
+        description.append('')
+    description = '\n'.join(description)
+    """
+
+    description = []
+
+    names = []
+    for group,module_list in module_groups:
+        for module in module_list:
+            names.append(module.name)
+
+    ## name column width
+    name_width = max(len(name) for name in names)
+    desc_width = linewidth - len(indent) - name_width - len(delim)
+    
+    for group,module_list in module_groups:
+        description.append(group + ':')
+        for module in module_list:
+            name = module.name
+            descriptor = module.help
+            ## first line includes name, pad to name_width
+            name = name + ' '*(name_width-len(name))
+            ## take tokens from descriptor up to desc_width to generate lines
+            width = 0
+            line_tokens = []
+            for token in descriptor.split():
+                if width + len(token) > desc_width:
+                    if width > 0: # push current tokens to line
+                        line = indent + name + delim + ' '.join(line_tokens)
+                        description.append(line)
+                        name = ' '*name_width
+                    width = 0
+                    line_tokens = []
+                line_tokens.append(token)
+                width += len(token)
+            if width > 0:
+                line = indent + name + delim + ' '.join(line_tokens)
+                description.append(line)
+        description.append('')
+    return '\n'.join(description)
+
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -43,13 +93,7 @@ def main():
                      ),
                     ]
 
-    description = []
-    for group,module_list in module_groups:
-        description.append(group + ':')
-        for module in module_list:
-            description.append('  ' + module.name + '\t' + module.help)
-        description.append('')
-    description = '\n'.join(description)
+    description = generate_description(module_groups)
     
     subparsers = parser.add_subparsers(title='commands', metavar='<command>'
                                       , description=description)
