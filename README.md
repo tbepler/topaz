@@ -1,9 +1,15 @@
 # Topaz
 
 
-## Setup
+## Installation
 
-### Dependencies 
+
+### From source
+
+_Recommended: install Topaz into a virtual Python environment_
+See https://conda.io/docs/user-guide/tasks/manage-environments.html or https://virtualenv.pypa.io/en/stable/ for setting one up.
+
+#### Install the dependencies 
 
 Tested with python version 3.6, should work with python 2 but untested
 
@@ -16,29 +22,61 @@ Tested with python version 3.6, should work with python 2 but untested
 - scikit-learn (0.19.0)
 - cython (0.26)
 
-Easy installation
+Easy installation of dependencies
 ```
 conda install numpy pandas scikit-learn cython
 conda install -c soumith pytorch torchvision
 ```
+For more info on installing pytorch see http://pytorch.org
 
-### Build the cython files
+#### Download the source code
+```
+git clone https://github.com/tbepler/topaz
+```
+
+#### Install Topaz
+
+Move to the source code directory
+```
+cd topaz
+```
+
+Install Topaz into your Python path including the topaz command line interface
+```
+pip install .
+```
+
+To install for development use
+```
+pip install -e .
+```
+
+To only compile the cython files
 ```
 python setup.py build_ext --inplace
 ```
 
-## Image preprocessing
+## User guide
 
-### Downsampling
+The command line interface is structured as a single entry command (topaz) with different steps defined as subcommands. A general usage guide is provided below with brief instructions for the most important subcommands in the particle picking pipeline.
+
+To see a list of all subcommands with a brief description of each, run
+```
+topaz --help
+```
+
+### Image preprocessing
+
+#### Downsampling (topaz downsample)
 
 It is recommened to downsample and normalize images prior to model training and prediction.
 
 The downsample script uses the discrete Fourier transform to reduce the spacial resolution of images. It can be used as
 ```
-python scripts/downsample.py --scale={downsampling factor} --output={output image path} {input image path} 
+topaz downsample --scale={downsampling factor} --output={output image path} {input image path} 
 ```
 ```
-usage: downsample.py [-h] [-s SCALE] [-o OUTPUT] [-v] file
+usage: topaz downsample [-h] [-s SCALE] [-o OUTPUT] [-v] file
 
 positional arguments:
   file
@@ -46,22 +84,22 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -s SCALE, --scale SCALE
-                        downsampling factor
+                        downsampling factor (default: 4)
   -o OUTPUT, --output OUTPUT
                         output file
   -v, --verbose         print info
 ```
 
-### Normalization
+#### Normalization (topaz normalize)
 
 The normalize script can then be used to normalize the images. This script fits a two component Gaussian mixture model with an additional scaling multiplier per image to capture carbon pixels and account for differences in exposure. The pixel values are then adjusted by dividing each image by its scaling factor and then subtracting the mean and dividing by the standard deviation of the dominant Gaussian mixture component. It can be used as
 ```
-python scripts/normalize.py --destdir={directory to put normalized images} [list of image files]
+topaz normalize --destdir={directory to put normalized images} [list of image files]
 ```
 ```
-usage: Script for normalizing a list of images using a per image scaled 2-component Gaussian mixture model
-       [-h] [-s SAMPLE] [--niters NITERS] [--seed SEED] [-o DESTDIR] [-v]
-       files [files ...]
+usage: topaz normalize [-h] [-s SAMPLE] [--niters NITERS] [--seed SEED]
+                       [-o DESTDIR] [-v]
+                       files [files ...]
 
 positional arguments:
   files
@@ -69,7 +107,7 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -s SAMPLE, --sample SAMPLE
-                        image sampling factor for model fit (default: 100)
+                        pixel sampling factor for model fit (default: 100)
   --niters NITERS       number of iterations to run for model fit (default:
                         200)
   --seed SEED           random seed for model initialization (default: 1)
@@ -78,17 +116,17 @@ optional arguments:
   -v, --verbose         verbose output
 ```
 
-### Full preprocessing
+#### Single-step preprocessing (topaz preprocess)
 
 Both downsampling and normalization can be performed in one step with the preprocess script.
 ```
-python scripts/preprocess.py --scale={downsampling factor} --destdir={directory to put processed images} [list of image files]
+topaz preprocess --scale={downsampling factor} --destdir={directory to put processed images} [list of image files]
 ```
 ```
-usage: Script for performing image downsampling and normalization in one step
-       [-h] [-s SCALE] [-t NUM_WORKERS] [--pixel-sampling PIXEL_SAMPLING]
-       [--niters NITERS] [--seed SEED] [-o DESTDIR] [-v]
-       files [files ...]
+usage: topaz preprocess [-h] [-s SCALE] [-t NUM_WORKERS]
+                        [--pixel-sampling PIXEL_SAMPLING] [--niters NITERS]
+                        [--seed SEED] -o DESTDIR [-v]
+                        files [files ...]
 
 positional arguments:
   files
@@ -108,13 +146,12 @@ optional arguments:
   -o DESTDIR, --destdir DESTDIR
                         output directory
   -v, --verbose         verbose output
-
 ```
 
-## Model training
+### Model training 
 
-### File formats
-The training script requires a file listing the image file paths and another listing the particle coordinates. Coordinates index images from the top left. These files should be tabe delimited with headers as follows:
+#### File formats
+The training script requires a file listing the image file paths and another listing the particle coordinates. Coordinates index images from the top left. These files should be tab delimited with headers as follows:
 
 image file list
 ```
@@ -129,25 +166,25 @@ image_name	x_coord	y_coord
 ...
 ```
 
-### Training script 
-Models can be trained using the train.py script.
+#### Train region classifiers with labeled particles (topaz train)
+Models are trained using the 'topaz train' command.
 ```
-usage: train.py [-h] [--train-images TRAIN_IMAGES]
-                [--train-targets TRAIN_TARGETS] [--test-images TEST_IMAGES]
-                [--test-targets TEST_TARGETS] [-k K_FOLD] [--fold FOLD]
-                [--cross-validation-seed CROSS_VALIDATION_SEED]
-                [--radius RADIUS] [-m MODEL] [--units UNITS]
-                [--dropout DROPOUT] [--bn {on,off}] [--pooling POOLING]
-                [--unit-scaling UNIT_SCALING] [--ngf NGF]
-                [--method {PN,GE-KL,GE-binomial,PU}]
-                [--autoencoder AUTOENCODER] [--pi PI] [--slack SLACK]
-                [--l2 L2] [--learning-rate LEARNING_RATE] [--natural]
-                [--minibatch-size MINIBATCH_SIZE]
-                [--minibatch-balance MINIBATCH_BALANCE]
-                [--epoch-size EPOCH_SIZE] [--num-epochs NUM_EPOCHS]
-                [--num-workers NUM_WORKERS]
-                [--test-batch-size TEST_BATCH_SIZE] [-d DEVICE]
-                [--save-prefix SAVE_PREFIX] [--output OUTPUT] [--describe]
+usage: topaz train [-h] [--train-images TRAIN_IMAGES]
+                   [--train-targets TRAIN_TARGETS] [--test-images TEST_IMAGES]
+                   [--test-targets TEST_TARGETS] [-k K_FOLD] [--fold FOLD]
+                   [--cross-validation-seed CROSS_VALIDATION_SEED]
+                   [--radius RADIUS] [-m MODEL] [--units UNITS]
+                   [--dropout DROPOUT] [--bn {on,off}] [--pooling POOLING]
+                   [--unit-scaling UNIT_SCALING] [--ngf NGF]
+                   [--method {PN,GE-KL,GE-binomial,PU}]
+                   [--autoencoder AUTOENCODER] [--pi PI] [--slack SLACK]
+                   [--l2 L2] [--learning-rate LEARNING_RATE] [--natural]
+                   [--minibatch-size MINIBATCH_SIZE]
+                   [--minibatch-balance MINIBATCH_BALANCE]
+                   [--epoch-size EPOCH_SIZE] [--num-epochs NUM_EPOCHS]
+                   [--num-workers NUM_WORKERS]
+                   [--test-batch-size TEST_BATCH_SIZE] [-d DEVICE]
+                   [--save-prefix SAVE_PREFIX] [--output OUTPUT] [--describe]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -219,10 +256,9 @@ optional arguments:
                         path prefix to save trained models each epoch
   --output OUTPUT       destination to write the train/test curve
   --describe            only prints a description of the model, does not train
-
 ```
 
-### Model choices
+#### Model choices
 Currently, there are several model architechtures available for use as the region classifier
 - resnet8 [receptive field = 75]
 
@@ -238,9 +274,9 @@ The pooling scheme can be changed for the conv\* models. The default is not to p
 
 For a detailed layout of the architectures, use the --describe flag.
 
-### Training method, criteria, and parameters
+#### Training method, criteria, and parameters
 
-#### Methods
+##### Methods
 
 The PN method option treats every coordinate not labeled as positive (y=1) as negative (y=0) and then optimizes the standard classification objective:
 $$ \piE_{y=1}[L(g(x),1)] + (1-\pi)E_{y=0}[L(g(x),0)] $$
@@ -254,19 +290,17 @@ where $\lambda$ is a slack parameter (--slack flag) that specifies how strongly 
 
 The PU method uses an objective function proposed by Kiryo et al. (2017) 
 
-#### Radius
+##### Radius
 This sets how many pixels around each particle coordinate are treated as positive, acting as a form of data augmentation. These coordinates follow a distribution that results from which pixel was selected as the particle center when the data was labeled. The radius should be chosen to be large enough that it covers a reasonable region of pixels likely to have been selected but not so large that pixels outside of the particles are labeled as positives.
 
 
-## Segmentation and particle extraction
+### Segmentation and particle extraction
 
-### Segmention (optional)
-Images can be segmented using the segment.py script and a trained model.
+#### Segmention (topaz segment, optional)
+Images can be segmented using the 'topaz segment' command with a trained model.
 ```
-usage: Script for segmenting images using a trained model. [-h] [-m MODEL]
-                                                           [-o DESTDIR]
-                                                           [-d DEVICE] [-v]
-                                                           paths [paths ...]
+usage: topaz segment [-h] [-m MODEL] [-o DESTDIR] [-d DEVICE] [-v]
+                     paths [paths ...]
 
 positional arguments:
   paths                 paths to image files for processing
@@ -283,16 +317,16 @@ optional arguments:
   -v, --verbose         verbose mode
 ```
 
-### Particle extraction
-Predicted particle coordinates can be extracted directly from saved segmented images (see above) or images can be segmented and particles extracted in one step given a trained model using the extract.py script.
+#### Particle extraction (topaz extract)
+Predicted particle coordinates can be extracted directly from saved segmented images (see above) or images can be segmented and particles extracted in one step given a trained model using the `topaz extract` command.
 ```
-usage: Script for extracting particles from segmented images or images processed with a trained model. Uses a non maxima suppression algorithm.
-       [-h] [-m MODEL] [-r RADIUS] [-t THRESHOLD]
-       [--assignment-radius ASSIGNMENT_RADIUS] [--min-radius MIN_RADIUS]
-       [--max-radius MAX_RADIUS] [--step-radius STEP_RADIUS]
-       [--num-workers NUM_WORKERS] [--targets TARGETS] [--only-validate]
-       [-d DEVICE] [-o OUTPUT]
-       paths [paths ...]
+usage: topaz extract [-h] [-m MODEL] [-r RADIUS] [-t THRESHOLD]
+                     [--assignment-radius ASSIGNMENT_RADIUS]
+                     [--min-radius MIN_RADIUS] [--max-radius MAX_RADIUS]
+                     [--step-radius STEP_RADIUS] [--num-workers NUM_WORKERS]
+                     [--targets TARGETS] [--only-validate] [-d DEVICE]
+                     [-o OUTPUT]
+                     paths [paths ...]
 
 positional arguments:
   paths                 paths to image files for processing
@@ -305,8 +339,8 @@ optional arguments:
   -r RADIUS, --radius RADIUS
                         radius of the regions to extract
   -t THRESHOLD, --threshold THRESHOLD
-                        score quantile giving threshold at which to
-                        terminate region extraction (default: 0.5)
+                        score quantile giving threshold at which to terminate
+                        region extraction (default: 0.5)
   --assignment-radius ASSIGNMENT_RADIUS
                         maximum distance between prediction and labeled target
                         allowed for considering them a match (default: same as
@@ -321,8 +355,8 @@ optional arguments:
                         grid size when searching for optimal radius parameter
                         (default: 5)
   --num-workers NUM_WORKERS
-                        number of processes to use for searching over radii
-                        (default: 0)
+                        number of processes to use for extracting in parallel,
+                        0 uses main process (default: 0)
   --targets TARGETS     path to file specifying particle coordinates. used to
                         find extraction radius that maximizes the AUPRC
   --only-validate       flag indicating to only calculate validation metrics.
@@ -339,19 +373,19 @@ This script uses the non maxima suppression algorithm to greedily select particl
 
 The radius parameter can be tuned automatically given a set of known particle coordinates by finding the radius which maximizes the average precision score. In this case, predicted coordinates must be assigned to target coordinates which requires an additional distance threshold (--assignment-radius). 
 
-### Choosing a final particle list threshold
-Particles extracted using the extract.py script still have scores associated with them and a final particle list should be determined by choosing particles above some score threshold. The script precision_recall_curve.py can facilitate this by reporting the precision-recall curve given a list of predicted particle coordinates and a list of known target coordinates. A threshold can then be chosen to optimize the F1 score or for specific recall/precision levels. The precision_recall_curve.py script can be used as
+#### Choosing a final particle list threshold (topaz precision_recall_curve)
+Particles extracted using Topaz still have scores associated with them and a final particle list should be determined by choosing particles above some score threshold. The 'topaz precision_recall_curve' command can facilitate this by reporting the precision-recall curve for a list of predicted particle coordinates and a list of known target coordinates. A threshold can then be chosen to optimize the F1 score or for specific recall/precision levels on a heldout set of micrographs.
 ```
-usage: Script for calculating the precision-recall curve for a set of predicted particle coordinates and a set of target coordinates.
-       [-h] [--predicted PREDICTED] [--targets TARGETS]
-       [--assignment-radius ASSIGNMENT_RADIUS]
+usage: topaz precision_recall_curve [-h] [--predicted PREDICTED]
+                                    [--targets TARGETS] -r ASSIGNMENT_RADIUS
 
 optional arguments:
   -h, --help            show this help message and exit
   --predicted PREDICTED
                         path to file containing predicted particle coordinates
+                        with scores
   --targets TARGETS     path to file specifying target particle coordinates
-  --assignment-radius ASSIGNMENT_RADIUS
+  -r ASSIGNMENT_RADIUS, --assignment-radius ASSIGNMENT_RADIUS
                         maximum distance between prediction and labeled target
                         allowed for considering them a match
 ```
