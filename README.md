@@ -6,7 +6,7 @@
 
 ### From source
 
-_Recommended: install Topaz into a virtual Python environment_
+_Recommended: install Topaz into a virtual Python environment_  
 See https://conda.io/docs/user-guide/tasks/manage-environments.html or https://virtualenv.pypa.io/en/stable/ for setting one up.
 
 #### Install the dependencies 
@@ -60,10 +60,7 @@ python setup.py build_ext --inplace
 
 The command line interface is structured as a single entry command (topaz) with different steps defined as subcommands. A general usage guide is provided below with brief instructions for the most important subcommands in the particle picking pipeline.
 
-To see a list of all subcommands with a brief description of each, run
-```
-topaz --help
-```
+To see a list of all subcommands with a brief description of each, run `topaz --help`
 
 ### Image preprocessing
 
@@ -167,7 +164,7 @@ image_name	x_coord	y_coord
 ```
 
 #### Train region classifiers with labeled particles (topaz train)
-Models are trained using the 'topaz train' command.
+Models are trained using the `topaz train` command.
 ```
 usage: topaz train [-h] [--train-images TRAIN_IMAGES]
                    [--train-targets TRAIN_TARGETS] [--test-images TEST_IMAGES]
@@ -259,9 +256,8 @@ optional arguments:
 ```
 
 #### Model choices
-Currently, there are several model architechtures available for use as the region classifier
+Currently, there are several model architectures available for use as the region classifier
 - resnet8 [receptive field = 75]
-
 - conv127 [receptive field = 127]
 - conv63 [receptive field = 63]
 - conv31 [receptive field = 31]
@@ -297,7 +293,7 @@ This sets how many pixels around each particle coordinate are treated as positiv
 ### Segmentation and particle extraction
 
 #### Segmention (topaz segment, optional)
-Images can be segmented using the 'topaz segment' command with a trained model.
+Images can be segmented using the `topaz segment` command with a trained model.
 ```
 usage: topaz segment [-h] [-m MODEL] [-o DESTDIR] [-d DEVICE] [-v]
                      paths [paths ...]
@@ -374,7 +370,7 @@ This script uses the non maxima suppression algorithm to greedily select particl
 The radius parameter can be tuned automatically given a set of known particle coordinates by finding the radius which maximizes the average precision score. In this case, predicted coordinates must be assigned to target coordinates which requires an additional distance threshold (--assignment-radius). 
 
 #### Choosing a final particle list threshold (topaz precision_recall_curve)
-Particles extracted using Topaz still have scores associated with them and a final particle list should be determined by choosing particles above some score threshold. The 'topaz precision_recall_curve' command can facilitate this by reporting the precision-recall curve for a list of predicted particle coordinates and a list of known target coordinates. A threshold can then be chosen to optimize the F1 score or for specific recall/precision levels on a heldout set of micrographs.
+Particles extracted using Topaz still have scores associated with them and a final particle list should be determined by choosing particles above some score threshold. The `topaz precision_recall_curve` command can facilitate this by reporting the precision-recall curve for a list of predicted particle coordinates and a list of known target coordinates. A threshold can then be chosen to optimize the F1 score or for specific recall/precision levels on a heldout set of micrographs.
 ```
 usage: topaz precision_recall_curve [-h] [--predicted PREDICTED]
                                     [--targets TARGETS] -r ASSIGNMENT_RADIUS
