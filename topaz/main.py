@@ -7,11 +7,13 @@ def main():
     import topaz.commands.train
     import topaz.commands.segment
     import topaz.commands.extract
+    import topaz.commands.precision_recall_curve
 
     import topaz.commands.downsample
     import topaz.commands.normalize
     import topaz.commands.preprocess
 
+    import topaz.commands.scale_coordinates
     import topaz.commands.boxes_to_coordinates 
     import topaz.commands.star_to_coordinates 
     import topaz.commands.coordinates_to_boxes
@@ -21,6 +23,7 @@ def main():
                       [topaz.commands.train,
                        topaz.commands.segment,
                        topaz.commands.extract,
+                       topaz.commands.precision_recall_curve,
                       ]
                      ),
                      ('Image processing',
@@ -29,8 +32,10 @@ def main():
                        topaz.commands.preprocess,
                       ]
                      ),
-                     ('Conversion utilities',
-                      [topaz.commands.boxes_to_coordinates,
+                     ('Cooordinate utilities',
+                      [
+                       topaz.commands.scale_coordinates,
+                       topaz.commands.boxes_to_coordinates,
                        topaz.commands.star_to_coordinates,
                        topaz.commands.coordinates_to_boxes,
                        topaz.commands.coordinates_to_eman2_json,
