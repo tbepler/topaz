@@ -435,7 +435,8 @@ def main(args):
     use_cuda = False
     if args.device >= 0:
         use_cuda = torch.cuda.is_available()
-        torch.cuda.set_device(args.device)
+        if use_cuda:
+            torch.cuda.set_device(args.device)
     report('Using device={} with cuda={}'.format(args.device, use_cuda))
 
     if use_cuda:

@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from ..utils import insize_from_outsize
+from topaz.model.utils import insize_from_outsize
 
 class BasicConv(nn.Module):
     def __init__(self, layers, units, unit_scaling=1, dropout=0, bn=True

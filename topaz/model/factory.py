@@ -1,7 +1,7 @@
 from __future__ import print_function, division
 
-from .features.basic import BasicConv 
-from .features.resnet import ResNet8, ResNet6
+from topaz.model.features.basic import BasicConv 
+from topaz.model.features.resnet import ResNet8, ResNet6
 
 resnet8 = ResNet8
 resnet6 = ResNet6
