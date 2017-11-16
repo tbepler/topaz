@@ -39,6 +39,10 @@ Easy installation of dependencies
 conda install numpy pandas scikit-learn cython
 conda install -c soumith pytorch torchvision
 ```
+To install PyTorch for CUDA 8
+```
+conda install -c soumith pytorch torchvision cuda80
+```
 For more info on installing pytorch see http://pytorch.org
 
 #### Download the source code
