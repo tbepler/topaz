@@ -66,8 +66,9 @@ def load_pil(path, standardize=False):
 
 
 def load_image(path, standardize=False):
+    ## this might be more stable as path.endswith('.mrc')
     ext = os.path.splitext(path)[1]
-    if ext == 'mrc':
+    if ext == '.mrc':
         image = load_mrc(path)
     else:
         image = load_pil(path)
