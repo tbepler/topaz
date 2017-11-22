@@ -43,6 +43,8 @@ class Process:
 
     def __call__(self, args):
         name,image = args
+        # convert PIL image to array
+        image = np.array(image, copy=False)
         image = downsample(image, self.scale)
         return name, image
 
