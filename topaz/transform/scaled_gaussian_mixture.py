@@ -89,7 +89,6 @@ class ScaledGaussianMixture:
             for i in range(len(X)):
                 # scale parameters
                 proba = probas[i]
-                component = proba.argmax(axis=-1).astype(np.int32)
                 xi = X[i]
 
                 a = np.sum(proba*xi[...,np.newaxis]**2/variances)
@@ -112,7 +111,7 @@ class ScaledGaussianMixture:
 
             if verbose:
                 digits = int(np.floor(np.log10(niters))) + 1
-                template = '# [{:0'+str(digits)+'d}] logp={}'
+                template = '# [{:0'+str(digits)+'d}] logp = {}'
                 print(template.format(it, logp))
 
             if logp - cur_logp < self.tol: # stop, parameters have converged
@@ -121,63 +120,66 @@ class ScaledGaussianMixture:
 
         return scale, probas
 
+    def transform(self, X, niters=5, verbose=False):
 
-    def transform(self, X, niters=5):
+        #X = [X[i].ravel() for i in range(len(X))]
 
         weights = self.weights
         means = self.means
         variances = self.variances
 
-        mus = np.array([np.mean(X[i]) for i in range(len(X))], dtype=np.float32)
-        scale = np.mean(mus)/mus
-        #cdef np.ndarray[float] scale = np.ones(len(X), dtype=np.float32)
+        mus = np.array([np.mean(X[i]) for i in range(len(X))]) #, dtype=np.float32)
+        scale = mus/np.mean(mus)
 
-        components = []
         probas = []
+        ## initialize the component probabilities to the prior
         for i in range(len(X)):
-            component = np.random.randint(0, self.ncomponents, size=X[i].shape).astype(np.int32)
-            components.append(component)
-            #size = (X[i].shape[0], X[i].shape[1], self.ncomponents)
-            #proba = np.ones(size, dtype=np.float32)
-            #proba += np.random.uniform(0,0.1,size=size).astype(np.float32)
-        
-        # mixture components
-        for i in range(len(X)):
-            component = components[i]
-            xi = X[i]
-            proba = np.exp(-(xi[...,np.newaxis]/scale[i]-means)**2/2/variances)/np.sqrt(2*np.pi*variances)
-            proba *= weights
-            component[:,:] = proba.argmax(axis=-1).astype(np.int32)
+            shape = X[i].shape + (1,)
+            proba = np.tile(weights, shape)
+            probas.append(proba)
 
-        for _ in range(niters):
+        logp = -np.inf
+
+        ## coordinate ascent iteration
+        for it in range(niters):
+
             ## calculate the expectation of the scaling parameters and mixture components
+            cur_logp = logp
+            logp = 0
+
             for i in range(len(X)):
                 # scale parameters
-                a = 0
-                b = 0
-                component = components[i]
+                proba = probas[i]
                 xi = X[i]
 
-                mu = means[component]
-                var = variances[component]
-
-                a = np.sum(xi**2/var)
-                b = np.sum(xi*mu/var)
-                scale[i] = a/b
-
-                unscale_logp = np.log(1 - self.scale_prior) - np.sum((xi-mu)**2/2/var)
-                scale_logp = np.log(self.scale_prior) - np.sum((xi/scale[i]-mu)**2/2/var)
-                if unscale_logp >= scale_logp:
-                    scale[i] = 1.0
+                a = np.sum(proba*xi[...,np.newaxis]**2/variances)
+                b = np.sum(proba*xi[...,np.newaxis]*means/variances)
+                scale[i] = 2*a/(b + np.sqrt(b**2 + 4*a*len(xi)))
 
                 # mixture components
-                proba = np.exp(-(xi[...,np.newaxis]/scale[i]-means)**2/2/variances)/np.sqrt(2*np.pi*variances)
-                proba *= weights
-                component[:,:] = proba.argmax(axis=-1).astype(np.int32)
+                cur_proba = proba
+                next_proba = -(xi[...,np.newaxis]/scale[i]-means)**2/2/variances - np.log(2*np.pi)/2 - np.log(variances)/2
+                next_proba += np.log(weights)
 
+                ma = next_proba.max(axis=-1, keepdims=True)
+                next_proba -= ma
 
-        return scale, proba
+                logp += np.sum(np.log(np.sum(np.exp(next_proba), axis=-1))) + np.sum(ma)
 
+                next_proba[:] = np.exp(next_proba)
+                next_proba /= next_proba.sum(axis=-1, keepdims=True)
+                probas[i] = next_proba
+
+            if verbose:
+                digits = int(np.floor(np.log10(niters))) + 1
+                template = '# [{:0'+str(digits)+'d}] logp = {}'
+                print(template.format(it, logp))
+
+            if logp - cur_logp < self.tol: # stop, parameters have converged
+                print('# logp tolerance reached')
+                break
+
+        return scale, probas
 
 
                 

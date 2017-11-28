@@ -62,6 +62,7 @@ def main():
     import topaz.commands.downsample
     import topaz.commands.normalize
     import topaz.commands.preprocess
+    import topaz.commands.automask
 
     import topaz.commands.scale_coordinates
     import topaz.commands.boxes_to_coordinates 
@@ -80,6 +81,7 @@ def main():
                       [topaz.commands.downsample,
                        topaz.commands.normalize,
                        topaz.commands.preprocess,
+                       topaz.commands.automask,
                       ]
                      ),
                      ('Cooordinate utilities',
