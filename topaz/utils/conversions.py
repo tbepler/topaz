@@ -19,7 +19,7 @@ def boxes_to_coordinates(boxes, shape, image_name=None):
     coords = np.stack([x_coord, y_coord], axis=1)
     if image_name is not None: # in this case, return as table with image_name column
         coords = pd.DataFrame(coords, columns=['x_coord', 'y_coord'])
-        coords.insert('image_name', 0, [image_name]*len(coords))
+        coords.insert(0, 'image_name', [image_name]*len(coords))
 
     return coords
 
