@@ -27,6 +27,7 @@ def main(args):
 
         image_name = os.path.splitext(os.path.basename(path))[0]
         impath = os.path.join(args.imagedir, image_name) + '.' + args.image_ext
+        print(impath)
         # use glob incase image_ext is '*'
         impath = glob.glob(impath)[0]
 
