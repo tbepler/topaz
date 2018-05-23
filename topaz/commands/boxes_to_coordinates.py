@@ -4,6 +4,7 @@ import sys
 import os
 import pandas as pd
 from PIL import Image
+import glob
 
 name = 'boxes_to_coordinates'
 help = 'convert .box format coordinates to tab delimited coordinates table'
@@ -11,11 +12,12 @@ help = 'convert .box format coordinates to tab delimited coordinates table'
 def add_arguments(parser):
     parser.add_argument('files', nargs='+', help='path to input box files')
     parser.add_argument('--imagedir', help='directory of images, eman2 inverts the y-axis')
-    parser.add_argument('--image-ext', default='tiff', help='image format extension (default: tiff)')
+    parser.add_argument('--image-ext', default='*', help='image format extension, * corresponds to matching the first image file with the same name as the box file (default: *)')
     parser.add_argument('-o', '--output', help='destination file (default: stdout)')
 
 def main(args):
     from topaz.utils.conversions import boxes_to_coordinates
+    from topaz.utils.data.loader import load_image
 
     tables = []
 
@@ -24,7 +26,11 @@ def main(args):
             continue
 
         image_name = os.path.splitext(os.path.basename(path))[0]
-        im = Image.open(args.imagedir + '/' + image_name + '.' + args.image_ext)
+        impath = os.path.join(args.imagedir, image_name) + '.' + args.image_ext
+        # use glob incase image_ext is '*'
+        impath = glob.glob(impath)[0]
+
+        im = load_image(impath)
         shape = (im.height,im.width)
         box = pd.read_csv(path, sep='\t', header=None).values
 
