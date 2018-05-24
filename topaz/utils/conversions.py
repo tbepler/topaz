@@ -4,17 +4,23 @@ import numpy as np
 import pandas as pd
 
 
-def boxes_to_coordinates(boxes, shape, image_name=None):
+def boxes_to_coordinates(boxes, shape=None, invert_y=False, image_name=None):
     ## first 2 columns are x and y coordinates of lower left box corners
     ## next 2 columns are width and height
+
     ## requires knowing image size to invert y-axis (shape parameter)
     ## to conform with origin in upper-left rather than lower-left
+    ## apparently, EMAN2 only inverts the y-axis for .tiff images
+    ## so box files only need to be inverted when working with .tiff
     x_lo = boxes[:,0]
     y_lo = boxes[:,1]
     width = boxes[:,2]
     height = boxes[:,3]
     x_coord = x_lo + width//2
-    y_coord = (shape[0]-1-y_lo) - height//2
+    y_coord = y_lo + height//2
+
+    if invert_y:
+        y_coord = (shape[0]-1-y_lo) - height//2
 
     coords = np.stack([x_coord, y_coord], axis=1)
     if image_name is not None: # in this case, return as table with image_name column
