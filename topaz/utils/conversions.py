@@ -41,10 +41,12 @@ def coordinates_to_boxes(coords, shape, box_width, box_height):
     return boxes
 
 
-def coordinates_to_eman2_json(coords, shape, tag='manual'):
+def coordinates_to_eman2_json(coords, shape=None, invert_y=False, tag='manual'):
     entries = []
     x_coords = coords[:,0]
-    y_coords = shape[0]-1-coords[:,1]
+    y_coords = coords[:,1]
+    if invert_y:
+        y_coords = shape[0]-1-coords[:,1]
     for i in range(len(x_coords)):
         entries.append([int(x_coords[i]), int(y_coords[i]), tag])
     return entries
