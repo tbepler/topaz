@@ -54,7 +54,8 @@ def main(args):
             impath = glob.glob(impath)[0]
             im = load_image(impath)
             shape = (im.height,im.width)
-
+        
+        xy = group[['x_coord','y_coord']].values.astype(int)
         boxes = coordinates_to_eman2_json(xy, shape=shape, invert_y=invert_y)
 
         with open(path, 'w') as f:
