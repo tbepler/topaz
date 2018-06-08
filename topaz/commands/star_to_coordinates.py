@@ -19,7 +19,7 @@ def parse_star(f):
     lines = f.readlines()
     for i in range(len(lines)):
         line = lines[i]
-        if line.startswith('data_images'): 
+        if line.startswith('data_'): 
             return parse_star_body(lines[i+1:])
 
 
