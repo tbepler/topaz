@@ -14,7 +14,7 @@ help = 'normalize a set of images using a per image scaled 2-component Gaussian 
 
 def add_arguments(parser):
     parser.add_argument('files', nargs='+')
-    parser.add_argument('-s', '--sample', default=100, type=int, help='pixel sampling factor for model fit (default: 100)')
+    parser.add_argument('-s', '--sample', default=25, type=int, help='pixel sampling factor for model fit (default: 25)')
     parser.add_argument('--niters', default=200, type=int, help='number of iterations to run for model fit (default: 200)')
     parser.add_argument('--seed', default=1, type=int, help='random seed for model initialization (default: 1)')
     parser.add_argument('-o', '--destdir', help='output directory')

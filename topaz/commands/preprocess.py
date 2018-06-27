@@ -21,7 +21,7 @@ def add_arguments(parser):
     parser.add_argument('-s', '--scale', default=4, type=int, help='rescaling factor for image downsampling (default: 4)')
     parser.add_argument('-t', '--num-workers', default=0, type=int, help='number of processes to use for parallel image downsampling (default: 0)')
 
-    parser.add_argument('--pixel-sampling', default=100, type=int, help='pixel sampling factor for model fit (default: 100)')
+    parser.add_argument('--pixel-sampling', default=25, type=int, help='pixel sampling factor for model fit (default: 25)')
     parser.add_argument('--niters', default=200, type=int, help='number of iterations to run for model fit (default: 200)')
     parser.add_argument('--seed', default=1, type=int, help='random seed for model initialization (default: 1)')
 

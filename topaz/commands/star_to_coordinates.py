@@ -4,6 +4,8 @@ import sys
 import os
 import pandas as pd
 
+import topaz.utils.star as star
+
 
 name = 'star_to_coordinates'
 help = 'convert star file coordinates to tab delimited coordinates table'
@@ -15,52 +17,6 @@ def add_arguments(parser):
     return parser
 
 
-def parse_star(f):
-    lines = f.readlines()
-    for i in range(len(lines)):
-        line = lines[i]
-        if line.startswith('data_'): 
-            return parse_star_body(lines[i+1:])
-
-
-def parse_star_body(lines):
-    ## data_images line has been read, next is loop
-    for i in range(len(lines)):
-        if lines[i].startswith('loop_'):
-            lines = lines[i+1:]
-            break
-    header,lines = parse_star_loop(lines)
-    ## parse the body
-    content = []
-    for i in range(len(lines)):
-        line = lines[i].strip()
-        if line.startswith('data'): # done with image block
-            break
-        if line.startswith('#') or line.startswith(';'): # comment lines
-            continue
-        if line != '':
-            tokens = line.split()
-            content.append(tokens)
-
-    return pd.DataFrame(content, columns=header)
-
-
-def parse_star_loop(lines):
-    columns = []
-    for i in range(len(lines)):
-        line = lines[i].strip()
-        if not line.startswith('_'):
-            break
-        name = line[1:]
-        # strip trailing comments from name
-        loc = name.find('#')
-        if loc >= 0:
-            name = name[:loc]
-        name = name.strip()
-        columns.append(name)
-    return columns, lines[i:]
-
-
 def strip_ext(name):
     clean_name,ext = os.path.splitext(name)
     return clean_name
@@ -68,10 +24,10 @@ def strip_ext(name):
 
 def main(args):
     with open(args.file, 'r') as f:
-        table = parse_star(f)
+        table = star.parse(f)
 
-    ## columns of interest are 'rlnMicrographName', 'rlnCoordinateX', and 'rlnCoordinateY'
-    table = table[['rlnMicrographName', 'rlnCoordinateX', 'rlnCoordinateY']]
+    ## columns of interest are 'MicrographName', 'CoordinateX', and 'CoordinateY'
+    table = table[['MicrographName', 'CoordinateX', 'CoordinateY']]
     table.columns = ['image_name', 'x_coord', 'y_coord']
     ## convert the coordinates to integers
     table['x_coord'] = table['x_coord'].astype(float).astype(int)
