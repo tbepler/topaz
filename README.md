@@ -37,7 +37,7 @@ Tested with python version 3.6, should work with python 2 but untested
 Easy installation of dependencies
 ```
 conda install numpy pandas scikit-learn cython
-conda install -c soumith pytorch torchvision
+conda install -c soumith pytorch=0.2.0 torchvision
 ```
 To install PyTorch for CUDA 8
 ```
