@@ -38,7 +38,7 @@ def add_arguments(parser):
     parser.add_argument('--dropout', default=0.0, type=float, help='dropout rate model parameter(default: 0.0)')
     parser.add_argument('--bn', default='on', choices=['on', 'off'], help='use batch norm in the model (default: on)')
     parser.add_argument('--pooling', help='pooling method to use (default: none)')
-    parser.add_argument('--unit-scaling', default=1, type=int, help='scale the number of units up by this factor every layer (default: 1)')
+    parser.add_argument('--unit-scaling', default=2, type=int, help='scale the number of units up by this factor every pool/stride layer (default: 2)')
     parser.add_argument('--ngf', default=32, type=int, help='scaled number of units per layer in generative model if used (default: 32)')
 
     methods = ['PN', 'GE-KL', 'GE-binomial', 'PU']
@@ -47,12 +47,12 @@ def add_arguments(parser):
     parser.add_argument('--autoencoder', default=0, type=float, help='option to augment method with autoencoder. weight on reconstruction error (default: 0)')
 
     parser.add_argument('--pi', type=float, help='parameter specifying fraction of data that is expected to be positive')
-    parser.add_argument('--slack', default=-1, type=float, help='weight on GE penalty (default: 10 x number of particles for GE-KL, 1 for GE-binomial)')
+    parser.add_argument('--slack', default=-1, type=float, help='weight on GE penalty (default: 10 for GE-KL, 1 for GE-binomial)')
 
 
     parser.add_argument('--l2', default=0.0, type=float, help='l2 regularizer on the model parameters (default: 0)')
 
-    parser.add_argument('--learning-rate', default=0.001, type=float, help='learning rate for the optimizer (default: 0.001)') 
+    parser.add_argument('--learning-rate', default=0.0002, type=float, help='learning rate for the optimizer (default: 0.0002)') 
 
     parser.add_argument('--natural', action='store_true', help='sample unbiasedly from the data to form minibatches rather than sampling particles and not particles at ratio given by minibatch-balance parameter')
 
@@ -67,7 +67,7 @@ def add_arguments(parser):
     parser.add_argument('-d', '--device', default=0, type=int, help='which device to use, set to -1 to force CPU (default: 0)')
 
     parser.add_argument('--save-prefix', help='path prefix to save trained models each epoch')
-    parser.add_argument('--output', help='destination to write the train/test curve')
+    parser.add_argument('-o', '--output', help='destination to write the train/test curve')
 
     parser.add_argument('--describe', action='store_true', help='only prints a description of the model, does not train')
 
@@ -266,7 +266,7 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
     elif args.method == 'GE-KL':
         #split = 'pu'
         if slack < 0:
-            slack = 10*num_positive_regions
+            slack = 10
         assert positive_fraction <= pi
         pi = pi - positive_fraction
         optim = optim(classifier.parameters(), lr=lr)

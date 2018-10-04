@@ -66,8 +66,11 @@ def main():
     import topaz.commands.scale_coordinates
     import topaz.commands.boxes_to_coordinates 
     import topaz.commands.star_to_coordinates 
+    import topaz.commands.coordinates_to_star
     import topaz.commands.coordinates_to_boxes
     import topaz.commands.coordinates_to_eman2_json
+    import topaz.commands.particle_stack
+    import topaz.commands.star_particles_threshold
 
     module_groups = [('Particle picking',
                       [topaz.commands.train,
@@ -82,13 +85,16 @@ def main():
                        topaz.commands.preprocess,
                       ]
                      ),
-                     ('Cooordinate utilities',
+                     ('File utilities',
                       [
                        topaz.commands.scale_coordinates,
                        topaz.commands.boxes_to_coordinates,
                        topaz.commands.star_to_coordinates,
+                       topaz.commands.coordinates_to_star,
                        topaz.commands.coordinates_to_boxes,
                        topaz.commands.coordinates_to_eman2_json,
+                       topaz.commands.particle_stack,
+                       topaz.commands.star_particles_threshold,
                       ]
                      ),
                     ]

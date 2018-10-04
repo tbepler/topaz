@@ -8,7 +8,7 @@ import topaz.utils.star as star
 
 
 name = 'star_to_coordinates'
-help = 'convert star file coordinates to tab delimited coordinates table'
+help = 'convert .star file coordinates to tab delimited coordinates table'
 
 
 def add_arguments(parser):
