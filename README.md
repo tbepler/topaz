@@ -72,6 +72,10 @@ To only compile the cython files
 python setup.py build_ext --inplace
 ```
 
+## Tutorial
+
+A tutorial for using Topaz on a small demonstration dataset can be found [here](tutorial/01_walkthrough.ipynb). To run the tutorial, [jupyter notebook](http://jupyter.org/install) also needs to be installed. The tutorial data can be downloaded [here](http://bergerlab-downloads.csail.mit.edu/topaz/topaz-tutorial-data.tar.gz).
+
 ## User guide
 
 The command line interface is structured as a single entry command (topaz) with different steps defined as subcommands. A general usage guide is provided below with brief instructions for the most important subcommands in the particle picking pipeline.
