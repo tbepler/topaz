@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 import topaz.mrc as mrc
-import topaz.star as star
+import topaz.utils.star as star
 
 name = 'particle_stack'
 help = 'extract mrc particle stack given coordinates table'

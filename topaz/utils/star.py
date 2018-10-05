@@ -2,6 +2,9 @@ from __future__ import print_function,division
 
 import pandas as pd
 
+def parse_star(f):
+    return parse(f)
+
 def parse(f):
     lines = f.readlines()
     for i in range(len(lines)):

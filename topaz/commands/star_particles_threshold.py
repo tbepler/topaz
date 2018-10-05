@@ -5,7 +5,7 @@ import os
 import numpy as np
 import pandas as pd
 
-import topaz.star as star
+import topaz.utils.star as star
 
 name = 'star_particles_threshold'
 help = 'filter the particles in a .star file by score threshold'

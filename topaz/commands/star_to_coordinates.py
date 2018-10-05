@@ -26,9 +26,14 @@ def main(args):
     with open(args.file, 'r') as f:
         table = star.parse(f)
 
-    ## columns of interest are 'MicrographName', 'CoordinateX', and 'CoordinateY'
-    table = table[['MicrographName', 'CoordinateX', 'CoordinateY']]
-    table.columns = ['image_name', 'x_coord', 'y_coord']
+    if 'ParticleScore' in table.columns:
+        ## columns of interest are 'MicrographName', 'CoordinateX', 'CoordinateY', and 'ParticleScore'
+        table = table[['MicrographName', 'CoordinateX', 'CoordinateY', 'ParticleScore']]
+        table.columns = ['image_name', 'x_coord', 'y_coord', 'score']
+    else:
+        ## columns of interest are 'MicrographName', 'CoordinateX', and 'CoordinateY'
+        table = table[['MicrographName', 'CoordinateX', 'CoordinateY']]
+        table.columns = ['image_name', 'x_coord', 'y_coord']
     ## convert the coordinates to integers
     table['x_coord'] = table['x_coord'].astype(float).astype(int)
     table['y_coord'] = table['y_coord'].astype(float).astype(int)
