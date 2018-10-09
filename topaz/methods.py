@@ -124,7 +124,7 @@ class GE_binomial:
         count_vector = Variable(count_vector)
 
         q_discrete = -0.5*(q_mu-count_vector)**2/(q_var + 1e-10) # add small epsilon to prevent NaN
-        q_discrete = F.softmax(q_discrete, dim=0)
+        q_discrete = F.softmax(q_discrete) # dim=0 doesn't work for pytorch=0.2.0
 
         ## KL of w from the binomial distribution with pi
         log_binom = scipy.stats.binom.logpmf(np.arange(0,N+1),N,self.pi)
