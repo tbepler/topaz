@@ -9,6 +9,12 @@ A pipeline for particle detection in cryo-electron microscopy images using convo
 
 - Basic Unix/Linux knowledge.
 
+<br />
+
+# Installation
+
+**<details><summary>Click here to install *using Docker*</summary><p>**
+
 **<details><summary>Do you have Docker installed? If not, *click here*</summary><p>**
 
 ## Linux/MacOS &nbsp;&nbsp; *(command line)*
@@ -39,16 +45,9 @@ Launch Kitematic.
 
 ## What is Docker?
 
-[This tutorial explains why Docker is used for Appion-Protomo.](https://www.youtube.com/watch?v=YFl2mCHdv24)
+[This tutorial explains why Docker is useful.](https://www.youtube.com/watch?v=YFl2mCHdv24)
 
 </p></details>
-
-<br />
-
-
-# Installation
-
-**<details><summary>Click here to install *using Docker*</summary><p>**
 
 A Dockerfile is provided to build images with CUDA support. Build from the github repo:
 ```
