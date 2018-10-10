@@ -47,6 +47,7 @@ Launch Kitematic.
 
 </p></details>
 
+<br/>
 
 A Dockerfile is provided to build images with CUDA support. Build from the github repo:
 ```
