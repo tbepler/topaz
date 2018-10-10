@@ -461,4 +461,12 @@ optional arguments:
                         allowed for considering them a match
 ```
 
+# License
+
+Topaz is open source software packages released under the [GNU General Public License, Version 3](https://github.com/tbepler/topaz/blob/master/LICENSE).
+
 </p></details>
+
+# Bugs & Suggestions
+
+Please report any bugs, problems, suggestions, or requests as a [Github issue](https://github.com/tbepler/topaz/issues).
