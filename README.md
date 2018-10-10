@@ -461,6 +461,16 @@ optional arguments:
                         allowed for considering them a match
 ```
 
+# References
+
+Bepler, T., Morin, A., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2018). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs. arXiv. https://arxiv.org/abs/1803.08207
+
+# Author
+
+<details><summary>Tristan Bepler</summary><p>
+
+</p></details>
+
 # License
 
 Topaz is open source software packages released under the [GNU General Public License, Version 3](https://github.com/tbepler/topaz/blob/master/LICENSE).
