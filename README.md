@@ -119,13 +119,13 @@ python setup.py build_ext --inplace
 
 [Click here](tutorial/01_walkthrough.ipynb) for a tutorial for using Topaz on a small demonstration dataset.
 
-To run the tutorial, [jupyter notebook](http://jupyter.org/install) also needs to be installed
+To run the tutorial, [Jupyter notebook](http://jupyter.org/install) also needs to be installed
 
 The tutorial data can be downloaded [here](http://bergerlab-downloads.csail.mit.edu/topaz/topaz-tutorial-data.tar.gz).
 
 # User guide
 
-**<details><summary>Click here for a description of Topaz commands</summary><p>**
+**<details><summary>Click here for a description of the Topaz pipeline and its commands</summary><p>**
 
 The command line interface is structured as a single entry command (topaz) with different steps defined as subcommands. A general usage guide is provided below with brief instructions for the most important subcommands in the particle picking pipeline.
 
@@ -471,7 +471,7 @@ Bepler, T., Morin, A., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2018). 
 
 # License
 
-Topaz is open source software packages released under the [GNU General Public License, Version 3](https://github.com/tbepler/topaz/blob/master/LICENSE).
+Topaz is open source software released under the [GNU General Public License, Version 3](https://github.com/tbepler/topaz/blob/master/LICENSE).
 
 # Bugs & Suggestions
 
