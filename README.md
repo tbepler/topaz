@@ -45,7 +45,7 @@ Launch Kitematic.
 
 A Dockerfile is provided to build images with CUDA support. Build from the github repo:
 ```
-docker build -t topaz https://github.com/tbepler/topaz
+docker build -t topaz https://github.com/tbepler/topaz.git
 ```
 
 or download the source code and build from the source directory

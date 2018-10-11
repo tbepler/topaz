@@ -18,6 +18,7 @@ RUN curl -o ~/miniconda.sh -O  https://repo.continuum.io/miniconda/Miniconda3-la
      /opt/conda/bin/conda create -y --name $NAME python=$PYTHON_VERSION numpy pandas scikit-learn cython && \
      /opt/conda/bin/conda clean -ya 
 
+ENV PATH /opt/conda/bin:$PATH
 ENV PATH /opt/conda/envs/$NAME/bin:$PATH
 RUN conda install --name $NAME -c soumith pytorch=0.2.0 torchvision cuda80
 
