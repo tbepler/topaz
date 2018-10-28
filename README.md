@@ -82,7 +82,7 @@ conda install -c soumith pytorch=0.2.0 torchvision
 ```
 To install PyTorch for CUDA 8
 ```
-conda install -c soumith pytorch torchvision cuda80
+conda install -c soumith pytorch=0.2.0 torchvision cuda80
 ```
 For more info on installing pytorch see http://pytorch.org
 
