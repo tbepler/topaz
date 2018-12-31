@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
         curl \
         ca-certificates \
-        && \
+        && apt-get clean && \
      rm -rf /var/lib/apt/lists/*
 
 ENV PYTHON_VERSION=3.6
