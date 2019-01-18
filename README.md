@@ -23,11 +23,11 @@ source activate topaz # this changes to the topaz conda environment, 'conda acti
 ```
 More information on conda environments can be found [here](https://conda.io/docs/user-guide/tasks/manage-environments.html).
 
-## Install Topaz and its dependencies
+## Install Topaz
 
 __At the moment, prebuilt Topaz is only provided for 64-bit linux__
 
-To install the precompiled Topaz package and its dependencies including pytorch:
+To install the precompiled Topaz package and its dependencies, including pytorch:
 ```
 conda install topaz -c tbepler -c soumith
 ```
@@ -39,6 +39,7 @@ or combined into a single command:
 ```
 conda install topaz cuda80 -c tbepler -c soumith
 ```
+That's it! Topaz is now installed in your anaconda environment.
 
 </p></details>
 
