@@ -73,6 +73,9 @@ class ShuffledSampler:
         self.i += 1
         return sample
 
+    # for python 2.7 compatability
+    next = __next__
+
     def __iter__(self):
         return self
 
@@ -146,6 +149,9 @@ class StratifiedCoordinateSampler:
         sample = next(g)
 
         return i//2, sample
+
+    # for python 2.7 compatability
+    next = __next__
 
     def __iter__(self):
         for _ in range(self.size):
