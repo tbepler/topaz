@@ -42,34 +42,6 @@ conda install topaz cuda80 -c tbepler -c soumith
 
 </p></details>
 
-**<details><summary>Do you have Docker installed? If not, *click here*</summary><p>**
-
-## Linux/MacOS &nbsp;&nbsp; *(command line)*
-
-Download and install Docker 1.21 or greater for [Linux](https://docs.docker.com/engine/installation/) or [MacOS](https://store.docker.com/editions/community/docker-ce-desktop-mac).
-
-> Consider using a Docker 'convenience script' to install (search on your OS's Docker installation webpage).
-
-Launch docker according to your Docker engine's instructions, typically ``docker start``.  
-
-> **Note:** You must have sudo or root access to *install* Docker. If you do not wish to *run* Docker as sudo/root, you need to configure user groups as described here: https://docs.docker.com/install/linux/linux-postinstall/
-
-## Windows &nbsp;&nbsp; *(GUI & command line)*
-
-Download and install [Docker Toolbox for Windows](https://docs.docker.com/toolbox/toolbox_install_windows/). 
-
-Launch Kitematic.
-
-> If on first startup Kitematic displays a red error suggesting that you run using VirtualBox, do so.
-
-> **Note:** [Docker Toolbox for MacOS](https://docs.docker.com/toolbox/toolbox_install_mac/) has not yet been tested.
-
-## What is Docker?
-
-[This tutorial explains why Docker is useful.](https://www.youtube.com/watch?v=YFl2mCHdv24)
-
-</p></details>
-
 **<details><summary>Click here to install *using Docker*</summary><p>**
 
 **<details><summary>Do you have Docker installed? If not, *click here*</summary><p>**
