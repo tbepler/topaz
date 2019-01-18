@@ -29,17 +29,21 @@ def boxes_to_coordinates(boxes, shape=None, invert_y=False, image_name=None):
 
     return coords
 
+def coordinates_to_boxes(coords, box_width, box_height, shape=None, invert_y=False, tag='manual'):
+    entries = []
+    x_coords = coords[:,0]
+    y_coords = coords[:,1]
+    if invert_y:
+        y_coords = shape[0]-1-coords[:,1]
+    box_width = np.array([box_width]*len(x_coords), dtype=np.int32)
+    box_height = np.array([box_height]*len(x_coords), dtype=np.int32)
 
-def coordinates_to_boxes(coords, shape, box_width, box_height):
-    x_coord = coords[:,0]
-    y_coord = shape[0]-1-coords[:,1]
-    box_width = np.array([box_width]*len(x_coord), dtype=np.int32)
-    box_height = np.array([box_height]*len(x_coord), dtype=np.int32)
+    # x and y are centers, make lower left corner
+    x_coords = x_coords - box_width//2
+    y_coords = y_coords - box_height//2
 
-    boxes = np.stack([x_coord, y_coord, box_width, box_height], 1)
-
+    boxes = np.stack([x_coords, y_coords, box_width, box_height], 1)
     return boxes
-
 
 def coordinates_to_eman2_json(coords, shape=None, invert_y=False, tag='manual'):
     entries = []

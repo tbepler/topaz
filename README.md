@@ -1,12 +1,51 @@
 # Topaz
+A pipeline for particle detection in cryo-electron microscopy images using convolutional neural networks trained from positive and unlabeled examples.
 
+# Prerequisites
 
-## Installation
+- Linux for installation from source, or any modern operating system for Docker installation.
 
-### Docker image
+- An Nvidia GPU.
+
+- Basic Unix/Linux knowledge.
+
+# Installation
+
+**<details><summary>Click here to install *using Docker*</summary><p>**
+
+**<details><summary>Do you have Docker installed? If not, *click here*</summary><p>**
+
+## Linux/MacOS &nbsp;&nbsp; *(command line)*
+
+Download and install Docker 1.21 or greater for [Linux](https://docs.docker.com/engine/installation/) or [MacOS](https://store.docker.com/editions/community/docker-ce-desktop-mac).
+
+> Consider using a Docker 'convenience script' to install (search on your OS's Docker installation webpage).
+
+Launch docker according to your Docker engine's instructions, typically ``docker start``.  
+
+> **Note:** You must have sudo or root access to *install* Docker. If you do not wish to *run* Docker as sudo/root, you need to configure user groups as described here: https://docs.docker.com/install/linux/linux-postinstall/
+
+## Windows &nbsp;&nbsp; *(GUI & command line)*
+
+Download and install [Docker Toolbox for Windows](https://docs.docker.com/toolbox/toolbox_install_windows/). 
+
+Launch Kitematic.
+
+> If on first startup Kitematic displays a red error suggesting that you run using VirtualBox, do so.
+
+> **Note:** [Docker Toolbox for MacOS](https://docs.docker.com/toolbox/toolbox_install_mac/) has not yet been tested.
+
+## What is Docker?
+
+[This tutorial explains why Docker is useful.](https://www.youtube.com/watch?v=YFl2mCHdv24)
+
+</p></details>
+
+<br/>
+
 A Dockerfile is provided to build images with CUDA support. Build from the github repo:
 ```
-docker build -t topaz https://github.com/tbepler/topaz
+docker build -t topaz https://github.com/tbepler/topaz.git
 ```
 
 or download the source code and build from the source directory
@@ -16,7 +55,9 @@ cd topaz
 docker build -t topaz .
 ```
 
-### From source
+</p></details>
+
+**<details><summary>Click here to install *from source*</summary><p>**
 
 _Recommended: install Topaz into a virtual Python environment_  
 See https://conda.io/docs/user-guide/tasks/manage-environments.html or https://virtualenv.pypa.io/en/stable/ for setting one up.
@@ -41,7 +82,7 @@ conda install -c soumith pytorch=0.2.0 torchvision
 ```
 To install PyTorch for CUDA 8
 ```
-conda install -c soumith pytorch torchvision cuda80
+conda install -c soumith pytorch=0.2.0 torchvision cuda80
 ```
 For more info on installing pytorch see http://pytorch.org
 
@@ -72,11 +113,19 @@ To only compile the cython files
 python setup.py build_ext --inplace
 ```
 
-## Tutorial
+</p></details>
 
-A tutorial for using Topaz on a small demonstration dataset can be found [here](tutorial/01_walkthrough.ipynb). To run the tutorial, [jupyter notebook](http://jupyter.org/install) also needs to be installed. The tutorial data can be downloaded [here](http://bergerlab-downloads.csail.mit.edu/topaz/topaz-tutorial-data.tar.gz).
+# Tutorial
 
-## User guide
+[Click here](tutorial/01_walkthrough.ipynb) for a tutorial for using Topaz on a small demonstration dataset.
+
+To run the tutorial, [Jupyter notebook](http://jupyter.org/install) also needs to be installed
+
+The tutorial data can be downloaded [here](http://bergerlab-downloads.csail.mit.edu/topaz/topaz-tutorial-data.tar.gz).
+
+# User guide
+
+**<details><summary>Click here for a description of the Topaz pipeline and its commands</summary><p>**
 
 The command line interface is structured as a single entry command (topaz) with different steps defined as subcommands. A general usage guide is provided below with brief instructions for the most important subcommands in the particle picking pipeline.
 
@@ -406,3 +455,24 @@ optional arguments:
                         allowed for considering them a match
 ```
 
+</p></details>
+
+# References
+
+Bepler, T., Morin, A., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2018). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs. arXiv. https://arxiv.org/abs/1803.08207
+
+# Author
+
+<details><summary>Tristan Bepler</summary><p>
+
+  <img src="https://scontent-lga3-1.xx.fbcdn.net/v/t1.0-1/c31.94.389.389/s100x100/9756_10151396630122455_1428574906_n.jpg?_nc_cat=101&oh=a23c14188564ec224551309f838e05e2&oe=5C5518FF" width="120">
+  
+</p></details>
+
+# License
+
+Topaz is open source software released under the [GNU General Public License, Version 3](https://github.com/tbepler/topaz/blob/master/LICENSE).
+
+# Bugs & Suggestions
+
+Please report any bugs, problems, suggestions, or requests as a [Github issue](https://github.com/tbepler/topaz/issues).
