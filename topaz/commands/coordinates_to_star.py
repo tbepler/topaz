@@ -5,6 +5,7 @@ import os
 import numpy as np
 import pandas as pd
 
+import topaz.utils.star as star
 
 name = 'coordinates_to_star'
 help = 'convert coordinates table to .star file format'
@@ -35,8 +36,10 @@ def main(args):
 
 
     #_,image_idx = np.unique(image_name, return_inverse=True)
+    micrograph_name = [name + args.image_ext for name in image_name]
     image_name = ['1@' + name + args.image_ext for name in image_name]
     star_table = pd.DataFrame({'ImageName': image_name})
+    star_table['MicrographName'] = micrograph_name
     star_table['CoordinateX'] = x_coord
     star_table['CoordinateY'] = y_coord
     
@@ -69,12 +72,7 @@ def main(args):
 
 
     ## write the star file
-    print('data_images')
-    print('loop_')
-    for i,name in enumerate(star_table.columns):
-        print('_rln' + name + ' #' + str(i+1))
-
-    star_table.to_csv(sys.stdout, sep='\t', index=False, header=False)
+    star.write(star_table, sys.stdout)
 
 
 
