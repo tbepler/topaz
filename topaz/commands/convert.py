@@ -11,7 +11,7 @@ from topaz.utils.conversions import mirror_y_axis
 
 
 name = 'convert'
-help = 'convert particle coordinate files between various formats automatically'
+help = 'convert particle coordinate files between various formats automatically. also allows filtering particles by score threshold.'
 
 
 def add_arguments(parser):
@@ -49,9 +49,9 @@ def main(args):
         except file_utils.UnknownFormatError as e:
             print('Error: unrecognized input coordinates file extension ('+e.ext+')', file=sys.stderr)
             sys.exit(1)
+    formats_detected = list(set(from_forms))
     if verbose > 0:
-        formats_detected = set(from_forms)
-        print('# INPUT formats detected: '+str(list(formats_detected)), file=sys.stderr)
+        print('# INPUT formats detected: '+str(formats_detected), file=sys.stderr)
 
     # determine the output file format
     output_path = args.output
@@ -62,9 +62,13 @@ def main(args):
         # if output is to stdout and form is not set
         # then raise an error
         if to_form == 'auto':
-            print('Error: writing file to stdout and no output format (--to) set! Please tell me what format to write!')
-            sys.exit(1)
-        if to_form == 'box' or form == 'json':
+            if len(formats_detected) == 1:
+                # write the same output format as input format
+                to_form = from_forms[0]
+            else:
+                print('Error: writing file to stdout and multiple input formats present with no output format (--to) set! Please tell me what format to write!')
+                sys.exit(1)
+        if to_form == 'box' or to_form == 'json':
             print('Error: writing BOX or JSON output files requires a destination directory. Please set the --output parameter!')
             sys.exit(1)
 
@@ -96,44 +100,67 @@ def main(args):
     if verbose > 0:
         print('# OUTPUT format: ' + to_form)
 
-    # read the input files
-    dfs = []
-    for i in range(len(args.files)):
-        path = args.files[i]
-        coords = file_utils.read_coordinates(path, format=from_forms[i])
-        dfs.append(coords)
-    coords = pd.concat(dfs, axis=0)
-
-    # threshold particles by score (if there is a score)
     t = args.threshold
-    if 'score' in coords.columns:
-        coords = coords.loc[coords['score'] >= t]
 
-    # invert y-axis coordinates if specified
-    invert_y = args.invert_y
-    if invert_y:
-        if args.imagedir is None:
-            print('Error: --imagedir must specify the directory of images in order to mirror the y-axis coordinates', file=sys.stderr)
-            sys.exit(1)
+    # special case when inputs and outputs are all star files
+    if len(formats_detected) == 1 and formats_detected[0] == 'star' and to_form == 'star':
         dfs = []
-        for image_name,group in coords.groupby('image_name'):
-            impath = os.path.join(args.imagedir, image_name) + '.' + args.image_ext
-            # use glob incase image_ext is '*'
-            impath = glob.glob(impath)[0]
-            im = load_image(impath)
-            height = im.height
+        for path in args.files:
+            with open(path, 'r') as f:
+                table = star.parse(f)
+            dfs.append(table)
+        table = pd.concat(dfs, axis=0)
+        # convert  score column to float and apply threshold
+        if 'ParticleScore' in table.columns:
+            table['ParticleScore'] = table['ParticleScore'].astype(float)
+            table = table.loc[table['ParticleScore'] >= t]
+        # write output file
+        if output is None:
+            with open(output_path, 'w') as f:
+                star.write(table, f)
+        else:
+            star.write(table, output)
+    
 
-            group = mirror_y_axis(group, height)
-            dfs.append(group)
+    else: # general case
+
+        # read the input files
+        dfs = []
+        for i in range(len(args.files)):
+            path = args.files[i]
+            coords = file_utils.read_coordinates(path, format=from_forms[i])
+            dfs.append(coords)
         coords = pd.concat(dfs, axis=0)
 
-    # output file format is decided and coordinates are processed, now write files
-    if output is None and to_form != 'box' and to_form != 'json':
-        output = open(output_path, 'w')
-    if to_form == 'box' or to_form == 'json':
-        output = output_path
+        # threshold particles by score (if there is a score)
+        if 'score' in coords.columns:
+            coords = coords.loc[coords['score'] >= t]
 
-    file_utils.write_coordinates(output, coords, format=to_form, boxsize=boxsize, image_ext=image_ext)
+        # invert y-axis coordinates if specified
+        invert_y = args.invert_y
+        if invert_y:
+            if args.imagedir is None:
+                print('Error: --imagedir must specify the directory of images in order to mirror the y-axis coordinates', file=sys.stderr)
+                sys.exit(1)
+            dfs = []
+            for image_name,group in coords.groupby('image_name'):
+                impath = os.path.join(args.imagedir, image_name) + '.' + args.image_ext
+                # use glob incase image_ext is '*'
+                impath = glob.glob(impath)[0]
+                im = load_image(impath)
+                height = im.height
+
+                group = mirror_y_axis(group, height)
+                dfs.append(group)
+            coords = pd.concat(dfs, axis=0)
+
+        # output file format is decided and coordinates are processed, now write files
+        if output is None and to_form != 'box' and to_form != 'json':
+            output = open(output_path, 'w')
+        if to_form == 'box' or to_form == 'json':
+            output = output_path
+
+        file_utils.write_coordinates(output, coords, format=to_form, boxsize=boxsize, image_ext=image_ext)
 
 
 if __name__ == '__main__':

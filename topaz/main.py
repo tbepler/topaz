@@ -92,12 +92,16 @@ def main():
                        topaz.commands.convert,
                        topaz.commands.split,
                        topaz.commands.scale_coordinates,
+                       topaz.commands.particle_stack,
+                      ]
+                     ),
+                     ('[Deprecated]',
+                      [
                        topaz.commands.boxes_to_coordinates,
                        topaz.commands.star_to_coordinates,
                        topaz.commands.coordinates_to_star,
                        topaz.commands.coordinates_to_boxes,
                        topaz.commands.coordinates_to_eman2_json,
-                       topaz.commands.particle_stack,
                        topaz.commands.star_particles_threshold,
                       ]
                      ),
