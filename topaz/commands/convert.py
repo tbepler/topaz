@@ -11,7 +11,7 @@ from topaz.utils.conversions import mirror_y_axis
 
 
 name = 'convert'
-help = 'convert partice coordinate files between various formats automatically'
+help = 'convert particle coordinate files between various formats automatically'
 
 
 def add_arguments(parser):

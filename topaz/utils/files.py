@@ -100,6 +100,8 @@ def write_coordinates(path, table, format='auto', boxsize=0, image_ext='.mrc'):
             if k in table.columns:
                 table[v] = table[k]
                 table = table.drop(k, axis=1)
+        # append image extension
+        table['MicrographName'] = table['MicrographName'].apply(lambda x: x + image_ext)
         
         star.write(table, path)
 

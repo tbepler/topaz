@@ -64,6 +64,7 @@ def main():
     import topaz.commands.preprocess
 
     import topaz.commands.convert
+    import topaz.commands.split
     import topaz.commands.scale_coordinates
     import topaz.commands.boxes_to_coordinates 
     import topaz.commands.star_to_coordinates 
@@ -89,6 +90,7 @@ def main():
                      ('File utilities',
                       [
                        topaz.commands.convert,
+                       topaz.commands.split,
                        topaz.commands.scale_coordinates,
                        topaz.commands.boxes_to_coordinates,
                        topaz.commands.star_to_coordinates,
