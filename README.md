@@ -64,16 +64,16 @@ See https://conda.io/docs/user-guide/tasks/manage-environments.html or https://v
 
 #### Install the dependencies 
 
-Tested with python version 3.6, should work with python 2 but untested
+Tested with python 3.6 and 2.7
 
-- pytorch (0.2.0)
-- torchvision (0.1.9)
-- pillow (4.2.1)
-- numpy (1.13.1)
-- pandas (0.20.3) 
-- scipy (0.19.1)
-- scikit-learn (0.19.0)
-- cython (0.26)
+- pytorch (=0.2.0)
+- torchvision (=0.1.9)
+- pillow (>= 4.2.1)
+- numpy (>= 1.11)
+- pandas (>= 0.20.3) 
+- scipy (>= 0.19.1)
+- scikit-learn (>= 0.19.0)
+- cython (>= 0.26)
 
 Easy installation of dependencies
 ```
