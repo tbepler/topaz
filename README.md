@@ -105,11 +105,10 @@ Tested with python 3.6 and 2.7
 - pandas (>= 0.20.3) 
 - scipy (>= 0.19.1)
 - scikit-learn (>= 0.19.0)
-- cython (>= 0.26)
 
 Easy installation of dependencies
 ```
-conda install numpy pandas scikit-learn cython
+conda install numpy pandas scikit-learn
 conda install -c soumith pytorch=0.2.0 torchvision
 ```
 To install PyTorch for CUDA 8
@@ -138,11 +137,6 @@ pip install .
 To install for development use
 ```
 pip install -e .
-```
-
-To only compile the cython files
-```
-python setup.py build_ext --inplace
 ```
 
 </p></details>
