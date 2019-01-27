@@ -41,21 +41,16 @@ def read_coordinates(path, format='auto'):
             table = star.parse(f)
 
         # standardize the image name, x, y, and score column names
-        d = {'ParticleScore': 'score',
+        d = {star.SCORE_COLUMN_NAME: 'score',
              'MicrographName': 'image_name',
-             'CoordinateX': 'x_coord',
-             'CoordinateY': 'y_coord',
+             star.X_COLUMN_NAME: 'x_coord',
+             star.Y_COLUMN_NAME: 'y_coord',
              }
 
         for k,v in d.items():
             if k in table.columns:
                 table[v] = table[k]
                 table = table.drop(k, axis=1)
-        # convert coordinates to integers
-        table['x_coord'] = table['x_coord'].astype(float).astype(int)
-        table['y_coord'] = table['y_coord'].astype(float).astype(int)
-        if 'score' in table.columns:
-            table['score'] = table['score'].astype(float)
         # strip off image extension, but save this for later
         table['image_name'] = table['image_name'].apply(strip_ext) 
         particles = table
@@ -90,10 +85,10 @@ def write_coordinates(path, table, format='auto', boxsize=0, image_ext='.mrc'):
 
     elif format == 'star':
         # fix column names to be star format
-        d = {'score': 'ParticleScore',
+        d = {'score': star.SCORE_COLUMN_NAME,
              'image_name': 'MicrographName',
-             'x_coord': 'CoordinateX',
-             'y_coord': 'CoordinateY',
+             'x_coord': star.X_COLUMN_NAME,
+             'y_coord': star.Y_COLUMN_NAME,
              }
         table = table.copy()
         for k,v in d.items():
