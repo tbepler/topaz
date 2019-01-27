@@ -43,10 +43,9 @@ def main(args):
     if fmt == 'star':
         with open(path, 'r') as f:
             table = star.parse(f)
-        # convert  score column to float and apply threshold
-        if 'ParticleScore' in table.columns:
-            table['ParticleScore'] = table['ParticleScore'].astype(float)
-            table = table.loc[table['ParticleScore'] >= t]
+        # apply score threshold
+        if star.SCORE_COLUMN_NAME in table.columns:
+            table = table.loc[table[star.SCORE_COLUMN_NAME] >= t]
 
         # write per micrograph files
         for image_name,group in table.groupby('MicrographName'):

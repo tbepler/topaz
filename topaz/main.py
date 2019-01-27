@@ -91,12 +91,12 @@ def main():
                       [
                        topaz.commands.convert,
                        topaz.commands.split,
-                       topaz.commands.scale_coordinates,
                        topaz.commands.particle_stack,
                       ]
                      ),
                      ('[Deprecated]',
                       [
+                       topaz.commands.scale_coordinates,
                        topaz.commands.boxes_to_coordinates,
                        topaz.commands.star_to_coordinates,
                        topaz.commands.coordinates_to_star,

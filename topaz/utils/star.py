@@ -2,6 +2,11 @@ from __future__ import print_function,division
 
 import pandas as pd
 
+X_COLUMN_NAME = 'CoordinateX'
+Y_COLUMN_NAME = 'CoordinateY'
+SCORE_COLUMN_NAME = 'AutopickFigureOfMerit'
+OLD_SCORE_COLUMN_NAME = 'ParticleScore'
+
 def parse_star(f):
     return parse(f)
 
@@ -32,7 +37,22 @@ def parse_star_body(lines):
             tokens = line.split()
             content.append(tokens)
 
-    return pd.DataFrame(content, columns=header)
+    table = pd.DataFrame(content, columns=header)
+
+    # check for old naming convention, 'ParticleScore'
+    if OLD_SCORE_COLUMN_NAME in table.columns and SCORE_COLUMN_NAME not in table.columns:
+        table[SCORE_COLUMN_NAME] = table[OLD_SCORE_COLUMN_NAME]
+        table = table.drop(OLD_SCORE_COLUMN_NAME, axis=1)
+
+    # convert columns to correct data type
+    if X_COLUMN_NAME in table:
+        table[X_COLUMN_NAME] = table[X_COLUMN_NAME].astype(float).astype(int)
+    if Y_COLUMN_NAME in table:
+        table[Y_COLUMN_NAME] = table[Y_COLUMN_NAME].astype(float).astype(int)
+    if SCORE_COLUMN_NAME in table:
+        table[SCORE_COLUMN_NAME] = table[SCORE_COLUMN_NAME].astype(float)
+
+    return table
 
 
 def parse_star_loop(lines):
@@ -53,6 +73,7 @@ def parse_star_loop(lines):
         columns.append(name)
     return columns, lines[i:]
 
+
 def write(table, f):
     ## write the star file
     print('data_images', file=f)
@@ -61,3 +82,6 @@ def write(table, f):
         print('_rln' + name + ' #' + str(i+1), file=f)
 
     table.to_csv(f, sep='\t', index=False, header=False)
+
+
+

@@ -11,7 +11,7 @@ from topaz.utils.conversions import mirror_y_axis
 
 
 name = 'convert'
-help = 'convert particle coordinate files between various formats automatically. also allows filtering particles by score threshold.'
+help = 'convert particle coordinate files between various formats automatically. also allows filtering particles by score threshold and UP- and DOWN-scaling coordinates.'
 
 
 def add_arguments(parser):
@@ -23,8 +23,12 @@ def add_arguments(parser):
     parser.add_argument('--to', choices=['auto', 'coord', 'star', 'json', 'box'], default='auto'
                        , help='file format of the OUTPUT file. NOTE: when converting to JSON or BOX formats, OUTPUT must specify the destination directory. (default: detect format automatically based on file extension)')
 
-    # arguments for file format specific parameters
+    # arguments for thresholding/scaling coordinates
     parser.add_argument('-t', '--threshold', type=float, default=-np.inf, help='threshold the particles by score (optional)')
+    parser.add_argument('-s', '--down-scale', type=float, default=1, help='DOWN-scale coordinates by this factor. new coordinates will be coord_new = (x/s)*coord_cur. (default: 1)')
+    parser.add_argument('-x', '--up-scale', type=float, default=1, help='UP-scale coordinates by this factor. new coordinates will be coord_new = (x/s)*coord_cur. (default: 1)')
+
+    # arguments for file format specific parameters
     parser.add_argument('--invert-y', action='store_true', help='invert (mirror) the y-axis particle coordinates. requires also specifying --imagedir.')
     parser.add_argument('--imagedir', help='directory of images. only required to invert the y-axis - sometimes necessary for particles picked on .tiff images')
     parser.add_argument('--image-ext', default='.mrc', help='image file extension. required for converting to STAR and BOX formats and to find images when --invert-y is set. (default=.mrc)')
@@ -101,6 +105,9 @@ def main(args):
         print('# OUTPUT format: ' + to_form)
 
     t = args.threshold
+    down_scale = args.down_scale
+    up_scale = args.up_scale
+    scale = up_scale/down_scale
 
     # special case when inputs and outputs are all star files
     if len(formats_detected) == 1 and formats_detected[0] == 'star' and to_form == 'star':
@@ -111,9 +118,16 @@ def main(args):
             dfs.append(table)
         table = pd.concat(dfs, axis=0)
         # convert  score column to float and apply threshold
-        if 'ParticleScore' in table.columns:
-            table['ParticleScore'] = table['ParticleScore'].astype(float)
-            table = table.loc[table['ParticleScore'] >= t]
+        if star.SCORE_COLUMN_NAME in table.columns:
+            table = table.loc[table[star.SCORE_COLUMN_NAME] >= t]
+        # scale coordinates
+        if scale != 1:
+            x_coord = table[star.X_COLUMN_NAME].values
+            x_coord = np.round(scale*x_coord).astype(int)
+            table[star.X_COLUMN_NAME] = x_coord
+            y_coord = table[star.Y_COLUMN_NAME].values
+            y_coord = np.round(scale*y_coord).astype(int)
+            table[star.Y_COLUMN_NAME] = y_coord
         # write output file
         if output is None:
             with open(output_path, 'w') as f:
@@ -135,6 +149,15 @@ def main(args):
         # threshold particles by score (if there is a score)
         if 'score' in coords.columns:
             coords = coords.loc[coords['score'] >= t]
+
+        # scale coordinates
+        if scale != 1:
+            x_coord = coords['x_coord'].values
+            x_coord = np.round(scale*x_coord).astype(int)
+            coords['x_coord'] = x_coord
+            y_coord = coords['y_coord'].values
+            y_coord = np.round(scale*y_coord).astype(int)
+            coords['y_coord'] = y_coord
 
         # invert y-axis coordinates if specified
         invert_y = args.invert_y
