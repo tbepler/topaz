@@ -11,7 +11,8 @@ of objects per image.
 def stratify(labels, nbins=5):
     strata = []
     for source,group in labels.groupby('source'):
-        buckets = pd.qcut(group['count'], nbins, labels=False, duplicates='drop')
+        counts = group['count'].rank(method='first')
+        buckets = pd.qcut(counts, nbins, labels=False) #, duplicates='drop')
         for ident in buckets.unique():
             I = buckets == ident
             g = group.loc[I]

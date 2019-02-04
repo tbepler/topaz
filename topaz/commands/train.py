@@ -12,6 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
+import topaz.utils.files as file_utils
 from topaz.utils.printing import report
 from topaz.utils.data.loader import load_images_from_list
 from topaz.utils.data.coordinates import match_coordinates_to_images
@@ -203,7 +204,7 @@ def load_data(train_images, train_targets, test_images, test_targets, radius
         random = np.random.RandomState(cross_validation_seed)
         ## make the split
         train_images, train_targets, test_images, test_targets = cross_validation_split(k_fold, fold, train_images, train_targets, random=random)
-       
+
     return train_images, train_targets, test_images, test_targets
 
 def report_data_stats(train_images, train_targets, test_images, test_targets):
