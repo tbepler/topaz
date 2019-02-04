@@ -63,6 +63,8 @@ def main():
     import topaz.commands.normalize
     import topaz.commands.preprocess
 
+    import topaz.commands.gui
+
     import topaz.commands.convert
     import topaz.commands.split
     import topaz.commands.scale_coordinates
@@ -92,6 +94,11 @@ def main():
                        topaz.commands.convert,
                        topaz.commands.split,
                        topaz.commands.particle_stack,
+                      ]
+                     ),
+                     ('GUI',
+                      [
+                       topaz.commands.gui,
                       ]
                      ),
                      ('[Deprecated]',
