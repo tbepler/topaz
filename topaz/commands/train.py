@@ -26,11 +26,16 @@ def add_arguments(parser):
     parser.add_argument('--test-images', help='path to file listing the test images, optional')
     parser.add_argument('--test-targets', help='path to file listing the testing particle coordinates, optional')
 
+    ## optional format of the particle coordinates file
+    parser.add_argument('--format', dest='format_', choices=['auto', 'coord', 'csv', 'star', 'box'], default='auto'
+                       , help='file format of the INPUT file (default: detect format automatically based on file extension)')
+
     ## cross-validation k-fold split options
     parser.add_argument('-k', '--k-fold', default=0, type=int, help='option to split the training set into K folds for cross validation (default: not used)')
     parser.add_argument('--fold', default=0, type=int, help='when using K-fold cross validation, sets which fold is used as the heldout test set (default: 0)')
     parser.add_argument('--cross-validation-seed', default=42, type=int, help='random seed for partitioning data into folds (default: 42)')
 
+    # training parameters
     parser.add_argument('--radius', default=0, type=int, help='pixel radius around particle centers to consider positive (default: 0)')
 
     parser.add_argument('-m', '--model', default='resnet8', help='model type to fit (default: resnet8)')
@@ -64,11 +69,14 @@ def add_arguments(parser):
     parser.add_argument('--num-workers', default=0, type=int, help='number of worker processes for data augmentation (default: 0)')
     parser.add_argument('--test-batch-size', default=1, type=int, help='batch size for calculating test set statistics (default: 1)')
 
+
+    ## device and output files
     parser.add_argument('-d', '--device', default=0, type=int, help='which device to use, set to -1 to force CPU (default: 0)')
 
     parser.add_argument('--save-prefix', help='path prefix to save trained models each epoch')
     parser.add_argument('-o', '--output', help='destination to write the train/test curve')
 
+    ## only describe the model
     parser.add_argument('--describe', action='store_true', help='only prints a description of the model, does not train')
 
     return parser
@@ -164,10 +172,12 @@ def cross_validation_split(k, fold, images, targets, random=np.random):
     return train_images, train_targets, test_images, test_targets
 
 def load_data(train_images, train_targets, test_images, test_targets, radius
-             , k_fold=0, fold=0, cross_validation_seed=42):
+             , k_fold=0, fold=0, cross_validation_seed=42, format_='auto'):
 
     train_images = pd.read_csv(train_images, sep='\t') # training image file list
-    train_targets = pd.read_csv(train_targets, sep='\t') # training particle coordinates file
+    #train_targets = pd.read_csv(train_targets, sep='\t') # training particle coordinates file
+    train_targets = file_utils.read_coordinates(train_targets, format=format_)
+
     # check for source columns
     if 'source' not in train_images and 'source' not in train_targets:
         train_images['source'] = 0
@@ -179,7 +189,8 @@ def load_data(train_images, train_targets, test_images, test_targets, radius
     
     if test_images is not None:
         test_images = pd.read_csv(test_images, sep='\t')
-        test_targets = pd.read_csv(test_targets, sep='\t')
+        #test_targets = pd.read_csv(test_targets, sep='\t')
+        test_targets = file_utils.read_coordinates(test_targets, format=format_)
         # check for source columns
         if 'source' not in test_images and 'source' not in test_targets:
             test_images['source'] = 0
@@ -450,6 +461,7 @@ def main(args):
                       args.test_images,
                       args.test_targets,
                       radius,
+                      format_=args.format_,
                       k_fold=args.k_fold,
                       fold=args.fold,
                       cross_validation_seed=args.cross_validation_seed,

@@ -18,9 +18,9 @@ def add_arguments(parser):
     parser.add_argument('files', nargs='+', help='path to input particle file(s). when multiple input files are given, they are concatentated into a single output file.')
     parser.add_argument('-o', '--output', help='path to output particle file (default: stdout)')
 
-    parser.add_argument('--from', dest='_from', choices=['auto', 'coord', 'star', 'box'], default='auto'
+    parser.add_argument('--from', dest='_from', choices=['auto', 'coord', 'csv', 'star', 'box'], default='auto'
                        , help='file format of the INPUT file (default: detect format automatically based on file extension)')
-    parser.add_argument('--to', choices=['auto', 'coord', 'star', 'json', 'box'], default='auto'
+    parser.add_argument('--to', choices=['auto', 'coord', 'csv', 'star', 'json', 'box'], default='auto'
                        , help='file format of the OUTPUT file. NOTE: when converting to JSON or BOX formats, OUTPUT must specify the destination directory. (default: detect format automatically based on file extension)')
 
     # arguments for thresholding/scaling coordinates
