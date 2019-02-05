@@ -3,6 +3,7 @@ from __future__ import print_function, division
 
 import os
 import sys
+import glob
 
 import numpy as np
 import pandas as pd
@@ -22,14 +23,15 @@ help = 'train region classifier from images with labeled coordinates'
 
 def add_arguments(parser):
 
-    parser.add_argument('--train-images', help='path to file listing the training images')
+    parser.add_argument('--train-images', help='path to file listing the training images. also accepts directory path from which all images are loaded.')
     parser.add_argument('--train-targets', help='path to file listing the training particle coordinates')
-    parser.add_argument('--test-images', help='path to file listing the test images, optional')
+    parser.add_argument('--test-images', help='path to file listing the test images. also accepts directory path from which all images are loaded. option.')
     parser.add_argument('--test-targets', help='path to file listing the testing particle coordinates, optional')
 
     ## optional format of the particle coordinates file
     parser.add_argument('--format', dest='format_', choices=['auto', 'coord', 'csv', 'star', 'box'], default='auto'
                        , help='file format of the INPUT file (default: detect format automatically based on file extension)')
+    parser.add_argument('--image-ext', default='', help='sets the image extension if loading images from directory. should include "." before the extension (e.g. .tiff). (default: find all extensions)')
 
     ## cross-validation k-fold split options
     parser.add_argument('-k', '--k-fold', default=0, type=int, help='option to split the training set into K folds for cross validation (default: not used)')
@@ -173,9 +175,22 @@ def cross_validation_split(k, fold, images, targets, random=np.random):
     return train_images, train_targets, test_images, test_targets
 
 def load_data(train_images, train_targets, test_images, test_targets, radius
-             , k_fold=0, fold=0, cross_validation_seed=42, format_='auto'):
+             , k_fold=0, fold=0, cross_validation_seed=42, format_='auto', image_ext=''):
 
-    train_images = pd.read_csv(train_images, sep='\t') # training image file list
+    # if train_images is a directory path, map to all images in the directory
+    if train_images.endswith(os.sep):
+        paths = glob.glob(train_images + '*' + image_ext)
+        valid_paths = []
+        image_names = []
+        for path in paths:
+            name = os.path.basename(path)
+            name,ext = os.path.splitext(name)
+            if ext in ['.mrc', '.tiff', '.png']:
+                image_names.append(name)
+                valid_paths.append(path)
+        train_images = pd.DataFrame({'image_name': image_names, 'path': valid_paths})
+    else:
+        train_images = pd.read_csv(train_images, sep='\t') # training image file list
     #train_targets = pd.read_csv(train_targets, sep='\t') # training particle coordinates file
     train_targets = file_utils.read_coordinates(train_targets, format=format_)
 
@@ -189,7 +204,19 @@ def load_data(train_images, train_targets, test_images, test_targets, radius
     train_images, train_targets = match_images_targets(train_images, train_targets, radius)
     
     if test_images is not None:
-        test_images = pd.read_csv(test_images, sep='\t')
+        if test_images.endswith(os.sep):
+            paths = glob.glob(test_images + '*' + image_ext)
+            valid_paths = []
+            image_names = []
+            for path in paths:
+                name = os.path.basename(path)
+                name,ext = os.path.splitext(name)
+                if ext in ['.mrc', '.tiff', '.png']:
+                    image_names.append(name)
+                    valid_paths.append(path)
+            test_images = pd.DataFrame({'image_name': image_names, 'path': valid_paths})
+        else:
+            test_images = pd.read_csv(test_images, sep='\t')
         #test_targets = pd.read_csv(test_targets, sep='\t')
         test_targets = file_utils.read_coordinates(test_targets, format=format_)
         # check for source columns
@@ -466,6 +493,7 @@ def main(args):
                       k_fold=args.k_fold,
                       fold=args.fold,
                       cross_validation_seed=args.cross_validation_seed,
+                      image_ext=args.image_ext
                      )
     num_positive_regions, total_regions = report_data_stats(train_images, train_targets
                                                            , test_images, test_targets)

@@ -8,6 +8,7 @@ from PIL import Image
 import torch
 
 import topaz.mrc as mrc
+from topaz.utils.image import unquantize
 
 class ImageDirectoryLoader:
     def __init__(self, rootdir, pathspec=os.path.join('{source}', '{image_name}'), format='tiff'
@@ -53,7 +54,7 @@ def load_mrc(path, standardize=False):
         image /= header.rms
     return Image.fromarray(image)
 
-def load_pil(path, standardize=False):
+def load_tiff(path, standardize=False):
     image = Image.open(path)
     fp = image.fp
     image.load()
@@ -63,6 +64,24 @@ def load_pil(path, standardize=False):
         image = (image - image.mean())/image.std()
         image = Image.fromarray(image)
     return image
+
+def load_png(path, standardize=False):
+    image = Image.open(path)
+    fp = image.fp
+    image.load()
+    fp.close()
+    x = np.array(image, copy=False)
+    x = unquantize(x)
+    if standardize:
+        x = (x - x.mean())/x.std()
+    image = Image.fromarray(x)
+    return image
+
+
+def load_pil(path, standardize=False):
+    if path.endswith('.png'):
+        return load_png(path)
+    return load_tiff(path)
 
 
 def load_image(path, standardize=False):
