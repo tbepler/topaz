@@ -16,7 +16,7 @@ def as_mask(shape, x_coord, y_coord, radii):
         threshold = radius**2
         
         d2 = (xgrid - x)**2 + (ygrid - y)**2
-        mask += (d2 < threshold)
+        mask += (d2 <= threshold)
 
     mask = np.clip(mask, 0, 1)
     return mask
