@@ -86,6 +86,23 @@ def write_via_csv(path, table):
     via_table.to_csv(path, index=False)
 
 
+def read_box(path):
+    # columns are separated by some number of spaces
+    # and are ordered as x,y,width,height
+    table = []
+    with open(path, 'r') as f:
+        for line in f:
+            if line != '':
+                tokens = line.split()
+                x = int(tokens[0])
+                y = int(tokens[1])
+                w = int(tokens[2])
+                h = int(tokens[3])
+                table.append([x,y,w,h])
+    table = np.array(table, dtype=int)
+    return table
+
+
 def read_coordinates(path, format='auto'):
     if format == 'auto':
         format = detect_format(path)
@@ -110,7 +127,7 @@ def read_coordinates(path, format='auto'):
         particles = table
 
     elif format == 'box':
-        box = pd.read_csv(path, sep='\t', header=None).values
+        box = read_box(path)
         image_name = os.path.basename(os.path.splitext(path)[0])
         particles = boxes_to_coordinates(box, image_name=image_name)
     elif format == 'csv':
