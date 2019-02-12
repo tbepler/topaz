@@ -23,6 +23,8 @@ def add_arguments(parser):
     parser.add_argument('--to', choices=['auto', 'coord', 'csv', 'star', 'json', 'box'], default='auto'
                        , help='file format of the OUTPUT file. NOTE: when converting to JSON or BOX formats, OUTPUT must specify the destination directory. (default: detect format automatically based on file extension)')
 
+    parser.add_argument('--suffix', default='', help='suffix to append to file names when writing to directory (default: none)')
+
     # arguments for thresholding/scaling coordinates
     parser.add_argument('-t', '--threshold', type=float, default=-np.inf, help='threshold the particles by score (optional)')
     parser.add_argument('-s', '--down-scale', type=float, default=1, help='DOWN-scale coordinates by this factor. new coordinates will be coord_new = (x/s)*coord_cur. (default: 1)')
@@ -104,6 +106,8 @@ def main(args):
     if verbose > 0:
         print('# OUTPUT format: ' + to_form)
 
+    suffix = args.suffix
+
     t = args.threshold
     down_scale = args.down_scale
     up_scale = args.up_scale
@@ -183,7 +187,7 @@ def main(args):
         if to_form == 'box' or to_form == 'json':
             output = output_path
 
-        file_utils.write_coordinates(output, coords, format=to_form, boxsize=boxsize, image_ext=image_ext)
+        file_utils.write_coordinates(output, coords, format=to_form, boxsize=boxsize, image_ext=image_ext, suffix=suffix)
 
 
 if __name__ == '__main__':

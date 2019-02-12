@@ -19,6 +19,8 @@ def add_arguments(parser):
     parser.add_argument('--format', dest='_from', choices=['auto', 'coord', 'star'], default='auto'
                        , help='file format of the INPUT file. outputs will be written in the same format. (default: detect format automatically based on file extension)')
 
+    parser.add_argument('--suffix', default='', help='suffix to append to file names (default: none)')
+
     # arguments for file format specific parameters
     parser.add_argument('-t', '--threshold', type=float, default=-np.inf, help='threshold the particles by score (optional)')
 
@@ -37,6 +39,8 @@ def main(args):
             print('Error: unrecognized input coordinates file extension ('+e.ext+')', file=sys.stderr)
             sys.exit(1)
     _,ext = os.path.splitext(path)
+    
+    suffix = args.suffix
 
     t = args.threshold
     base = args.output
@@ -50,7 +54,7 @@ def main(args):
         # write per micrograph files
         for image_name,group in table.groupby('MicrographName'):
             image_name,_ = os.path.splitext(image_name)
-            path = base + '/' + image_name + ext
+            path = base + '/' + image_name + suffix + ext
             with open(path, 'w') as f:
                 star.write(group, f)
     else: # format is coordinate table
@@ -59,7 +63,7 @@ def main(args):
             table = table.loc[table['score'] >= t]
         # write per micrograph files
         for image_name,group in table.groupby('image_name'):
-            path = base + '/' + image_name + ext
+            path = base + '/' + image_name + suffix + ext
             group.to_csv(path, sep='\t', index=False)
 
 

@@ -139,18 +139,18 @@ def read_coordinates(path, format='auto'):
     return particles
 
 
-def write_coordinates(path, table, format='auto', boxsize=0, image_ext='.mrc'):
+def write_coordinates(path, table, format='auto', boxsize=0, image_ext='.mrc', suffix=''):
     if format == 'box' or format == 'json':
         # writing separate file per image
         for image_name,group in table.groupby('image_name'):
             if format == 'box':
-                this_path = path + '/' + image_name + '.box'
+                this_path = path + '/' + image_name + suffix + '.box'
                 xy = group[['x_coord', 'y_coord']].values.astype(np.int32)
                 boxes = coordinates_to_boxes(xy, boxsize, boxsize)
                 boxes = pd.DataFrame(boxes)
                 boxes.to_csv(this_path, sep='\t', header=False, index=False)
             else: # json format
-                this_path = path + '/' + image_name + '_info.json'
+                this_path = path + '/' + image_name + suffix + '_info.json'
                 xy = group[['x_coord','y_coord']].values.astype(int)
                 boxes = coordinates_to_eman2_json(xy)
                 with open(this_path, 'w') as f:
