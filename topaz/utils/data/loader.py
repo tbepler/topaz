@@ -124,6 +124,41 @@ def load_images_from_list(names, paths, sources=None, standardize=False):
     return images
 
 
+class LabeledRegionsDataset:
+    def __init__(self, images, labels, crop):
+        self.images = images
+        self.labels = labels
+        self.crop = crop
+
+        # precalculate the number of regions
+        n = len(self.images)
+        im = self.images[0]
+        self.size = im.width*im.height
+        self.n = n*self.size
+
+    def __len__(self):
+        return self.n
+
+    def __getitem__(self, k):
+        i = k//self.size
+        im = self.images[i]
+
+        j = k % self.size
+
+        label = self.labels[i].ravel()[j]
+
+        ## crop the image
+        x = j % im.width
+        y = j // im.width
+        xmi = x - self.crop//2
+        xma = xmi + self.crop
+        ymi = y - self.crop//2
+        yma = ymi + self.crop
+        im = im.crop((xmi, ymi, xma, yma))
+
+        return im, label
+
+
 class LabeledImageCropDataset:
     def __init__(self, images, labels, crop):
         self.images = images
