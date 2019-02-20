@@ -71,13 +71,16 @@ def main():
 
     import topaz.commands.convert
     import topaz.commands.split
+    import topaz.commands.particle_stack
+    import topaz.commands.train_test_split
+
+    # deprecated
     import topaz.commands.scale_coordinates
     import topaz.commands.boxes_to_coordinates 
     import topaz.commands.star_to_coordinates 
     import topaz.commands.coordinates_to_star
     import topaz.commands.coordinates_to_boxes
     import topaz.commands.coordinates_to_eman2_json
-    import topaz.commands.particle_stack
     import topaz.commands.star_particles_threshold
 
     module_groups = [('Particle picking',
@@ -99,6 +102,7 @@ def main():
                        topaz.commands.convert,
                        topaz.commands.split,
                        topaz.commands.particle_stack,
+                       topaz.commands.train_test_split,
                       ]
                      ),
                      ('GUI',

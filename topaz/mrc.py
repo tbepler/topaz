@@ -186,6 +186,9 @@ def make_header(shape, cella, cellb, mz=1, dtype=np.float32, order=(1,2,3), dmin
 
 
 def write(f, array, header=None, extended_header=b'', ax=1, ay=1, az=1, alpha=0, beta=0, gamma=0):
+    # make sure the array contains float32
+    array = array.astype(np.float32)
+
     exthd_size = len(extended_header)
     if header is None:
         header = MRCHeader( array.shape[2], array.shape[1], array.shape[0], # nx, ny, nz
