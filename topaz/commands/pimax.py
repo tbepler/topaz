@@ -55,14 +55,14 @@ def add_arguments(parser):
 
     training.add_argument('--learning-rate', default=0.0003, type=float, help='learning rate for the optimizer (default: 0.0003)') 
 
-    training.add_argument('--minibatch-size', default=256, type=int, help='number of data points per minibatch (default: 256)')
+    training.add_argument('--minibatch-size', default=1024, type=int, help='number of data points per minibatch (default: 1024)')
     training.add_argument('--num-steps', default=100000, type=int, help='number of SGD steps to train each model for (default: 100k)')
 
 
     model = parser.add_argument_group('model arguments (optional)')
 
     model.add_argument('--size', type=int, default=31, help='window size for the classifier (default: 31)')
-    model.add_argument('--hidden-dim', type=int, default=50, help='hidden dimension of the classifier (default: 50)')
+    model.add_argument('--hidden-dim', type=int, default=200, help='hidden dimension of the classifier (default: 200)')
 
 
     outputs = parser.add_argument_group('output file arguments (optional)')
@@ -245,21 +245,20 @@ def fit_steps(model, optim, data_iterator, num_steps, use_cuda=False):
 
 def predict(models, images, use_cuda=False, padding=0):
     predicts = []
-    for image_list in images:
-        logits = []
-        for im in image_list:
-            x = Variable(torch.from_numpy(x), requires_grad=False)
-            x = x.view(1, 1, x.size(0), x.size(1))
-            if padding > 0:
-                x = F.pad(x, (padding,padding,padding,padding))
-            p = 0
-            for model in models:
-                p = model(x).data + p
+    for im in images:
+        x = np.array(im, copy=False)
+        x = Variable(torch.from_numpy(x), requires_grad=False)
+        if use_cuda:
+            x = x.cuda()
+        x = x.view(1, 1, x.size(0), x.size(1))
+        if padding > 0:
+            x = F.pad(x, (padding,padding,padding,padding))
+        p = 0
+        for model in models:
+            p = torch.sigmoid(model(x)).data + p
 
-            p /= len(models)
-            logits.append(p.cpu().numpy())
-        
-        predicts.append(logits)
+        p /= len(models)
+        predicts.append(p.cpu().numpy())
 
     return predicts
 
@@ -339,16 +338,189 @@ def main(args):
         for i in range(len(test_targets)):
             t = test_targets[i]
             y = y_list[i]
-            for j in range(len(t)):
-                labels.append(t[j].ravel())
-                logits.append(y[j].ravel())
-
+            labels.append(t.ravel())
+            logits.append(y.ravel())
     
     ## concatenate the labels and logits
     ## then proceed with alphamax algorithm
 
     labels = np.concatenate(labels, 0)
     logits = np.concatenate(logits, 0)
+
+    print(len(labels), len(logits))
+    """
+    # subsample data if too big
+    ns = 500
+    if len(labels) > ns:
+        index = np.random.choice(len(labels), size=ns, replace=False)
+        labels = labels[index]
+        logits = logits[index]
+    """
+
+    ## we need to estimate the density of the logits
+    ## using a non-parametric model (in this case, histogram based)
+    x_1 = logits[labels == 1] # these are our positive data points
+    x = logits # these are all data points
+
+    # make kernel density estimate based on histogram
+    mi = np.min(x)
+    ma = np.max(x)
+    bins = np.linspace(mi, ma, 201)
+
+    index = np.digitize(x, bins[1:-1])
+    index_1 = index[labels == 1]
+
+    # find the weight of each bin
+    c,_ = np.histogram(x, bins=bins)
+    w = c/c.sum()
+    c,_ = np.histogram(x_1, bins=bins)
+    w_1 = c/c.sum()
+
+    # now, make kernel density estimate
+    k = w[index]
+    k_1 = k[labels == 1]
+
+    f_hat_1 = w_1[index]
+
+    index = torch.from_numpy(index)
+    index_1 = torch.from_numpy(index_1)
+    w = torch.from_numpy(w)
+    w_1 = torch.from_numpy(w_1)
+    k = torch.from_numpy(k)
+    k_1 = torch.from_numpy(k_1)
+    f_hat_1 = torch.from_numpy(f_hat_1)
+
+    index = Variable(index, requires_grad=False)
+    index_1 = Variable(index_1, requires_grad=False)
+    w = Variable(w, requires_grad=False)
+    w_1 = Variable(w_1, requires_grad=False)
+    k = Variable(k, requires_grad=False)
+    k_1 = Variable(k_1, requires_grad=False)
+    f_hat_1 = Variable(f_hat_1, requires_grad=False)
+
+    # define the optimization problem
+    def nll(beta):
+        beta = torch.from_numpy(beta)
+        beta = Variable(beta, requires_grad=False)
+
+        b = beta[index]
+        b_1 = beta[index_1]
+
+        h_1 = torch.sum(torch.log(b_1*k_1 + 1e-10))
+
+        alpha = torch.sum(w*beta)
+        h_0 = (1-alpha)*(1-b)*k/torch.sum((1-beta)*w)
+        f_1 = alpha*b*f_hat_1/torch.sum(beta*w_1)
+
+        h = f_1 + h_0
+        h = torch.sum(torch.log(h + 1e-10))
+
+        loss = -h_1 - h
+        return loss.data[0]
+
+    def nll_jac(beta): # Jacobian of the NLL
+        beta = torch.from_numpy(beta)
+        beta = Variable(beta, requires_grad=True)
+
+        b = beta[index]
+        b_1 = beta[index_1]
+
+        h_1 = torch.sum(torch.log(b_1*k_1 + 1e-10))
+
+        alpha = torch.sum(w*beta)
+        h_0 = (1-alpha)*(1-b)*k/torch.sum((1-beta)*w)
+        f_1 = alpha*b*f_hat_1/torch.sum(beta*w_1)
+
+        h = f_1 + h_0
+        h = torch.sum(torch.log(h + 1e-10))
+
+        nll = -h_1 - h
+
+        nll.backward()
+        beta_grad = beta.grad.data.numpy()
+        return beta_grad
+
+
+    # for each alpha slice, find optimal beta
+    from scipy.optimize import minimize
+
+    # what values do we want to try?
+    alphas = np.linspace(0, 0.5, 101)
+    alphas = alphas[1:] # discard pi=0
+    loglike = np.zeros(len(alphas))
+    for i in range(len(alphas)):
+        alpha = alphas[i]
+        beta_init = alpha*np.ones(len(bins)-1)
+        # define constraint
+        constraint = {'type': 'eq'
+                     ,'fun': lambda a: np.mean(a) - alpha
+                     ,'jac': lambda a: np.ones_like(a)/len(a)
+                     }
+        bounds = [(0,1)]*len(beta_init)
+        result = minimize(nll, jac=nll_jac, x0=beta_init, bounds=bounds, constraints=constraint)
+        loglike[i] = -result.fun
+        print(alpha, loglike[i])
+
+    """
+    # make kernel density estimate based on Gaussian KDE
+    s2 = 0.1
+    k = np.exp(-(x - x[:,np.newaxis])**2/s2)/len(x)
+    k_1 = k[labels == 1]
+    log_k = -(x - x[:,np.newaxis])**2/s2 - np.log(len(x))
+    log_k_1 = log_k[labels == 1]
+    log_k_hat_1 = -(x_1 - x[:,np.newaxis])**2/s2 - np.log(len(x_1)) # estimate for all x using only x_1
+    k_hat_1 = np.exp(log_k_hat_1) # estimate for all x using only x_1
+    f_hat_1 = np.sum(k_hat_1, 1) # probability of x given x_1
+
+    def logsumexp(a):
+        ma = np.max(a, axis=1, keepdims=True)
+        s = np.exp(a - ma).sum(axis=1, keepdims=True)
+        ls = ma + np.log(s)
+        return ls[:,0]
+
+    def logsumexp2(a, b):
+        ma = np.maximum(a, b)
+        s = np.exp(a - ma) + np.exp(b - ma)
+        return ma + np.log(s)
+
+
+    # define the optimization problem
+    def nll(beta):
+        log_beta = np.log(beta)
+        # first term is over only positives
+        log_h_1 = np.sum(logsumexp(log_beta + log_k_1))
+
+        alpha = np.mean(beta)
+        log_1_m_beta = np.log(1-beta)
+
+        log_h_0 = logsumexp(log_1_m_beta + log_k) + np.log(1-alpha)
+        log_f_1 = np.log(f_hat_1) + np.log(alpha)
+        log_h = np.sum(logsumexp2(log_f_1, log_h_0))
+
+        return -log_h_1 - log_h
+
+    # for each alpha slice, find optimal beta
+    from scipy.optimize import minimize
+
+    # what values do we want to try?
+    alphas = np.linspace(0.001, 0.5, 100)
+    loglike = np.zeros(len(alphas))
+    for i in range(len(alphas)):
+        alpha = alphas[i]
+        beta_init = alpha*np.ones(len(x))
+        # define constraint
+        constraint = {'type': 'eq'
+                     ,'fun': lambda a: np.mean(a) - alpha
+                     }
+        bounds = [(0,1)]*len(beta_init)
+        result = minimize(nll, x0=beta_init, bounds=bounds, constraints=constraint)
+        loglike[i] = -result.fun
+        print(alpha, loglike[i])
+    """
+        
+    print(alphas)
+    print(loglike)
+
 
     report('Done!')
 

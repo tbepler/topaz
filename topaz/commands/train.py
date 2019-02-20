@@ -7,6 +7,7 @@ import glob
 
 import numpy as np
 import pandas as pd
+import multiprocessing as mp
 
 import torch
 import torch.nn as nn
@@ -27,7 +28,7 @@ def add_arguments(parser):
     parser.add_argument('--describe', action='store_true', help='only prints a description of the model, does not train')
     # set GPU and number of worker threads
     parser.add_argument('-d', '--device', default=0, type=int, help='which device to use, set to -1 to force CPU (default: 0)')
-    parser.add_argument('--num-workers', default=0, type=int, help='number of worker processes for data augmentation (default: 0)')
+    parser.add_argument('--num-workers', default=0, type=int, help='number of worker processes for data augmentation, if set to <0, automatically uses all CPUs available (default: 0)')
 
     # group arguments into sections
 
@@ -446,6 +447,9 @@ def make_data_iterators(train_images, train_targets, test_images, test_targets
     epoch_size = args.epoch_size
     num_epochs = args.num_epochs
     num_workers = args.num_workers
+    if num_workers < 0: # set num workers to use all CPUs
+        num_workers = mp.cpu_count()
+
     testing_batch_size = args.test_batch_size
     balance = args.minibatch_balance # ratio of positive to negative in minibatch
     if args.natural:
