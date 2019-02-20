@@ -19,7 +19,7 @@ def main(args):
     # where is the GUI
     root = os.path.dirname(topaz.main.__file__)
     root = os.path.dirname(root)
-    gui_path = os.path.join(root, 'gui', 'full.html')
+    gui_path = os.path.join(root, 'gui', 'topaz.html')
 
     # open the GUI
     webbrowser.open('file://' + os.path.realpath(gui_path), new=2)

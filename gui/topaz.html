@@ -3,11 +3,6 @@
   <head>
     <meta charset="UTF-8">
     <!--
-
-        The Topaz GUI is based on the VGG Image Annotator, the license for which follows
-        below.
-
-
         VGG Image Annotator (via)
         www.robots.ox.ac.uk/~vgg/software/via/
 
@@ -35,7 +30,7 @@
         POSSIBILITY OF SUCH DAMAGE.
 
       -->
-    <title>Topaz Picking GUI</title>
+    <title>Topaz GUI</title>
     <meta name="author" content="Alex Noble, Abhishek Dutta">
     <meta name="description" content="Topaz GUI is a standalone particle picker based on VIA.">
 
@@ -60,19 +55,109 @@
       ga('send', 'pageview');
     </script>
 
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+	<script src="https://github.com/seikichi/tiff.js/raw/master/tiff.min.js"></script>
+	
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 	<script>
 	$( document ).ready(function() {
 		$('.preprocessing_inputs').each(function() {
 			$(this).on('keyup', function() {
-				var scale = $('#scale').val() == '' ? '8' : $('#scale').val();
+				var scale1 = $('#scale1').val() == '' ? '8' : $('#scale1').val();
+				var numworkers1 = $('#numworkers1').val() == '' ? '-1' : $('#numworkers1').val();
+				var pixelsampling1 = $('#pixelsampling1').val() == '' ? '200' : $('#pixelsampling1').val();
+				var niters1 = $('#niters1').val() == '' ? '100' : $('#niters1').val();
+				var seed1 = $('#seed1').val() == '' ? '1' : $('#seed1').val();
+				var output1 = $('#output1').val() == '' ? '/path/to/output/preprocessed/images/' : $('#output1').val();
+				var input1 = $('#input1').val() == '' ? '/path/to/input/images/*.mrc' : $('#input1').val();
+				$('#result1').html("topaz preprocess --scale " + scale1 + " --num-workers " + numworkers1 + " --pixel-sampling " + pixelsampling1 + " --niters " + niters1 + " --seed " + seed1 + " --verbose -o " + output1 + " " + input1);
+			});
+		});
+	});
+	$( document ).ready(function() {
+		$('.training_inputs').each(function() {
+			$(this).on('keyup', function() {
+				var trainimages2 = $('#trainimages2').val() == '' ? '/path/to/preprocessed/images/' : $('#trainimages2').val();
+				var traintargets2 = $('#traintargets2').val() == '' ? '/path/to/training_particles.csv' : $('#traintargets2').val();
+				var kfold2 = $('#kfold2').val() == '' ? '5' : $('#kfold2').val();
+				var fold2 = $('#fold2').val() == '' ? '0' : $('#fold2').val();
+				var radius2 = $('#radius2').val() == '' ? '4' : $('#radius2').val();
+				var model2 = $('#model2').val() == '' ? 'resnet8' : $('#model2').val();
+				var units2 = $('#units2').val() == '' ? '32' : $('#units2').val();
+				var dropout2 = $('#dropout2').val() == '' ? '0.0' : $('#dropout2').val();
+				var bn2 = $('#bn2').val() == '' ? 'on' : $('#bn2').val();
+				var pooling2 = $('#pooling2').val() == '' ? 'none' : $('#pooling2').val();
+				var unitscaling2 = $('#unitscaling2').val() == '' ? '1' : $('#unitscaling2').val();
+				var ngf2 = $('#ngf2').val() == '' ? '32' : $('#ngf2').val();
+				var method2 = $('#method2').val() == '' ? 'GE-binomial' : $('#method2').val();
+				var autoencoder2 = $('#autoencoder2').val() == '' ? '0' : $('#autoencoder2').val();
+				var pi2 = $('#pi2').val() == '' ? '0.035' : $('#pi2').val();
+				var slack2 = $('#slack2').val() == '' ? '1' : $('#slack2').val();
+				var l22 = $('#l22').val() == '' ? '0' : $('#l22').val();
+				var learningrate2 = $('#learningrate2').val() == '' ? '0.001' : $('#learningrate2').val();
+				var minibatchsize2 = $('#minibatchsize2').val() == '' ? '256' : $('#minibatchsize2').val();
+				var minibatchbalance2 = $('#minibatchbalance2').val() == '' ? '1/16' : $('#minibatchbalance2').val();
+				var epochsize2 = $('#epochsize2').val() == '' ? '5000' : $('#epochsize2').val();
+				var numepochs2 = $('#numepochs2').val() == '' ? '10' : $('#numepochs2').val();
+				var numworkers2 = $('#numworkers2').val() == '' ? '-1' : $('#numworkers2').val();
+				var testbatchsize2 = $('#testbatchsize2').val() == '' ? '1' : $('#testbatchsize2').val();
+				var device2 = $('#device2').val() == '' ? '0' : $('#device2').val();
+				var saveprefix2 = $('#saveprefix2').val() == '' ? '/path/to/model' : $('#saveprefix2').val();
+				var output2 = $('#output2').val() == '' ? '/path/to/unique/output/model.txt' : $('#output2').val();
+				$('#result2').html("topaz train --train-images " + trainimages2 + " --train-targets " + traintargets2 + " --k-fold " + kfold2 + " --fold " + fold2 + " --radius " + radius2 + " --model " + model2 + " --units " + units2 + " --dropout " + dropout2 + " --bn " + bn2 + " --pooling " + pooling2 + " --unit-scaling " + unitscaling2 + " --ngf " + ngf2 + " --method " + method2 + " --autoencoder " + autoencoder2 + " --pi " + pi2 + " --l2 " + l22 + " --learning-rate " + learningrate2 + " --minibatch-size " + minibatchsize2 + " --minibatch-balance " + minibatchbalance2 + " --epoch-size " + epochsize2 + " --num-epochs " + numepochs2 + " --num-workers " + numworkers2 + " --test-batch-size " + testbatchsize2 + " --device " + device2 + " --save-prefix " + saveprefix2 + " --output " + output2);
+			});
+		});
+	});
+	/*
+	$( document ).ready(function() {
+		$('.crossvalidating_inputs').each(function() {
+			$(this).on('keyup', function() {
+				var trainimages = $('#trainimages').val() == '' ? '/path/to/preprocessed/images/' : $('#trainimages').val();
+				var traintargets = $('#traintargets').val() == '' ? '/path/to/training_particles.csv' : $('#traintargets').val();
+				var kfold = $('#kfold').val() == '' ? '5' : $('#kfold').val();
+				var fold = $('#fold').val() == '' ? '0' : $('#fold').val();
+				var crossvalidationseed = $('#crossvalidationseed').val() == '' ? '42' : $('#crossvalidationseed').val();
+				var radius = $('#radius').val() == '' ? '4' : $('#radius').val();
+				var model = $('#model').val() == '' ? 'resnet8' : $('#model').val();
+				var units = $('#units').val() == '' ? '32' : $('#units').val();
+				var dropout = $('#dropout').val() == '' ? '0.0' : $('#dropout').val();
+				var bn = $('#bn').val() == '' ? 'on' : $('#bn').val();
+				var pooling = $('#pooling').val() == '' ? 'none' : $('#pooling').val();
+				var unitscaling = $('#unitscaling').val() == '' ? '1' : $('#unitscaling').val();
+				var ngf = $('#ngf').val() == '' ? '32' : $('#ngf').val();
+				var method = $('#method').val() == '' ? 'GE-binomial' : $('#method').val();
+				var autoencoder = $('#autoencoder').val() == '' ? '0' : $('#autoencoder').val();
+				var pi = $('#pi').val() == '' ? '0.035' : $('#pi').val();
+				var slack = $('#slack').val() == '' ? '1' : $('#slack').val();
+				var l2 = $('#l2').val() == '' ? '0' : $('#l2').val();
+				var learningrate = $('#learningrate').val() == '' ? '0.001' : $('#learningrate').val();
+				var minibatchsize = $('#minibatchsize').val() == '' ? '256' : $('#minibatchsize').val();
+				var minibatchbalance = $('#minibatchbalance').val() == '' ? '1/16' : $('#minibatchbalance').val();
+				var epochsize = $('#epochsize').val() == '' ? '5000' : $('#epochsize').val();
+				var numepochs = $('#numepochs').val() == '' ? '10' : $('#numepochs').val();
 				var numworkers = $('#numworkers').val() == '' ? '##' : $('#numworkers').val();
-				var pixelsampling = $('#pixelsampling').val() == '' ? '200' : $('#pixelsampling').val();
-				var niters = $('#niters').val() == '' ? '100' : $('#niters').val();
-				var seed = $('#seed').val() == '' ? '1' : $('#seed').val();
-				var output = $('#output').val() == '' ? '/path/to/output/preprocessed/images/' : $('#output').val();
-				var input = $('#input').val() == '' ? '/path/to/input/images/*.mrc' : $('#input').val();
-				$('#result').html("&nbsp&nbsp&nbsp <code>topaz preprocess --scale " + scale + " --num-workers " + numworkers + " --pixel-sampling " + pixelsampling + " --niters " + niters + " --seed " + seed + " -o " + output + " --verbose " + input + "</code>");
+				var testbatchsize = $('#testbatchsize').val() == '' ? '1' : $('#testbatchsize').val();
+				var device = $('#device').val() == '' ? '0' : $('#device').val();
+				var saveprefix = $('#saveprefix').val() == '' ? '/path/to/model' : $('#saveprefix').val();
+				var output = $('#output').val() == '' ? '/path/to/unique/output/model.txt' : $('#output').val();
+				$('#result3').html("topaz train --train-images " + trainimages + " --train-targets " + traintargets + " --k-fold " + kfold + " --fold " + fold + " --cross-validation-seed " + crossvalidationseed + " --radius " + radius + " --model " + model + " --units " + units + " --dropout " + dropout + " --bn " + bn + " --pooling " + pooling + " --unit-scaling " + unitscaling + " --ngf " + ngf + " --method " + method + " --autoencoder " + autoencoder + " --pi " + pi + " --l2 " + l2 + " --learning-rate " + learningrate + " --minibatch-size " + minibatchsize + " --minibatch-balance " + minibatchbalance + " --epoch-size " + epochsize + " --num-epochs " + numepochs + " --num-workers " + numworkers + " --test-batch-size " + testbatchsize + " --device " + device + " --save-prefix " + saveprefix + " --output " + output);
+			});
+		});
+	});
+	*/
+	$( document ).ready(function() {
+		$('.extracting_inputs').each(function() {
+			$(this).on('keyup', function() {
+				var input4 = $('#input4').val() == '' ? '/path/to/preprocessed/images/*.tiff' : $('#input4').val();
+				var model4 = $('#model4').val() == '' ? '/path/to/model_epoch##.sav' : $('#model4').val();
+				var radius4 = $('#radius4').val() == '' ? '4' : $('#radius4').val();
+				var threshold4 = $('#threshold4').val() == '' ? '0.5' : $('#threshold4').val();
+				var minradius4 = $('#minradius4').val() == '' ? '5' : $('#minradius4').val();
+				var maxradius4 = $('#maxradius4').val() == '' ? '100' : $('#maxradius4').val();
+				var stepradius4 = $('#stepradius4').val() == '' ? '5' : $('#stepradius4').val();
+				var numworkers4 = $('#numworkers4').val() == '' ? '-1' : $('#numworkers4').val();
+				var device4 = $('#device4').val() == '' ? '0' : $('#device4').val();
+				var output4 = $('#output4').val() == '' ? '/path/to/extracted/particles.[star|csv|txt]' : $('#output4').val();
+				$('#result4').html("topaz extract --model " + model4 + " --radius " + radius4 + " --threshold " + threshold4 + " --min-radius " + minradius4 + " --max-radius " + maxradius4 + " --step-radius " + stepradius4 + " --num-workers " + numworkers4 + " --device " + device4 + " --output " + output4 + " " + input4);
 			});
 		});
 	});
@@ -80,7 +165,7 @@
 
     <!-- CSS style definition -->
     <style type="text/css">
-      body { min-width:200px; padding:0; margin:0; font-family:sans-serif; }
+      body { min-width:200px; padding:0; margin:0; font-family:sans-serif; background-color:#fafafa; }
       * { box-sizing: border-box; }
       input[type=text] { border:1px solid #cccccc; margin:0.6rem 0; padding:0.2rem 0.4rem; }
       a { text-decoration:none; }
@@ -103,17 +188,19 @@
       .menubar li ul li.submenu_divider { margin:0 0.4rem; padding:0; height:1px; border-bottom:1px solid #424242; }
       .menubar li:hover ul { display:block; }
 
+      .menubar2 { display:inline-block; height:1.8rem; background-color:#212121; z-index:9999; position: sticky; z-index: 99999;}
+	  
       /* toolbar containing small icons for tools */
       .toolbar { display:inline-block; margin-left:1rem; }
       .toolbar svg { fill:white; margin: 0.2rem 0.1rem; height:1.2rem;  -moz-user-select:none; -webkit-user-select:none; -ms-user-select:none;}
-      .toolbar svg:hover { fill:yellow; cursor:pointer; }
+      .toolbar svg:hover { fill:#5573b8; cursor:pointer; }
       .toolbar svg:active { fill:white; }
       .toolbar ul { display:inline-block; padding:0.2rem; margin:0; }
       .toolbar li { display:inline; float:left; padding:0rem 0.3rem; border:1px solid white;} /* main menu items */
       .toolbar li:hover { color:red; cursor:pointer; }
 
       /* Middle panel: containing #image_panel, #leftsidebar */
-      .middle_panel { display:table; table-layout:fixed; width:100%; min-height: 100%; position: absolute; top: 100; left: 0; z-index:1; padding:0;}
+      .middle_panel { display:table; table-layout:fixed; width:100%; min-height: 90%; position: absolute; top: 100; left: 0; z-index:1; padding:0;}
       #leftsidebar { display:none; z-index:10; vertical-align:top;}
       #display_area { display:table-cell; width:100%; z-index:1; margin:0; padding-left:1em; vertical-align:top; }
       /* layers of canvas */
@@ -171,8 +258,10 @@
       .button_panel .text_button:hover, .text_button:hover { cursor:pointer; }
       .button_panel .text_button:active, .text_button:active { color: #000000; }
       .button_panel .active { border-bottom:1px solid black; }
-      .button_panel .button { display:inline-block; padding:0.35rem 0.5rem; margin:0 0.05rem; cursor:pointer; background-color:#cccccc; border-radius:0.2rem; -moz-user-select:none; -webkit-user-select:none; -ms-user-select:none; }
-      .button_panel .button:hover { background-color:black; color:white; }
+      .button_panel .button1 { display:inline-block; padding:0.35rem 0.42rem; margin:0 0.05rem; cursor:pointer; background-color:#5573b8; color:white;  border-radius:0.2rem; -moz-user-select:none; -webkit-user-select:none; -ms-user-select:none; }
+      .button_panel .button2 { display:inline-block; padding:0.35rem 0.42rem; margin:0 0.05rem; cursor:pointer; background-color:#5573b8; color:white;  border-radius:0.2rem; -moz-user-select:none; -webkit-user-select:none; -ms-user-select:none; }
+      .button_panel .button1:hover { background-color:#6ca646; color:white; }
+      .button_panel .button2:hover { background-color:#b30404; color:white; }
 
       /* Attributes properties: name, description, type, ... */
       #attribute_properties { display:table; width:100%; border-collapse:collapse; margin:1rem 0; border:1px solid #cccccc; }
@@ -296,7 +385,6 @@
 	    float: right;
 	    background-color: #f1f1f1;
 	    width: 9.5%;
-	    height: 265px;
 		opacity: 0.95;
 		position: sticky;
 		z-index: 99999;
@@ -329,14 +417,180 @@
 	    background-color: #ccc;
 	  }
 
-	  /* Logos */
-	  .topaz_logo { background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAvYAAADlCAMAAAAP4kMOAAAACXBIWXMAABbqAAAW6gHljkMQAAAAQlBMVEWenp6SkpLq7e++vr7Ly8sCaLfY2dr///8BAQGkpaUFfM6wsLAxMjV3eHhYWVkJkecDVZ9LmM17sdkIOHin0O5KsPKtKcNYAAAgAElEQVR42uydi3akKhBFFZVO4xPF///VSxVodyegiIDmTkhmJiuvsXVzOFUUkD3+2l/751r2+y6ZUFrKVhRFLf8U8kNKyd+T/Gv/U+wJLYv6mbddA+0LG37YdG2b1UX5r9BPlvbH7wnsCapnkkb8kS+ekvevrSbpz+sI7BOHG0RlSwAihW4vWyffZMuzZ0EDvcYoz/uuQiSxp22TrHWF38PO223iP9jPypA3mzz18LLzyqABic862sMu88bwerMA4JO8i/O82ye5KfbdV8LWHOaeFvnRK2wCkl8cvz3yaefScgV/3qWl63fleerjPfGW3hL78itp6w7RQMqsa7y6V/sMcru9704jryAs+cTaAbtYHSrME49h9k7e2oy0abH/OkAjqbsTz6PJaUTU3AxXXoQjv7D/R2cTE1nUAT582kS0XV6ew75JjH15APqzNzw/O/yfH/y7OhT4G3ejOdm540pfaLkn4zBN06kbmx772jWSDBFznFR8EuIaujBRHdl6mfRx+cuM1il/Ul8N01BNXUZOYJ+Y+q+n03XVoZ5Ecwa6MJrQBAH/uRk3RhtIQrz+oCGO4Kwahkr+YbP4PdjnLhFLHnAMassoCnsM/OK0xnXxBDXyiN/QsFIvoeecMdb33tzfEvs67GNocl+5oTe4BrdLKf8N7KWtHyT3XMg29xJ8Qf4v2NM2+FPwzR2XN7gGt+C6+yewJ1y6egn+KAgRYw9tJL8D+710VhHjGTTF5djHjTJO+efYIW0o7CkfhmlqEHshyIzcz8QL+5tlcuo419M8L8deCr4/m7tX8vz/Yy8U9RNgD9xLm9PPfgY/I11i7Ld1N4vVC73MNQ18EZ0397uZ9VMuJ27ePlAmR/BqAu6HCrBH8AH62Yf7e83SRr0YD+6DF2746v3+mHyKrecvwF70rBowY19xJfay9crnHOb+VjU5ziPPUvL4Vngfhfvw98aT+yJMYtg6qkV1uk0Y6nvJPbZ+FEubPbnPHmnlfiu2dKG+waJ6WFMFFe4UFlnVedu51e4c5r68xZjjNp90yuU8716LpnQduWcv6iGbUw3wFXEUe8l910jdNL7/aDbtdSq+bpq2OONwmjYvjLXshJa7i1B8/L3R2+c/G678gMEn2Cz18RjjXOBYgHZ0bXf0r28txhQyUj9r7IehmkfxLvfDxI5zj+lEqZpKO3+8g57CB6VeX2TMs7Qbi4/wZ3XbXvO6R33T1tvVpi6F+dl5tbcM2QSW+BbPfLfz+eRSnbz3SbrI2UYJNT7Cpg5AvcK+kkEtH2WbEXn5NvZsqPrD3B/kgHaBXaVrNqFzqikj9c5U10HmyuNOFced7ZdyWJbdksyBK76CZVmbIFrPlMcZ2DzOQP28vPWMHff3R+UvGvabs5Bd7YoKKbfLeY4xV/o9RbpdPXq4/txtSrEpL6be0jtP40FB6gFuiT3js9T6UbqcEbQeukCvsD+k93dR+61URXOowpSUbbBUCvUVr03wD9uczFDbFil0PEN9Hkfs9WzsQj2fZ8ReAj+j8vcVcs+OFGTeRO23MmiHi1m216dk8dUeL2IjOXLQ5hhUNC/iTQt5P8NAY9v3Vz8qh4NpHKCec45RLcq+JF9jf0jvb6L2XdhKFtqG8QLlGfXauIhjQZ7hKig5/2tDi30XJ3s5aqpl6CrFniP487iIvXznbOWei1+l9nZj77krANlw+AdszinsN3JTh4oUDL+mM0N2qcvJQtYAvrlfDTXkLiX1Peeo9tLXI/jQeAXfAt9VcfqL1L4MmPVw8BjuokjPeVU790d02eBxMnMwdKXLIVGyqg/BoCH0gH2v3mbFPBoe+VcvuWcV2iBOfo3a22dnT5QsbpRyumtteTJEs3J/5IUZACeWtEl+HfVxLA7llYQZEpfTJKmHN+B+XrjnM3QCDrZfdg4oXHCrQ76D2tcxqN/iPk+Fvfl+HQwwWiNMxh51ncupo1gcAsaegdBD4SWT1PdS+1HtEfpeqz+v4KsAf9+Pv0TtrZMx7ckx28q98zz+aeyt3LsP/sSSHCliLui4icVB6qtJtkGKvWpcvmM0K5W+l/0AsWeAPUi+7Bbj71D7NhL1G9y7XjE9jb1t5yX3oCUzehyLWrQXUd9GSdkLWCjOQOqV2OvWY/IePD2XgSxT2GMDf89Y8RvUvgy+JOMtn3NS7s+rvTVwKfx/vrOjdlGBQhEiT/vzpUNqUgWziP0LfExicpyjUh2hh++Ypgo/4ZDOuV7tu4gr0awhZZ4Me9vaYNcbT601nOVtChQsNvW0xRnAtkDRJRANPWDxORjJgtZjlqfn6OulG8IhoWf76ZzL1b78iqIUeyElTYa9xcS5Wjibx7HAdklQ20ZZVCWqBXv0Lwi2Ih+Yhz+sX32PKtmRLgdL1vjt1b6NtzQBmi19//SV2uPYmyMMx45nYLvdGsqucDlllKoEygdcVALcT7ANGtPkQyoHYlnGV+rxU/1Siyk/GG+u9jTqquMND0WSqb3F3Re+SD03ry59gYLF4pwULqKox/lX5XHUikJl5dny9iH3ay3mrs25Wu3bcwGft7V2M1FBsLeUXjw970+zzVt6l5NHic3EABnLSpsX3QU09mwx9S+1X4rV8B/5wXhrtY+U73WIap28dRjszT3P6QIMZL9x/bxD6p6EX9GuLQ4mauAvTf1L7hfk37nHbx1ULqevmLiz2ueRLc7DelKHEx5BvL3F5TglaIvNgZDGKPQNY+HODjrjgBVoSHb1SX214P4JPXaFQU9qVTvcX6v2sdbjhPJRYdTefAUu/Y60m//9HVyOZZnvyUSqqAbt09m6T4iinn+yzmb+7u8rmMzFCdth095fq/axFl+6uHsXkxEI+9y3LGcjj2MbDBKn7uO4VDK/Yc9e3DM2ik/uuRCf3CupB/63uL9W7dvYzn4jmdOkw96YRXXB87kjozTF7fO5tyd/67JTQt9X7BXRgtYTXYq8gA5bH/fvUW3fq+z+MEzjTdXe4nFCV41bSnMcXE4Yb28ebxywN/jmZt9Yp0zd11EScct2xmruFdOXFRp8LDsY37DHbb4/uO9npqZqp2ljrdWlal8kEXtb1JUnU3vzSuHCp9e1+3cwocuJtbZEwLpxCS5D6KdV7IXK6H9SL3vJG/bzrLYQgW1i+T3Vvo0RDTnnMB1SKaGw7/ywN8QEdH84ShjUxim8JII8RpylUsWXGnu2JGdWN7+4dzKuyR2kvlfUT4O4o9qTVLsceZcHRMV+d8LM4AEblx6dzOXEqUoA6nHzP6agB+yxOmc9uGTkOpxdf0Qbn2oR+2oC7CurzblS7csE2cstl+PlMnygIn5qXzjYB6PLeaahPk5VwkNSr7bG+cCevajXlL8zvRgfPOdhWZFV8Wq+odrnSQJa+2Ccp1J74qf27a7HuTZ138apShBi1DteTiv2kMR5+71U6j3/SNS8uFdLC9XwYJ20ulDtLZOXURIOjZ+5L69U++3ChE2Xk6RAgUapSiCjGNkb9QMeyFmxT78iOP92Vhsafr0qZZnYnaXrEXdTe5LK49hSKft0XJrJKZxSJMVVBQqRLM4ohN4ETSu93g7tG77j9xMKIZ1TqR0WKlXEg/izOZrae97kMk0eB1vn938F8vbGsqDdXQU6B49zocvJ41QlCDrq+uFKraHVRzl8o/znlvHS8MN3ToM+6WdQdQpmub9Q7c33LeUzeiZSe3M1XBnA41zncuIUXj4EVbt6s1nMbM3ZuyyPfYgF+0E5I5R8xowb51yn9gmtva0uJ0+EvTG02EMzcwyCaTKr6JAcO12VoI+jwgw8yr2quXTZ25Ir7KGrDC/qmXHjnOvUnnwldKXUL6YNVZPjsWWIiSvi7LGjp+6fcZYHUV69Oxyk3rRYSga+ZrGvVuqXWa5ekDupPY28rMpBnHar0QJ5+9yjApS6joTGXVFiFyhEqkoo20mdyAMbgMjuDM6e/djAm2Di/hv3uLvIEtMOuP4WynMgn2Pg/jq1L5Jl7e0xLU2i9ubiiB3sc+dE/xUFCnEsDmmbSZcbD5L6Rgel7xt4E0IEwej1c5m4DmgxgTNgQDtxoT5nOt7nOrXPv1IOzn7lP2GwN9cmZIfTg+TASBbX5cTZDupRd9Oyqfc0Sa3H9SJQVibNPSGIPJ7KyX9md8bXWhS1uchQicesXI5hO9jL1N4sgdGeVuaVygmDfe2RtqcHBLxOvYNCpJQ9baf12BL09Vhmw3qYe9KH0cIhhRx2vNQH1BLyYexX7Bkb5FeZXoL4M4l5mdqbb120JRK1VyonjLf3WVyVH9DS5C7Hskzz7K8VVbUeUjXprV7VRjnA+IzEqw3QBr28lguBZ4MK/k79gJt+42pyae+h4/yQ++vUvkmaeCu9di+IuE/OdhbpgMexuZx4qfs4hZdQfzbj5gezrjDQ2K/bhajyg+pFPQg+jgJv1Fc4Tdvr42oFmavpexxwqdqnTORYB5cU2PvMGRSHBkJjGWaW9lYGOKSqxymqrhvW/XCwymBYKH8FrS/w4cBOOMXntbsCjBN6OWLfj2RmkMj8ngG9TO1Lr9RK4AxmlwL71iP86w79QFqXY6lKoKfFnrF5HrqmaVbKB+nvcSfA9y1DNPWr4KsV5sNK/jCtJxeqFSfw+fEmal8nLE2wptz2EvchvL1Z7LetvUlQj6YHYqXuI1UlPEQPbhyol9yrWVbYsB6xH6pVz9XnhzeroweBN+4X7Gc81EqVspF7qH3a/KVtr5oEap97bFfyPBjsFwnjpCbOmjjYI0Q6FIAeEvaqfJhhIeaq9lrmV/DfXf4L/Nd5nZj61Kf7jPdQ+zZx+iHzKT0OgL1ll57DHqc4OipFuplxCi8hBQkFBUi9xH5aZmux6l6xrfVfQ699zot7/Mp/1F2Ldps6EDQPYVvGIPH4/1+92oeEcKA2AgmumpO2aWMnzjCMVrOzhHvJ0h47rYSi1JzqCmy/cnIZD/bPEEG6H/YrA1X+bcjJtz7rssqJUR+IFVqaazDhNET2j97pFOqK9WqT0xuzv9TSKiBl2R6KntLWQhXuc+d0fxrbN4mNg8uF+yq2tn+FwCTb/MoUiUgkkvESavZ13RDm4Xi2nWSKcoKGSd4DPm5Wh05b6W/FPhQ9SdxPcw5ndH8E24fAPnHZfg32ZWS2X5E42ze0RcDLGUHlvOK4EoDsawt6n+ttLJojexYzE+7hpHYYHegt8PsZ7BH6zwuw/TLsIzbDFWfAPmw8Z7X9SZdVzuEGhUhDqmASZ0+oh/2sGFs3okEKF4FJFjO7o2Xga7DqwPxaD/R0pGUz0izs1bu6ANvHYY2tsC+iwn4tW3+7MeHrbbBIsqlt4rgSUNnX9gek2nF04lz6bO+o3gkdtB/neN3MijqUAUteTv4MqW4XYPu0h7Rr7oQipravwibubjImuOdKoXJWjJf7Y3kG8Mc/iOyV9GFPRgMh/F2r42+F+1Syo3WzMyzqq5IEe0FtWsp72a/F9hFhv9xf9YrI9uXqEPRyq37+/pzLFaNjRWMsV4IhezHqHr5PI+wlwZ6HURmW5sEOyjuZsnQPEueOZjTQOWqq6wvOf8WgKMrRNO9eF2X7iJ3PeWrYr45A/6JYloolgSm1B9P9ys1rf2fQALaE/oEVe0VVd+vF7An2wjbG8ngTWpL9lzn+Pgpb6VHCnVpJhj1eN9NR7VlsX10D9s9YsM9va6D/2kRbByFr2YZ5pEEhThwUChRgeAN7aqhqeWYVV+2FFTmtxtnj5o1xj77jwS5wH7sKp4d7JHpytE2NiGexfZW0pTC0dBSq7fN1qv96h3kFPmUWuSIcTeLcK5ysLLB3VvHQNTJRYrY9lnIU+O3tGjXiXnfDfEkf9Yx7qWqOX1BiakU/i+3LxE60lYOWLAbb/xP0354yUOPENyjEciXc84Hc8cpsZwHmrbTDZw1Lo41Yuu4qarEaug60ywhXAkQcj7jMn6UV/bQPQFVEDzGOSrWj68k9i+2Tw/4e0NAaAvu8yv4F+q9e50CNs6ZyDisSxBuliptROF4yOEUzjlRUfWR9gtH1M2I3fzG417o1gsfeG7SBv6a9r0O9oPkO5oYBoTuQAt6dzPbFNdj+UG1vtlVF1jz+uZpqO6n+SNmvmAaFaK4EA4XGKHpqHicpj+MGGfawE5U+13fYTwuOBE2ttoI7ZvFvHH5pvTnYXWgebWyxumNwn5/L9sU1tP0rQDiUf1bxej2z7N3Uj2/r68HpErx+rItHreXc4sRB4aakrnvR1wJhLzAjh+gezZdYxdHdOF+0rxWfyzrUxIR7c/HAADfzwGBqs+ng19L2/4cC5p71XXNU4WQQU+VEcyVAJFTdKCivo++MJD2HJlAEplLS7Hm1eadxSfglXcqlj/qZR83yPcXAjqPszfXFm9prafvksC+Swv4Hk8x7B2FHNCjEkzj3l9E4RnYLUDlC8RATLOcoF+xnjTZ+GM4H6NF26XnwnT0HU3cA9eaOYh64vCDbR4ywq86H/Q+oDzBfpqjlvGK5EjAJrTaaZgQJTr5Jrr0g7JW3mM6V86J5wHf2BcXC3rl4qJajIRewh66t7oJ1++TmhDLohCaWwlku2ue/IyiSQSFeyR41Tt8YWALGqafKRkNZo/E/lvBK9PNeE8+ojFsFzFQA2JPKudYpbUQHZhnSZnIk2ze/KLj3LnDFUjnRXAl36i8xkrtFahdUznm4aQ7/hr2wLgTbMCvmCodo36DdhiHD5wzXY/uII/aKk2H/zgNptdh5R9tvUIgUB8VnVRqc9j2ZJKeZVVyIxEKOv3o1pddL57Vk0E+t5rO2cqyHUmehTYq6lgMzYpvJ61TY/zgzc5fGiaVyYkqc+zAi7PF8lvNtFLB9P6WhKRzL7Ct6Rr38g/ulBRqnpbZDTFrTZ7J9wnlt/4B9SGBIENX/VqJaKkFuQlcUlfOOEwfFsIcNZ103PcNekjm+t9GXnyKnd9eAB3YaQb4EeUGf4y4QwaPLr8X2qZMT0sD+5+a+nRpnhZV2qpx4xkv4jjX0f9Q12uFt0R42t1Rzn2DfqzndY+zTtFobjynmsYH46TS7kEv5NMPtCLZ/HnbnjAj7LMQgcwTsm1u+42usN+0bI8SwRHQlII0axMMxEklwhj166WcVeqV6j/AJ9TjZjSjfop+dOBb4FvU0qJYfFMX9tZITIsZDhUwUOQD2G0C/iLCNkD1e5UQzXtI92MAeUE8OMjeNdtqUrtRwpMu4dMHI9gIg6E8qpydBJNDdKTgX8Fo5OfHCAJdJKzLs62ZTRbbcD69llbOjLhzRlQCPnvV9A+V0RKekMSY8jFbNUN8r/+hKTKhvZ2JHSp/tLe5FSw/9QNxDYM5ZbH8N2Gf3iLBvsmr3DanejKOD6T6qxLkPb6FZ2XMHFGxtH/1UfJ9Jm0nYt976g3xf5dP1RB/F60tgj9Vp2v6d1oJZhfQUBsO+rpusPIJYN7NqGbKF2VgIOO40HWzE0P2Ei9BPsLe2g+VTKjED/YR6/qPwcW/tnF6pZziR7bO0ppygdKgQ2NcA+SIEZ+URr8eyDTO0dB9X4tzzwaAekd7jiDYOOPDdNvMTWVfEmbP9pPKpD9dtbAW3JcpZab87j+1XeCSaOyEo+XUZ9vXaapp3diuCmfV9hDpZbl1vjvuSjpSilYYmENQ2GBdCiHdumgn1s9mbkrKM/zC+L3hY3AP4+1ox24fD/ji2L9KeV2UhZftl2Bd/VllVVb5Xny0xa8DLUQUk82z7GR1nISltKgJOoYUOch/eYpZg73qnkNLnsPf3t1byUE0H7Ms1a3vJ0yHAjXYa2+cRT7x/3Uo0IbCvE96PbmWx9dfyafSBU/UO/Bm9lE36I7K3NRhruXHt4GI6kEVSh77xxeWXdmy/Ic88lM69vB32ZeSRbbEwFVbISQn7vHlEXEFQjWm8JNjDdDZEYk8xgIzuCfbKc90Il55DUQkzzpe+2HF7XLpc6HFV724i1YlsXyeFfR20k0gJ+zom7ENUzkqY4YF2wWfT89SFmsneoV5xSr0leJ6rbEHf2qbaZaHT8tbWAl9ISkaTNNNwOI/tVyrCkSqYZVAhJyXsb4+oKzvq9nOgDM1fDal5RRNMnJjheo03kseWaSaqn9rJ/wLfkv+EfPI1j9BaiHva09h+5RZaJgTV94nF6WAfV+OElO4jzeH8EDm4Z8UJJtQTIl1zOOkdKT0wT6j31t/trfuvU+ESfT96HDscAPE6ke2fCUs5gTvahLAv67iw32xQWD7fO/bnMzQ4hbCnYQ4Cay2UmOCMxR81esL98AF8H+9yDn+OzwHjj6KoEXUu25cpSzmBk7LSwf79iLzeh9x9jv3moY8WxhNaYc+RlxQUQiXIPyxOKTlf+P7DtiBwBqKg/w2Df86zoiUt5RRhO9qEsK9jw36jynk+EmjQ/AYGTIA9B+NQZ6HkPhOJCX8TiDEEFmYs9xb3wyfy5V/gk1gyZM+fpNWpbL9SuogSlZMFPlUy2BfRYb9N5VRxXQnuabKmVlLV9kQJzfbUV0XUPgwT7snGYNArVTvn+nGxjj9a2OO5gHLiSCh9Ituv3NdjtNOGSvt0sI+ucbZBNn8nuhUPGdYwrZLv2XbMMJYG9yNDWHLflRJ65BJmi/9r5DuB/LMFINTju76W06ZA6BPZfiVzKIa4X+au93Vgn9fxYb9F5cSaw/n5bef36vW2Thxme5wh2w0dgXakkr3RJmCv6WHnK/RsJwt/ENR5MuN8/IurfireDA8G+jI7E/bpxH2w7a089Qs8rXSfp5E4CPy8e7Pr2A/206huXAESJjhIJSk4SuDdYPTEDN4uUOoz0N0/okfZTm/j/bAWt1NhXycyYa5UJarLwD520X7rfXRF4uQxUJ8PQ4ZOtJrjoUYQNBJV/QR7GGYilQ1VwMhub2IzXClaj93YknOnJcWPfh+ifH8qUJ9VZ8J+5dU9XuUsa5xfbvqpYF+ngP3P4ccr++tnFLKH6VM31dsqpoRIY0DsDPfQK9J1LTqUe/TxjB6h8wxDDfMNNTvWxrEb4HponccTPTnmrtLcqvxU2L8SkUoW/FNMBPvb43EhlRPflTAj+2oYOhA6iHvetYIYMf80Ou88aHdwFpAlU/UO9lJ5wX9uDjONcOB7Ap4GKGiIgEd/v8AjfibsV+bCHF3LWf4x1tVlYJ9G4/y8qU3gSphwX+GowU5rmkJuO030AF8ryXvqlIIP2rnMyrG9sEHIYjaBnKMV4NIxNw2FYco1JGuKbKjys2GfhlaycAykgf3yBPFdqw4v3ZfJJM7dkb1ZuoFQQCb8XuG0nXzksjun3rAtmUTMaAd3+nGX7NeHwHw8zhoGnHrLB2FQIRqqs9l+7eZepuDS3yCQBPbZ8lWZ73grgksxa1wUxRqLKqdk3IPwJsaH8QuG73MYYmhTcCzuyY0ssWxpad6ifWoaH70Bb5pAr8yuoevMs50O+/yRgO6Xi4M/aZw0sM+b48l1Gby/YDcJFfl0PxDd604LEDqW8LFKmd9Z3n8mXMpPqpfud0zJd3OX86HjQzBE/au7ANuvidoqPtn/lLudBvaLhZM8xsX+Q+5yCuPlHPdV6XBvhA6VMms6tZLj4GDvBZ0JMckdJWYfp9VOsB9GLShmzaD+ZnB/Adiv7Z6OPBfZFWaXBPbvGJqiDHxhm1Qle5/uC0a91lCah3hABD5Okm29jD/B5uQJ5t41MH0UivQDaCQUSRiUA4/dXYXtV4fkHHdLXfNU5ZeB/WLRfvcGcsWG9O0++oobB7VM95PMgYUWBPYo2Linie6ltFOs7NxlIT4kEOemjUPe8UmvNlSvM2R7o+3z02G/Qi4Hqvv3rp9jCtg/47DrK0SsVMlcCbNNrQ97QYdTkOuhp1xX4UX8qd4G34v58EJXvqQ7xTCQNwFBT2TfvYoSo11Ohv1a7NhRDoVnvasukQD2+TtO3aQMiZR+p5U4lu4rLOZoBn6rsWTT5d3UFGhx7xLv7TjCv1vdlp1pI8BeG5GEoM/MW/c0ZP8fe2fDpiqrhWEQxoZI2/XW//+rh/UBYkqpgTkdmblmt5umMm8eHxaLBRU0yoD96Y35pdS0/CnPqDa1VE8dtoP9qUyvH3c5zyso2LWypFLRHN5vGfG9U/Tyx5f2i0pbDvZh9nIfko8hQH938n6/HPlJMUiqblzG68NqnzKTeWxOKlI0WUxXwF6Uktf5LuetoFem4D2iT5F6GM52tp5LfxwHYZve/CwmX+JEVXW7X28d9RdxEUT9JrBPZmHl8JPNuxaqPPajqGXx0np2Al5T8sL7HHse1vKo9sL1bbg8zk8ocHZMI88hHUrFhwEtpCV46OUlaD0d/6exTwUYc0QPUk89Xb7KYz8KZ5bAyXip+ydpmCtmJTwN59wR/Mu9X9rs+NOVMe42YY69PZVNw1A/RPwhg9NL/dVJfedwtoB9fXo3T3Yu9TMqhJXHXpbT15kJCqtmJYxxr4O/d+CfoaZNp/LHyNv/i0Hvp6AB9hem3t0IWg9izzGcjWCfXln0JvciQ4Gw4tiX8ziJc5XGuOwmVdPjmH5kC5GYY9h1tiveHSVcDqA/nq93Gg/f75euwTRVrPUfj+Q8c/dvcV8lzdMcLS2O/WhiQibSqlnrDD5ncYK/J6Pj45gwIj0/7Mwz2Hv2GNl6vBzcL5iYfwabRONZmqbS/VLsn1f75FTtO3uN1elSBHOeszT2o1HGbGHyWS7ngxbncWB7JZ/j9P56DvW6j4O0nNjj+KC+k/vL1V0lLse+wbk97D+wAewP6VUWp4XBM51+ylnPWBz7U8k50YTLqWdYQn04rMj9rT9h6wSf/X1/lnYkgsP94gKm3v1NkHrKP4tCOBvCvn6ylLRdMLyrbPoJ5w0XS2Nf0uMkWRbTT4E8HFblvtP7Owo+FEM4/nQGv+9v+lEc+MJSIufI1ctrSLo8bA375JwVjRzmCv4TgzN3uFAa+6IeJ7UWvJkesq8Ohw+AH41rL7Rz4WAAACAASURBVBTP6eUmPCSfdS6ISiaA1B899Jcxqd8K9s+LgrWzUK3EszIEcws8l8W+LupxkquI9dTxrDoc1ub+FkXw7+Twz963d9w/KH/Yg/kcx28o0/h2G9tW7PORnOfRHHL4k6/7lWlzVQZbAXtR2k5PdTnNR7IS0oFMHtheaWh7Pnb7DvKt8/EYTVnxusPzMVJ6nJkl6EcOYxtq/9Te/+Iu9lNOQSWf1yCYPVAoi/34HrI5WVPTEhTGxb54VsLLCP7Fz111sUufnhNxT//BGjmXh2B9ivqtYP+yVMzp9GqP49o0L6oszd/AqSz2pT1OMg1TTXnU+hbnMYLfOfxLWGXSoR4lJPCA93LppB7+OAn9drBP5+ZE5Ce3966tbF9WFluwbVlZ7EV52CalYSYs5qk9ZfqW9WzwfWqaj+nEbp60PUR4qOxlDD0tKdFp6reDffWa+1/a2r4RVikNWyBrZa2QTXs6Taimt2TOtyj2ox4n8/zQJJejNranRCz4PiczlIbqwpk+1RiT7GPo5UO65Zaxn8h9oJ/a7+QztijToSj2qrjHSfoXM8tgZmgzMYtD+F1S5k+0fpY2YvvppL6v9Or2lPqNRHKm+pzlbVl+T1HsmzWmRae4HFke+7mrhrzgX2PBpz1rcXtlXmN1HEAvIcX4hdRvSu0h5F7uY1+GU0nsRx119hyYKdWeV9hKZXZU6MHoXP3qk3//Qm3A//7xeDaK4FwvU6DfFvblXGazMBZXEvs1PM5hSrnnag3s519s4xB+t+zqhzYox61NqDhgT+kvr/3NBrF/Fb9f2ORSDS2I/Ths+UPl9nUa5grYL2Gk6q82vPLI1rt72syQauD8RLmWE6DfHPaJrMEP2PrS2NereJxkGqZe2eQsGv+R0dEPDh8tPS9AuXARHILeTPE3m8T+UMnMgi/fUNCC2IuVMh4TATKxrslZumkBCb7qO3wKYJ6H0N9uE6nfVCTHs5ZT8Nu3QiPlsB/PEiuRDqBeRtI3q/ZdKFOFJB2uq3Cm9OIGvt0PcfW1n6ZdLzen9ofn+fJzP+33XEM57NfyOCmXEzs/sV2174NvWPGPTH2DOs9l/iYr/Vaxf54yPwN6+a56lsNerreq42Uapim/Y9zpjcpqIYZvr1fhGJfB2HCNPxlM/WTZ2Cb2h6puTh+HviD2a8VxMJbzarGJWgH7t7wmcY8OP4APwMMPwZH6uppzqdwo9vBSb41tc0BfUu3btTxOcmeT+vmbyYz9u8dA4IPgQ3Qe7Y1T+St6ejvD1C/DfkylTqVKg9Zm4fk4tSoPQVUxtW9XzPQ1r7AvL/fvT8N58KFJnJkid2OpFsjM8z13qCEyLN6Y43UWkN+auioolLKU2hdbzFS/vLSUHtTmWLFS0YY/yqEuQPLdTwe9Ugugn4/9cKlqW7aoRPV6+Uj8+TaizknP4OqW69I2RLHgEr6RCMGD2dZNScFv83xoBL5C8Enolb4tgX4+9sRhi+sH2raVuiq/4NIdrGraCcjbOvu7qSpFCf2Y6W9VtuevtPDP6z5I99aLfoJa4jnzrzZcrlMVbRlJAKdjr0YYa2HRxcInF4v7HR7OeouMgX0EZcTJN9Is/gCmvPQh89kbQW2ND3DNVyt4FAi+uSr1xjkXf+6oadcXpXxn/+PncW8LuHfg9woYfzv2e9sbXHzr6r2r+4793v6m5r/19zv2e/s/bDv2e9ux39veduz3trcd+73t7duw19YaU0OxMWwa6o5pbEpBlBwqkdFtvhke2v2BFUaYFb791zd8Y9vGe0l+tY1RVkjfhLFGNq7hbSP4LrgB9wn8F34t3E3hfqWUyPLWxt/s1G+r6kfslXFvUZiAsw7NIW+hR1hLt7B59GPoXbNib1/YTCNVrQ0y7th2ODsgQh+grouMAPhCaSWoR7gvaR0kulZyE8chfA4IYV8Zvp9RB4qDuNPxCDo8/I9B8ulhmi8LCv5gx/47G7Ds1B4TYUwDySCg9yzp1BtY7QF7B3nLUt9IS/ljm+nBqsO+CnfWHffKSz1C744HD9BSB3HHTw+rA/vA/Y79l2IPJ94pN6T5OiknvRdIhGNe4G8cAuh83L3cG6yyBtQRGNrOsViPfWUH2BPMKPXk6dyBtHw0cNAmqH1nh3a1/9oGht2deAd9XcFJBhVXiD2QAB0C7a4FSNoWUjzB5FvXR5AgcODbaYqx1+IR+9rrt+uvND5pQ6OxiolNjvaeyOyEfKm3Z/tSQyKsibF3HFgpDaTIAPZACqTEgjgqNL9AvdzU0dSIfSXEUO292MMhAvOnUKOfOjMcru8aHfm72n8p9zR6xWu8ouGsIUcjjbvHGEoC1gL9DSpjg0YI7Y3ZmBpaxF4nsPfUA+gn/G5PvLzEHRO5thDMRLlXO/bf2ZRBZ0uDWhy7ouHHrkDCh9y7CwGNcyV9wZjAjw22hH0F2Ns+9vWY1KPGs8s5od47ubcU0I96yo79dzYM41jlwxkQthE+tGGdr3f+xmqQe+gfZITRFZH3x5Dnp69XxoSLjtGAvXnAHh2Zd/WdpW/J4PM9IPdd/J57y672X4u9I13XKoSvDc3jaBzhKsDewHjXPQI2EUNzTxcGeJRxvcB8inVrYuL9oNZhLx7VvuZxCK6/jLmnfswDW5x+s8Hk7Nh/s8mxaN+1Ze5R8Gl1mxvQWsIeo960d96Jgh48ow+RfrMm6jy7JPwk+DCWI+IRLXl7fPcYqKeRLGu8j02FIBWPWZQqZHL+ZljIrPvG13ktp9gYqWRHj+dd8OAOhrkglPTT4HpnMsGKHyAKq70xHd34s/d/EzIZojHtg9r74SmlXLCpD5FL3wEaNj2S5B6Or86NPRS0qOVfg54nv+t1LnsQijusMQGqwdbLJkzfWJiaEhS65IgedgIwABIlUlqevleYzpAbezZZUboMa7p5tPIB/kgiBmpP8XelRD9W7+P1XQdoaFzLV7K02puoPcjU00/CAPbVX8M+1DVbp8MaWFlXJ8HI90I1RTcYAcReNNJamJRS6IkRQsOzuXQ35WpZn7mTy6vTa9Gokm2UYvBNOOreCHZwXRyqPaUk2B72PmYZjtsLP4YxoxDm0NubKl7/qKKXrquQCfQ12HdVkFbEXo/+RsHHnTWSI0VIwRTd3D3Iekg9oAwWylazTIR5H3sPO4dQVMgJ7hKCeTY4sjR9ue+r7Ijas2pLnm/z4cvGH3IAv+Ewpp+hHU1OeCxDFMBHM1B/F/aGDgpGevrDam/jBMMMVzHUcWvYXFjK0qJJKfdfJiP0A0jbQUG0gnOR534cnlsTIW/jfHfEXPFPHdmdob0wg2GQHYnkoNrTNNWp9YNaDNxI/FvZCX7TCKuf5uQMqm/V5nuxtyi+Rd9z3yum1Z6wzzbCUAIzywyaWsRD8EQmIOD9DxgCLPAGOcqUqE6dYzL1RKvtqDXd6LG3vgPfQ5g74IRJ6JDWPEQtR/gfqL0IGWiGSuBBFTIYmAP20N+V3+6euZe2l80wjn2F75Q7gP5e7MHZV0VHmLr/ob1S+2zYo6VBExPP0rLT9xNUlJPQNpCc6VyWYo/j7nsxjOsgj7o2i32YDXUA0YwSx1yENx+U+Ey5EzTdRAHWbg2P7wAvIjmEPZdM/CXs/dNqis0GmyPisH1C7a2MPABPChso8mO+EHtbGvtqkrfX7uPNe+FBxBpcTMWdoOkMAUf8JMKPGVsoybziBIYC04OwQegNprcT60i99h5ZSp/fHLKCyW9hTxtp/cjyqLen5BoWeyxYi4mknH4Gh2NA7tndU3fkq4QZx170DL1/6+LbIjkqq59OfijTIjlZW1gnSJpP2QaEPUnjL5WUZc2XmJqG2DtWGqmezmMyk5JuSRH7G02TAST6MAEQ5Ql0WW8cWKVgKif3R3JPCw9fqj0KOgXt6Yg4kVQYRRcbJXFKAl9ceO6VUgmTY3unaRoYfxX7siGcyWqfe9Riegtp0fNQPD7U4j0xh7j0Cud0UZzhZIP3mKD2UgTeKelNIfXWjw6ios3h+sLQS7ZbludahYxC52IwY5WK5GjGnjqyzyyirEsYRhP2/FLKr8ZS+oXak9zv2GfFfg21x0gOTvnDNV+rbllthD1HNGG1uSMMku0VLcOyz9We7cf/WLsWJcdRGMiryFLE+f/PvaC3MNieuZm9mttsHJvYjZBaLaFI7fCqoYPTDpEKAOj/vek323zlFw90uTPOGlIoqERByYANk0Ow/6Br/2ElKdSWAHsU1NpHrjfJWyanu8f2agtOIsxD87BfKitcrK4fbNuD2/maXXPZl0fen+77dwg4KZpafmB+a/0N1rcGCzlhtcS6VWvtzyNuXQkM4yyfh0bj4v+2sB+mNPeOJeLA1IDj81FjL7Af7wPFl6EaMfe7m6mDBvEaRAKItdLHFeCPRJpq6wX2zKqjJAJ8beQ9W2+LhOkmS8vW/o3RCvlPWEkIEUaUGUh1VjtxwgT7rLD3dr917OU5NE1n2CMvEc904XfsveAHcaVpmU8zrR3EI8n5xTrTe4l9hU6UkztyXvPPp/P7Ts3BZOuy/UUyS2JBbQFdkt/pL3fP2Mb7HUGSWvsvAmnIOmKgD2gUGf86XYUHNm3+sjHLEQNGcCA6wLl1Su38Iz9YCMwIThDAoocHwuPWKNJDjj5j6S2585HnFUYPhEeXOSXPHmUztCgFojMJ+t3Dfu/bB7L2CntYrShXEBj2OL8oov2RtYdCXsd4M2TaDPu+hBLA3mwvMqjD7l45h0kzB90zL9RCIrXTobXt/a/5oH4F++6gpUOD5aHr6YgGmiMgdGWmvZKyWPumG6FUB/saje9VFtefvsqeiILFvo2HP2CfoYlCO8jv4OhPfHuqvoJZMhAXb6RozSRjM5MxCFnd8eVNJApErpmJdCRQWR1Js0DY/MJ9P5pfQ/e+fWDnniJ0ZC8rsqcW9hx5AO5/4NsnY+09ZuoEewTNiY0D2Ff3yGxyzNbFbx4twL5a+LKWIr1e2zTn6XTN5+XGsKa2MOXlT5st7NNpaNVfuiHKu3z8lZy1T/O9CySJs7AvS2xXOyw48xr2WD446qe+Xg51TQI6TwqPmEwE3344OVh9N4LbW729EjgwV0D2js06IGYm1XvEnlTDyaJNrKCk5TiIvjSSeIlDmc8M1M5nb+1JlINVMhA8SA0h7AmXQF6EioU3VpsQrblNV3Vnt9LJ2jdyTDin1RzsN6hXE5o4FSan8Zav8lGFj+sG9vSRVM1AvkaCPIIt6nW09IXG7Me5dw7g4A3g8/AjvIwU/QbkNsE7/eWElZUGMtp1wKQRzqyZW0ADzmsnBzVRfFS10zHBuPDDu9ATWXFYXkGlAPW0xGKzPI1/Qoa2OIDgDu2h+k11Fcez4KQC+BrSo8zLN3I0sMiL97CpIJik2JoXG2JQj0jMuoilY1Rzf7b2LCxT3L/fiPqKO0jANCNJ8vcX3ATh7W9gX8wzN8GtZGwjKNRw/WbY71DP9vX7oGOI8mgLvEoGAUWOCvQO+VGMhyoJwoJpZOxhV14rVS+2FxrmfPzB0zF7s2VyssQaEb4sz7tirC8Nuol1mHwcnT/RMzkY1UbOisSltYerxOBvDXpCDb4uftsNOtsBvv3Yq4xgnzPBnkyyAX744jODcz148AH7fFNLK7DHjCip3D6sBAvQjWRcvGaiRvEHxEChkycTNIUVKWVGJYKUzdXYeaHAFDllOD7i44Ctx61TRkRLPg74W7F1Tu2W6ywtIZiOUWvfXMD6/UQ3sN+int5JeHJyUh3U8SFirqBHp5boBg/JO9HFL02nR+RP19O0eqwJzDjdETtMb/v7FALR7el7AlNcqmYGfLb21cbe+Imc9KvApu3bFADAKFcmLaBbgngY7GNIrhQJzgAIbg9gHzgNgNpOPDFJvjBVhdsDfmEPL7O0LmvSuAYBTo4M6uJ4GYjSrnOryWHYw5zjngmgvCEHB5IQI7wmaeYBVBWLJdawzxBJd/+Q1befyPxWjG+PK8Eyy94dALMFgBWFzUbbvM5TEJc9qPoK9t2PB41/ic95ewAnjbO4wJkCVBn+5OPssrQaSHSd+CdrL1eZbo0E+OUqk0ixHdSRD0fjOwOwzaU2eo2kXxiGkBtHUcfg/sDaR+xKEjonSj+Y7AUtPxt4TNiyHpPlZwxYU3pCmn+VLngZ6EZvrxpMCltxq2cMaIerBh4/9QEC2NMSsQ5p7WaC4nGrtV9bVXwMe9RPekeHFCo7imzFbKAGByII8jQjcM3XH0c2mRNbdODpfgD7WD3sk498cGT2KvaLLdNVMZxhP1t7E2QXOV+x06FcCYqG3f3iCcj74al3aAkYsA0sBYzg7h/UEg1ryLkO5DZByX1i4WTMUgZsxoAGHiw8BajdiCxRfkx6e6xjRMts+E2cnkYHuvDtpeGrKozjuD44OMPH4emIrh2tMnXTA3MWHmtK0XM6ZQ17/LVGEkRYE+yjRTC+qjMTqZDKC6IwGXXrYmAT0NjgPoQ9PKg97HVk6u/g8tIeaXLMSjRb++RJZHyZZ2tf21aTAw8a2z0dQM1HdW/IsI930BQebC0Jsv0J7qkYhRJGqDRI5NhIl47cT7J67EKsHejB628kGAJ3xAgrrqw9LxQSSGeOnUdAS9niQ7qG5CINYK9hn1LxGNMJsIH9VaHSyto7k5aFB3KBaXWP3cJ+1f9/imnbPKJmfJBL2I8bJZNpb+1Tm8LYapF9rckxsD9Zew97BLsJM+K1vAeZ+IJL/fHRjCyJYliQLvQ6eClUnYJdMC+9HClT4VgWE0Iku6QuJTlLW1ZKQ9HvbDZlyMT4SCs/XI087JfWngoVpRysYUgBoE+0ZzwJckyf+1K3sOc9lLMN7XziKq9zQuli5c3O2rcz7OFVTjND4WH/+gXsy0l2me9gL3ldOuuNtde/Njtt/8zaI+xxymYAVb0UTWdsXP9FYTtE+Wj0ARQ9fjB1xf9Os6Xdw14ISPk/BQfadLuL9qtL6QmCFULeF+3SjWneqCx+5P7jl9aezD35UZA5y7rZd2L1JcI+SpVXuYJ9p5nmEPF6Yu3zRW3cT6x9nHNHW2uf/E9ZRrTzvxhmaAn7dqqtvPHtlbrvLsC4t/bpkbXnAU+Zjrb3QagzTh6x4debYVnMobMAUkv/SDRD8uNOO520O9izrplVMNClifQw1EeTagqZvqmcOh2raMKsREFKMzLnj10OmtTIXFh7Dox5GxPoBiK4H82cxdgT7M1+Jlve/vy10wNrn66KsPqVta+/tfYlup/TsE6wNwzIFvbMz8MdfGTtxctxPs4fW/tJ77BHfYCKWbajLbeDBOkfyVcB0FQ+88GusLTVwx3qW+DGDNhYWTrWHIfRO6OjA5laaMFGZnhQ+SDu1xyXngsrgOlBXvn2mVHvogTyclAIqqsYhxCAevCprrO0P7T2FV3OdSuYH1j7MjMp+5C2ar58qUxY+vY3TA5SrZBj/P7UJ749U/ftddI0/Z1vD4ZDEr1XXdrB0PPODRGceBKHqV+C8hxRjaG1F4XnjbVvXHQLNbuYj1W9gyjfMeRF2S+Si5SpFbr9LeQNKmw7wt4nT07WXrp/6A5tVMeIpP3gaz+iCaJolhz7UusPYd/2onGXrtL00FNrXzyT02cL2VbW/oF63RI3jwlMShVEten31p58ep9K+GNrD7ahU73epSIefV9UIXrh5QekMt8LiQTZwL7j3lXljslpgSQ4OEkyqgTi4VozcR2VSsGo5Jv7e/x7swKagl06pp+ShlveXrqAsBPDuapBX0oVTS6K+UfC46W1nwWH3UnRtu79M2uPblL3IahJV9kz1/varzaHfk/SVS4tFJ7w9pKlqn4m/q1vX1mxcLvtAu5DOdb7gtlZIzjGqpIWPwb0yBw2pPjTbY+4xnKxJs1weg9BlfSsdYvcl5Wzwwj3t11oPqiQzgp7WmsurL2BPf+VYgdQ40hOGhQLwBUZ3OefwF59+ymPmpOTohGl037G5OhT9zlKFheElbXPJ3drcVUfbDgG5BHsW3pk7fFC3d++P7b2VeQ84aa0ebjOhRYF8ia0uqRhde1HSkBI0fJFMUQCD8QJQSj43i0zT8Gulg8GTqIeXMirMw2LUb7LDxI+nLRl5XG8sPZ2JyqFfcKguaIOn2Yea4KS2c7zV9a+WY3AkDA4KZpRqj239lGtfbfiMzqZkaK5+ZT8yvB1MtvSy3mVFmW0etkr2LOf1uvrkW9Ptn9KYBc/wP/p21eWm2bmS7bWnlu7ZuqOQ7B//5MipAMaHR9e9x7R1Tlu+tuDcE1gT63ERWzQNdxtIMEnw0vVVly+zpKCnqV3DZeaSCHLztpX492wsLIyutnY41TOpU670t4Lj1e+PSuDC6xvTFOf9Pb5d0yOKLGynF6gNVt7OrQwT5xWoTadrp9Pd+3bV8yspGe8vdwV/8XJQgyq+g+s/USr1n3Fa8W+xlrboeae/Q/S45ouHgFhj57KrXPf7O62VFCL7LnQOrJJxCG23jhUUNMVuN94bxLSck1jDJfWnoJZ9XZsKypWLMDedOwB/ca3T4aP5voJI4e31VX5tQprH/r2UkEksiBfZtLmDK6Vry84JKkykdPleAN7qgwA8exD3j5o7U07rTVw6f4HvP2ptmrX4GDgCLQuGaVax2Fh/+HOBYd0bMKOCZiGirfNAE1BcwvcPKEFKagdzXY+SkpyqCvVLajBh+YdhRVr5Dv1tqjkXVdX5VLtNp1Fjb02vkURdC3O2pffWXtfdJdKmGAflu79QybHFNLOzzaf+ziU1z2VXSeoxHAD++iqvupDa0/GoJ5DCyl6/b9Z2iLZhFe6qikM4PGi6LwTlUfECRcUSpdUyDM1aogvaac71578e60v7Nw7hM39x1VwUeUsVspDvoooF4Ipd/Zel80vs7TZmHlsSMXGHjRF0vGT9qUl1Odf+/ZgnLROyAjohSmsC3GOz7/2unNyxii08K4WX0I+TyZzaKobKjtXozLqMdzB3pw1YensHva1TRCfDDBPYbjOjW9/AXsRvH2/AO1I42KgO9hHbWgAqVBMiGIKd1Dv47jG25/F270KxdzrDGCNQM9KpOiWItieMlNVHxGNRTYQJ8BztBxurX0mhrZYH0flzrJucehQrq09rAnL7zzemA8EglSQMpIEMi6gjE+n1gtC3s5I592rwOG3l0Z36PB2ct750IuWRnKM87w6tBBaP1f8xCA1uuY3pgHk6UsuFdl0oi430RaEyxvNnGt3FcnkIYfZLmQ5HRWHY1PxUVqHLRJg00r0cWxO9b/2rkW3bRgGUqZgQxDS///cVXyJcizbW50sNaShQZqm6eycGZI63gmRQBjxcErn2+mYrWSdfFWr/LeGIVnhpwTNZ8njdUnb69v7Xnz0MrN6IA+16NQx2q5BZ7cpvD4XTLnu/XzjZVYP7T89QNh4MPT+Z4et7M3n7P2We37oH0KAbnty44UAQvcsbd/1362pxjuM+8SCNzxmElR+T8k4ondPhSsZNbP4vCQHOtG3z05o1PtSVX9l3KtyDg2QcNKkvJw5Ko1GWjYBfKzfTHM6OjnzHOMz8Pl64qKYpmjAGVdhPDVPMNb5FU9LyP3bmldspT3YCwOAJkeySGJ+o08IZ+TSTBqvRfEyF34YO1kBD44cWrYll+o4o7Wkgjdo8vZo+1noQnyyHElYCY5hsgH7nk6Oq2djtFJBfTuFGKFmJrHyd4ZT4YVr2pZuuPSyctE+T/3cPjOri+1DypckHQUGWDIo4ohRi/6r2PdU2BOR7STsoRH7rncpX8Ls6TKxMe+xsK40Sy/0muC4k+Nz+rhiFaNdWUEraZILcTZCI9pft3B5sR8bbyfQW0qc9R1RNOZRUlUggOa5wUdh4RYXB05ASM5Jo31RbU0no31DzqkgtrvOwQcRfZB/AvcZDdKtvj02Lfta3dIHCzNJtaZ+BLkWeZhxwP43BXttG/O86LTsNHJYi4P0hGnfCmmvVKI9eVcljbyBdXJk0I/k0yAcGnSmBvUBVjqgfoCQI3/dhFq9xMmI8uxmsoK9EW64L1QlqLwypnzkDNhfCMrl5WrGeTX80ucec/cQJLopmbfI/Enoq1k38zTL/chyTgyZEx3MptnY189VBd30k3P7nNtX30GDv36k+Pr94XgSmmgN2F9bcC4vPp/NqOO007EV2OemR5gzk93Z90CVPVhALLOuX97sN+2g3sJ9G+xXhe9PT0tXA5NiPo1YGeyTDmt9raM9D98esJnG+su3Ju7uHFwFfPOi0fpzc7F1WcLoPQEzcVWYIy96lzTnRLWsjnjQv2NguCD/FOuvB1Wnk4O2YvW7TanNbx5qcaLJVsYB+wtXgPCuv3L8pxLOrsKTlJa7N7HIcyQ24+TniSIykKKC/NZZ2Dc999d1C6D5JE228SSNeMW9FrPBkYGqNS+yL/RIcu66ktEAJBoSE5l2T/NMuqN0CZRuT5TEgEarkvYCz8Ie3oIggn2jBB/NXhkd8HPOdaO5bkSDcTuRC+wB+5vCXrWZbLj6O23/rlm/k/sUSyVcRqwCM8fYvCRltvJR9ZmPOpq5wN6xp1J0puLo3M2lX69W05LVJ3NdQQ73A/Y3hb0UpmziQTbr8CjpDXv6IIuiUYYjTPc6zxeOmWjvbpJNBfaN7Cr3L2U7jiK+VjGqHmv6sc0MGJ4Qvxrrty5HKRN5MhqTJdUzhn3k+atZfJJFA7+Ky3/S0cSFYD83uT0q2OUK4GvZuJeqoln3DlD30Abs77qicb2UCGYCeyXVSYATDxvJREawiULV2v6sYL9AIymcOKOXEC/gxzqHW1WT3H6xlLN5RPsbw17f5uAUm4h/jiQigtMiWnzEQeZcmI134ETf/s2ZvcDeiSxq6yY2bRzkkV4AD3p0wOdoPzo5N10c93ILexFzIqueFHXqNENj8cBiIh8Eex4KBbUHDJrba5Q39YS6Q2GbCSZmgrWHmwcV7daL9MoyqXwzzSaw+04mFAhHhQAAAFhJREFU09pAs9vl2oDa7AMdZf0c2MtkHNStaVJlTp1lB+84bs5KGIQdzcOUMG7udWM6lKD+JUH9S4L+HNTMOTi3KH1Ax3z+6w1kG+4EN9s81li3XqZcsfwBdPSktKMGVK8AAAAASUVORK5CYII=); display:inline-block; width:758px; height:229px;}
+	  /* Padding for text in command generation pages */
+	  .tab0 {
+		position: relative;
+		left: 0em;
+	  }
+	  .tab1 {
+		position: relative;
+		left: 1.5em;
+	  }
+	  .tab2 {
+		position: relative;
+		left: 2em;
+	  }
+	  .tab4 {
+		position: relative;
+		left: 4em;
+	  }
 	  
-	  .topaz_logo_medium { background:url(data:image/png;base64,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); display:inline-block; width:331px; height:100px;}
+	  /* Collapsible instructions */
+	  .collapsible {
+	    background-color: #fafafa;
+	    cursor: pointer;
+	    padding: 16px;
+	    width: 50%;
+	    border: none;
+	    text-align: left;
+	    outline: none;
+	    font-size: 22px;
+	  }
+
+	  .active, .collapsible:hover {
+	    background-color: #f2f2f2;
+	  }
+
+	  details[open] summary {
+	    background-color: #fafafa;
+	  }
+
+	  .content {
+	    padding: 0 18px;
+	    overflow: hidden;
+	    background-color: #fafafa;
+	  }
+	  
+	  /* Collapsible options */
+	  .collapsibleoptions {
+	    background-color: #fafafa;
+	    cursor: pointer;
+	    padding: 0px;
+	    width: 11%;
+	    border: none;
+	    text-align: left;
+	    outline: none;
+	    font-size: 16px;
+	  }
+
+	  .active, .collapsibleoptions:hover {
+	    background-color: #f2f2f2;
+	  }
+
+	  details[open] summary {
+	    background-color: #fafafa;
+	  }
+
+	  .content {
+	    padding: 0 0px;
+	    overflow: hidden;
+	    background-color: #fafafa;
+	  }
+	  
+	  hl1 {
+	    text-align: left;
+	  }
+	  
+	  hl1 span {
+	    background-color: #6ca646;
+	    padding: 3px;
+		border-radius:0.45rem;
+	  }
+	  
+	  hl2 {
+	    text-align: left;
+	  }
+	  
+	  hl2 span {
+	    background-color: #6ca646;
+	    padding: 5px;
+		border-radius:0.45rem;
+	  }
+	  
+	  hl3 {
+	    text-align: left;
+	  }
+	  
+	  hl3 span {
+	    background-color: #5573b8;
+	    padding: 3px;
+		border-radius:0.45rem;
+	  }
+	  
+	  hl4 {
+	    text-align: left;
+	  }
+	  
+	  hl4 span {
+	    background-color: #5573b8;
+	    padding: 5px;
+		border-radius:0.45rem;
+	  }
+	  
+	  hl5 {
+	    text-align: left;
+	  }
+	  
+	  hl5 span {
+	    background-color: #f5a153;
+	    padding: 3px;
+		border-radius:0.45rem;
+	  }
+	  
+	  hl6 {
+	    text-align: left;
+	  }
+	  
+	  hl6 span {
+	    background-color: #f5a153;
+	    padding: 5px;
+		border-radius:0.45rem;
+	  }
+	  
+	  hl7 {
+	    text-align: left;
+	  }
+	  
+	  hl7 span {
+	    background-color: #c8c8c8;
+	    padding: 3px;
+		border-radius:0.45rem;
+	  }
+	  
+	  hl8 {
+	    text-align: left;
+	  }
+	  
+	  hl8 span {
+	    background-color: #c8c8c8;
+	    padding: 5px;
+		border-radius:0.45rem;
+	  }
+	  
+	  hr {
+		border: 0;
+		height: 1px;
+		max-width: 800px;
+		margin-left: 0;
+		background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0));
+	}
+	  
+	  /* Logos - Compressed using https://www.ps2pdf.com/compress-png then converted using https://dataurl.sveinbjorn.org/#dataurlmaker */
+	  .topaz_logo { background:url(data:image/png;base64,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); display:inline-block; width:758px; height:227px;}
+	  
+	  .topaz_logo_medium { background:url(data:image/png;base64,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); display:inline-block; width:334px; height:100px;}
 	  
 	  .topaz_logo_small { background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFEAAAASCAMAAAAUncLGAAAACXBIWXMAAAsSAAALEgHS3X78AAAAVFBMVEUAAQHc29vu7u+gn5/j8fdRU1XY5u3///+JprqOjIseISQBT5wEXLQ+Pj59fX28urmRssMbN1DHz9Vrb3KxraoGbsgChdk9isKZwd1brOEvnOQebaOaZamQAAAByUlEQVQ4y62U266sIAyGCy4HOYgzIKLj+7/nrrSgJmZlXexmwrmffykdgBhep/0c9goh0AjHbZVm1+XbFi0PBqBfldfVvEILuh97P6liU9kMNFE6ah6wjxe88+L+DTAoBafhWs/DsZwYrxNFJ9TFJdJ8zRsjDbxZC3Q0QODx3QBgaIqNYOSMCNZe3Unj6rbvQkufSuyA4glVBVK6Sjw0lXb0dbtYZO0/zi6L/T4Te5hVFRtPYjw6iQAA2YCi4jebt3VJ6yPx4gFG3okGQ243V85OVSJmZrPpmWhO4nFJRJRFDTV93R/rcLfO4i8t6wNRPhClFOZw9iVXAPyUAnBa5GdJeV8zQv9GLHao8UWurtk2HJXqUeG+u4Rd+FPUPdo1D9xNLev2Yy3meknO5V8zI4qwHi6ZPcuggY84bfouGz7IZX8imvZ6DPgbcYToY4x+LI9wrDHjhdqM8pJLm3uKugWjSe1JpBriE7rOSi3nhEj3ze+SmeFOPAqZaoXKshFDEzWWZ9lJgRYEVTVqTDnQe/SV6JsD2cyzlqdOnZUP90t9bS6/JV+WWTnKlmMxa9/VP4RQlem5RaknNc1s9Zxg9wE/YuLw/wz1/wNOyCqRUHdGBAAAAABJRU5ErkJggg==); display:inline-block; width:81px; height:18px;}
 	  
 	  .via_logo { background:url(data:image/png;base64,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); display:inline-block; width:250px; height:100px;}
+	  
+	  .preprocessing_logo { background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADYAAABLBAMAAADJ12nxAAAACXBIWXMAABbqAAAW6gHljkMQAAAAMFBMVEWkpKT9/f39/f3////9/f36+vqJiYl7e3tycnLu7u6Xl5djY2PU1NTFxcW0tLTh4eFzh75wAAAAA3RSTlP6696exOcsAAAETklEQVRIx62V32tbVRzAg4V22haZb/4Xoefch4y0kZ1zhULmYOccobJue/G2S5eQB0lKiqNP7aWXsmKSSRW2giyhIUqf2ot3dkKk0FWkTBMHdb5UM2OLViMD13X4Pefe2x+J88kLgXA+53O+3+/53nNuoJeIFzxnA8UyfgG7ECikX3Wh1s6KnVMNOXz+O619zfWuqSoMh2eaeptXCRczFV2E09ezbV6FnBtNNvVwajSh4BA+5lF0CYbDmb3xOIOh4M/aMY+iufF4JIPup8tQbHDGy0p5AJ+mP8twrTYN9QTTMrzvYUJxbTqGWOgx1BNMyvCeRxDGRKulGohFoJ7g7CU3K+UhRDEBp4oJ1LM3i9ysXE/BCJSJyfBo6n3NzcrzECLSSTKKbo0ksxAedtn3EORDho2srCcdhwj16UafzyQMGVlZz/0M5BbqmnpwyBCWTNYTnsQyfCF5xBCWDLICJuGZdoakB7nR4L8wrBj+D4b+d0Z8RtsZJT6jrUwj2GMckZNsJgu7o9jLskE+g8VwOJVgWNX+OFXFLlQelmw87nrwGkBLqWIj8h/Eg9aqeCxazDQVBJbIqj5o0Fr0RjIg2PDodTkk14T3hEomWwueEOzWaIJBU4GpxaKTGodIm5IJtieDI+htTi4GnuDhYkoxgdR88HJyMckg0siVgHtm4W1XnoDX9JFkEMn1hAjVpxp4EBhESmXUWSEHHpPBq9ITPFpMuueoz2OCwdu+LpkQwxn/jPknGMpMuowd6C0Mgo+4TCD/3B6dffI87bK8OOlxCb9U7HJCMO2Yx+ZlDAo/nfYbzXPVI48/MXPetTXX2Cv11K9phx7fsjoEOwWzeS1WMIzYon7osR3zHgo6SzD7o9KVHzaNDup5RGR3zJXdbnMV2IDxFdLq5XnP+x2FxhzTsc27mqBP42pC6S/lDTjxh8u7fz87Zd/QxWZhUV6YsWJFemwDlCqiKNR9QyOdhZ+ADRbKKh7/0Lauyux5/0r+9o+KDRWabrywveLenGxr2nqvdgf+RWIVN0/efde7FYOO+cVNWfZArKwrj+9/4m3qoGUu1UtwadaNGHPZTsXf8G6r1zASX2/GfuuJcliTXBzP+S3cWo0sbBqGsUB21/IXAvz5xLJ/wfP9Dp4PlUqlBdJVeuVBgI/Zn/tfBv7xdl4XhcW52Defztc/AGYe896FaZ2VwZ61DvZOb4B1Oyt5n22sQM23BacD2yKYCIiLdeswzx1rVZfd52uL6MkfsJ9oo8NjQxOm7SZ88OujwkuyR2/f85J5y1HtlbDW1fhTMS8Zvj9lXHMZfzZQ6VP7Yt1RI+fNJqX+NnC1Z0OWudzEguOHS9rJ7xjsvm05S+v8cs1e1k9+/4SIOvbumG1MOJaZa/X49w30pu1M/mJb37Z6QsfijG1tRyxru9VTldl2nt+cbfneUi6PUL+zqulalgqduw/8ORs4rZ7XO6+ebn1e+wc/BQRd7DBzCAAAAABJRU5ErkJggg==); display:inline-block; width:54px; height:75px;}
+	  
+	  .training_logo { background:url(data:image/png;base64,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); display:inline-block; width:66px; height:75px;}
+	  
+	  .extracting_logo { background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEsAAABLBAMAAADKYGfZAAAACXBIWXMAABcRAAAXEQHKJvM/AAAAD1BMVEWAgID6+vqMjIze3t65ubm+JLLNAAAAg0lEQVRIx2MQYIADRkEUgJBgUGAgShnDYFeGJo0OBEaVjSqjtzJBYoDASFZmoqRiSFiZMDAsmQkrcwCFuSMhZcIKIGXKhJSJgAsWFkLKhCAFEHHKmOhrGpFegBSlBANE0ICo4AXbykJM1DMoGY7mBWopGy17R5XRWdkwaDQSo4y4DAgA/7ebTFUMKdYAAAAASUVORK5CYII=); display:inline-block; width:75px; height:75px;}
+	  
+	  .black_background { background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALYAAAApAQMAAACiDkHRAAAACXBIWXMAAAsSAAALEgHS3X78AAAAA1BMVEUhISFeAxSwAAAAEUlEQVQoz2NgGAWjYBQMNwAAA9gAAXhAw7AAAAAASUVORK5CYII=); display:inline-block; width:146px; height:33px;}
 	  
     </style>
   </head>
@@ -439,13 +693,13 @@
       </defs>
     </svg>
 	
-	<div class="tab">
+	<div class="tab" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">
+	  <span class="black_background"></span>
 	  <button class="tablinks" onclick="openTab(event, 'Preprocessing')">Pre-process</button>
-	  <button class="tablinks" onclick="openTab(event, 'Picking')" id="defaultOpen">Pick</button>
+	  <button class="tablinks" onclick="openTab(event, 'Picking')" id="defaultOpen">Pick | Analyze</button>
 	  <button class="tablinks" onclick="openTab(event, 'Training')">Train</button>
-	  <button class="tablinks" onclick="openTab(event, 'Crossvalidating')">Cross-validate</button>
+	  <!-- <button class="tablinks" onclick="openTab(event, 'Crossvalidating')">Cross-validate</button> -->
 	  <button class="tablinks" onclick="openTab(event, 'Extracting')">Extract</button>
-	  <button class="tablinks" onclick="openTab(event, 'Picking')">Analyze</button>
 	</div>
 
 	<div id="Preprocessing" class="tabcontent">
@@ -456,21 +710,32 @@
 		</ul>
         </div> <!-- end of menubar -->
       </div> <!-- endof #top_panel -->
-	  <h2>&nbsp&nbsp&nbsp Topaz Image Pre-processing Command Generator</h2>
-	  <p style=line-height:1.3>&nbsp&nbsp&nbsp Create commands for pre-processing images (scaling and normalization) for use in this Topaz picking GUI and for use in Topaz training.<br>&nbsp&nbsp&nbsp Values you may want to change are <b>bolded</b>. Values you need to change are <u>underlined</u>.</p>
-	  <br>&nbsp&nbsp&nbsp <strong>Fill in parameters and run the resulting command:</strong></br>
-	  <br><table>
-	  <tr title="Rescaling factor for image downsampling. Recommended: 4, 8, or 16 (e.g. a 4k x 4k image downsampled by 4 results in a 1k x 1k image) (type: even integer)"><td>&nbsp&nbsp <b>Scale factor:</b></td><td>&nbsp <input id="scale" class="preprocessing_inputs" style="width:3em" value="8"></td></tr>
-	  <tr title="Number of CPU cores to use for parallel image downsampling (type: integer)"><td>&nbsp&nbsp <u>Number of CPUs:</u></td><td>&nbsp <input id="numworkers" class="preprocessing_inputs" style="width:3em"></td></tr>
-	  <tr title="Pixel sampling factor for model fit (type: integer)"><td>&nbsp&nbsp Pixel sampling:</td><td>&nbsp <input id="pixelsampling" class="preprocessing_inputs" style="width:3em" value="200"></td></tr>
-	  <tr title="Number of iterations to run for model fit (type: integer)"><td>&nbsp&nbsp Number of iterations:</td><td>&nbsp <input id="niters" class="preprocessing_inputs" style="width:3em" value="100"></td></tr>
-	  <tr title="Random seed for model initialization (type: integer)"><td>&nbsp&nbsp Random seed:</td><td>&nbsp <input id="seed" class="preprocessing_inputs" style="width:3em" value="1"></td></tr>
-	  <tr title="Output directory (type: string; full path)"><td>&nbsp&nbsp <u>Output folder:</u></td><td>&nbsp <input id="output" class="preprocessing_inputs" style="width:20em" value="/path/to/output/preprocessed/images/"></td></tr>
-	  <tr title="Input micrographs for preprocessing (type: string; full path with wildcard for mrc files)"><td>&nbsp&nbsp <u>Input micrographs:</u></td><td>&nbsp <input id="input" class="preprocessing_inputs" style="width:20em" value="/path/to/input/images/*.mrc"></td></tr>
+	  <span class="tab1"><table><tr><td><span class="preprocessing_logo"></span></td><td><h2>&nbsp&nbsp&nbsp&nbsp&nbsp&nbspTopaz Image Pre-processing Command Generator</h2></td></tr></table></span>
+	  <span class="tab2"><p style=line-height:1.3>Create a command for pre-processing images (downsampling and normalization) for use in this Topaz GUI and in Topaz training.
+	  <br><br><br><br><strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
+	  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
+	  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
+	  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7></p>
+	  <hr width="20%">
+	  <br><table style="height:7.3em">
+	  <tr title="Input micrographs for preprocessing (type: string; full path with wildcard for mrc files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input1" class="preprocessing_inputs" style="width:20em" value="/path/to/input/images/*.mrc"></td></tr>
+	  <tr title="Output directory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output1" class="preprocessing_inputs" style="width:20em" value="/path/to/output/preprocessed/images/"></td></tr>
+	  <tr title="Number of CPU cores to use for parallel image downsampling. -1 means use all CPUs (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers1" class="preprocessing_inputs" style="width:3em" value="-1"></td></tr>
+	  <tr title="Rescaling factor for image downsampling. Recommended: 4, 8, or 16 depending on particle size (e.g. a 4k x 4k image downsampled by 4 results in a 1k x 1k image) (type: even integer)"><td><hl4><span><font size="3" color="white">Scale factor</font></span></hl4></td><td><input id="scale1" class="preprocessing_inputs" style="width:3em" value="8"></td></tr>
 	  </table>
-	  <br/>
-	  <div id="result">
-	  &nbsp&nbsp&nbsp <code>topaz preprocess --scale 8 --num-workers ## --pixel-sampling 200 --niters 100 --seed 1 -o /path/to/output/preprocessed/images/ --verbose /path/to/input/images/*.mrc</code>
+	  <br><section><details><summary class="collapsibleoptions" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
+		<div class="content">
+		  <table style="height:5.5em">
+		  <tr title="Pixel sampling factor for model fit (type: integer)"><td><hl8><span><font size="3" color="white">Pixel sampling</font></span></hl8></td><td><input id="pixelsampling1" class="preprocessing_inputs" style="width:3em" value="200"></td></tr>
+		  <tr title="Number of iterations to run for model fit (type: integer)"><td><hl8><span><font size="3" color="white">Number of iterations</font></span></hl8></td><td><input id="niters1" class="preprocessing_inputs" style="width:3em" value="100"></td></tr>
+		  <tr title="Random seed for model initialization (type: integer)"><td><hl8><span><font size="3" color="white">Random seed</font></span></hl8></td><td><input id="seed1" class="preprocessing_inputs" style="width:3em" value="1"></td></tr>
+		  </table>
+		</details></summary>
+		</span>
+	  <br/><br/><strong>Command:</strong><br/><hr width="20%"><br>
+	  <code><span class="tab0"><div id="result1" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
+	  topaz preprocess --scale 8 --num-workers -1 --pixel-sampling 200 --niters 100 --seed 1  --verbose -o /path/to/output/preprocessed/images/ /path/to/input/images/*.mrc
+	  </div></span></code>
 	  </div>
 	</div>
 
@@ -512,10 +777,9 @@
               <li onclick="settings_panel_toggle()" title="Show/edit project settings">Settings</li>
               <li class="submenu_divider"></li>
               <li onclick="sel_local_images()" title="Add images locally stored in this computer">Add local images</li>
-              <li onclick="project_file_add_url_with_input()" title="Add images from a web URL (e.g. http://www.robots.ox.ac.uk/~vgg/software/via/images/swan.jpg)">Add images from URL</li>
-              <li onclick="project_file_add_abs_path_with_input()" title="Add images using absolute path of file (e.g. /home/abhishek/image1.jpg)">Add images from absolute paths</li>
-              <li onclick="sel_local_data_file('files_url')" title="Add images from a list of web url or absolute path stored in a text file (one url or path per line)">Add urls or paths from text file</li>
-              <li onclick="project_file_remove_with_confirm()" title="Remove selected image (i.e. file currently being shown)">Remove image</li>
+              <li onclick="project_file_add_abs_path_with_input()" title="Add images using absolute files (e.g. /home/user/image.jpg)">Add images from absolute paths</li>
+              <li onclick="project_file_add_url_with_input()" title="Add images from a URL (e.g. http://www.robots.ox.ac.uk/~vgg/software/via/images/swan.jpg)">Add images from URL</li>
+              <li onclick="sel_local_data_file('files_url')" title="Add images from a list of absolute paths or URLs from a text file (one path or URL per line)">Add urls or paths from text file</li>
             </ul>
           </li>
 
@@ -549,6 +813,8 @@
               <li title="Visit the Topaz GitHub page"><a href="https://github.com/tbepler/topaz/" target="_blank">Topaz GitHub Page</a></li>
               <li title="Cite Topaz if you use it!"><a href="https://arxiv.org/abs/1803.08207" target="_blank">Topaz Citation</a></li>
               <li title="Visit the project page for the base GUI"><a href="http://www.robots.ox.ac.uk/~vgg/software/via/" target="_blank">VIA Project Page</a></li>
+              <li class="submenu_divider"></li>
+              <li title="If you have an issue with this GUI, please report it and include as much information as possible"><a href="https://github.com/tbepler/topaz/issues" target="_blank">Report an Issue</a></li>
               <li class="submenu_divider"></li>
               <li onclick="set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_LICENSE)" title="View license for VIA">License</li>
               <li onclick="set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_ABOUT)" title="Show more details about this GUI">About Topaz and VIA</li>
@@ -629,8 +895,9 @@
           <div id="img_fn_list"></div>
           <p>
             <div class="button_panel">
-              <span class="button" onclick="sel_local_images()" title="Add new images from local disk">Add Images</span>
-              <span class="button" onclick="project_file_remove_with_confirm()" title="Remove selected image (i.e. the image currently being shown) from project">Remove Image</span>
+              <span class="button1" onclick="sel_local_images()" title="Select new images from local disk">Add Images</span>
+              <span class="button1" onclick="project_file_add_abs_path_with_input()" title="Select path to images from local disk">Add Image Paths</span>
+              <span class="button2" onclick="project_file_remove_with_confirm()" title="Remove selected image (i.e. the image currently being shown) from project">Remove</span>
             </div>
           </p>
         </div>
@@ -877,29 +1144,12 @@
 
           <p>We recommend that you update the default path in <span class="text_button" title="Show Project Settings" onclick="settings_panel_toggle()">project settings</span> to the folder which contains this image.</p>
 
-          <p>A temporary fix is to use <span class="text_button" title="Load or Add Images" onclick="sel_local_images()">browser's file selector</span> to manually locate and add this file. We do not recommend this approach because it requires you to repeat this process every time your load this project in the VIA application.</p>
+          <p>A temporary fix is to use <span class="text_button" title="Add Images" onclick="sel_local_images()">browser's file selector</span> to manually locate and add this file. We do not recommend this approach because it requires you to repeat this process every time your load this project in the VIA application.</p>
         </div> <!-- end of file not found panel -->
-
-        <div id="page_start_info" class="display_area_content display_none narrow_page_content">
-          <a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo"></span></a><br/><br/>
-          <ul>
-            <p><font size="+2"><b><u>Quickstart Guide</u></b></font></p>
-            <p><font size="+2">For particle picking:</font></p>
-            <font size="+1"><b>1) </b>To start picking, <span class="text_button" title="Load or Add Images" onclick="sel_local_images()"><font size="+2">select images</font></span> or add images from <span class="text_button" title="Add images from absolute path (e.g. /my/beautiful/particles.jpg)" onclick="project_file_add_abs_path_with_input()">absolute path.</span></font></br>
-            <font size="+1"><b>2) </b>Pick 500+ particles representing as many particle orientations as possible.</font></br>
-            <font size="+1">&nbsp&nbsp&nbsp&nbsp• Pick across several representative images.</font></br>
-            <font size="+1"><b>3) </b>Export your particle picks as a CSV file and proceed to Topaz training.</font></br>
-            <br><font size="+1">• <span class="text_button" onclick="download_all_region_data('csv')"><font size="+1">Save your particles</font></span> and <span class="text_button" onclick="project_save_with_confirm()">project</span> regularly. You may <span class="text_button" onclick="sel_local_data_file('annotations')">load</span> <span class="text_button" onclick="project_open_select_project_file()">them</span> later to continue.</font>
-            <p><font size="+2">For analyzing Topaz picks:</font></p>
-            <font size="+1"><b>1) </b><span class="text_button" onclick="sel_local_data_file('annotations')">Import</span> your Topaz particle picks as a CSV file and review the picks.</font></br>
-            <br><font size="+1">• For further help, see the <span class="text_button" onclick="set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_GETTING_STARTED)">Getting Started</span> page.</font>
-            <br><br><p><strong>Citation: </strong>Bepler, T., Morin, A., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2018). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs.<a href="https://arxiv.org/abs/1803.08207" target="_blank"> arXiv.</a>
-          </ul>
-        </div>
 
         <div id="page_getting_started" class="display_area_content display_none narrow_page_content">
           <ol>
-            <li><strong>Convert MRCs to JPEGs</strong>: Use Topaz to convert your mrc files to JPEGs so you can use this GUI to make training picks and analyze Topaz results:
+            <li><strong>Convert MRCs to PNGs</strong>: Use Topaz to convert your mrc files to PNGs so you can use this GUI to make training picks and analyze Topaz results:
               <ul>
                 <br><code>topaz preprocess /full/path/to/mrcs/*.mrc -s [binning] -o /full/path/to/input/images/ -t [number_of_CPU_threads]</code></br></br>
               </ul>
@@ -945,24 +1195,26 @@
 
         <div id="page_about" class="display_area_content display_none" style="width:40rem !important">
           <div style="text-align:center">
-             <a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo_medium"></span></a>&nbsp&nbsp&nbsp&nbsp<a href="http://www.robots.ox.ac.uk/~vgg/software/via/" target="_blank"><span class="via_logo"></span></a>
+             <table style="font-family:mono; font-size:0.8em;text-align:center;">
+			 <tr><td><a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo_medium"></span></a></td><td>&nbsp&nbsp&nbsp&nbsp<a href="http://www.robots.ox.ac.uk/~vgg/software/via/" target="_blank"><span class="via_logo"></span></a></td></tr>
+			 <tr><td><a href="https://github.com/tbepler/topaz#topaz" target="_blank">Topaz Version 0.0.0</a></td><td><a href="https://gitlab.com/vgg/via/blob/master/CHANGELOG" target="_blank">VIA Version 2.0.5</a></td></tr>
+			 </table>
           </div>
 
-          <p style="font-family:mono; font-size:0.8em;text-align:center;"><a href="https://github.com/tbepler/topaz#topaz" target="_blank">Topaz Version 0.0.0</a> &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp <a href="https://gitlab.com/vgg/via/blob/master/CHANGELOG" target="_blank">VIA Version 2.0.5</a></p>
           <p><a href="https://github.com/tbepler/topaz/" target="_blank">Topaz</a> is a pipeline for particle detection in cryo-electron microscopy images using convolutional neural networks trained from positive and unlabeled examples. The original research can be found <a href="https://arxiv.org/abs/1803.08207" target="_blank">here</a>.</p>
           <p>Topaz GUI uses VGG Image Annotator (VIA), which is an image annotation tool that can be used to define regions in an image and create textual descriptions of those regions. VIA is an <a href="https://gitlab.com/vgg/via/" target="_blank">open source project</a> developed at the <a href="http://www.robots.ox.ac.uk/~vgg/" target="_blank">Visual Geometry Group</a> and released under the BSD-2 clause <a href="https://gitlab.com/vgg/via/blob/master/LICENSE" target="_blank">license</a>.</p>
           <p>Here is a list of some salient features of the Topaz GUI version of VIA:
             <ul>
-              <li>based solely on HTML, CSS and Javascript (no external javascript libraries)</li>
-              <li>can be used off-line (full application in a single html file of size &lt; 450KB)</li>
-              <li>requires nothing more than a modern web browser (tested on Firefox, Chrome, and Safari)</li>
+              <li>based solely on HTML, CSS and Javascript</li>
+              <li>can be used off-line (full application in a single html file of size &lt; 0.5MB)</li>
+              <li>only requires a modern web browser (tested on Firefox, Chrome, and Safari)</li>
               <li>import/export of particle picks in csv file format</li>
             </ul>
           </p>
           <p>For more Topaz details, visit <a href="https://github.com/tbepler/topaz/" target="_blank">https://github.com/tbepler/topaz/</a>.</p>
           <p>For more VIA details, visit <a href="http://www.robots.ox.ac.uk/~vgg/software/via/" target="_blank">http://www.robots.ox.ac.uk/~vgg/software/via/</a>.</p>
           <p>&nbsp;</p>
-          <p>VIA is Copyright &copy; 2016-2018, <a href="mailto:adutta-removeme@robots.ox.ac.uk">Abhishek Dutta</a>,Visual Geometry Group, Oxford University and <a target="_blank" href="https://gitlab.com/vgg/via/blob/master/Contributors.md">VIA Contributors</a>.</p>
+          <p><i>VIA is Copyright &copy; 2016-2018, <a href="mailto:adutta-removeme@robots.ox.ac.uk">Abhishek Dutta</a>,Visual Geometry Group, Oxford University and <a target="_blank" href="https://gitlab.com/vgg/via/blob/master/Contributors.md">VIA Contributors</a>.</i></p>
         </div> <!-- end of page_about -->
 
         <div id="page_license" class="display_area_content display_none narrow_page_content">
@@ -989,6 +1241,35 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
           </div>
+		
+        <div id="page_start_info" class="display_area_content display_none narrow_page_content">
+          <a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo"></span></a><br/><br/>
+          <ul>
+            <p><font size="+2"><b>Quickstart Guide</b></font></p>
+			<section><details><summary class="collapsible"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Particle picking for training</summary>
+			<div class="content">
+			  <p style=line-height:1.3>
+			  <font size="+1"><b>1) </b>To start picking, <span class="text_button" title="Load or Add Images" onclick="sel_local_images()"><font size="+2">select images</font></span> or add images from <span class="text_button" title="Add images from absolute path (e.g. /my/beautiful/particles.jpg)" onclick="project_file_add_abs_path_with_input()">absolute path.</span></font></br>
+              <font size="+1"><b>2) </b>Pick 500+ particles representing as many particle orientations as possible.</font></br>
+              <font size="+1">&nbsp&nbsp&nbsp&nbsp• Pick across several representative images.</font></br>
+              <font size="+1">&nbsp&nbsp&nbsp&nbsp• Not all particles need to be picked from each image.</font></br>
+              <font size="+1"><b>3) </b>Export your particle picks as a CSV file and proceed to Topaz training.</font></br>
+              <br><font size="+1">• <span class="text_button" onclick="download_all_region_data('csv')"><font size="+1">Save your particles</font></span> and <span class="text_button" onclick="project_save_with_confirm()">project</span> regularly. You may <span class="text_button" onclick="sel_local_data_file('annotations')">load</span> <span class="text_button" onclick="project_open_select_project_file()">them</span> later to continue.</font></br>
+              <br><font size="+1">• For further help, see the <span class="text_button" onclick="set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_GETTING_STARTED)">Getting Started</span> page.</font>
+			  </p>
+			</div>
+			</details></summary>
+			<section><details><summary class="collapsible" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on"	onselectstart="return false;" onmousedown="return false;">Analyzing Topaz picks</summary>
+			<div class="content">
+			  <p>
+			  <font size="+1"><b>1) </b><span class="text_button" onclick="sel_local_data_file('annotations')">Import</span> your Topaz particle picks as a CSV file and review the picks.</font>
+			  </p>
+			</details></summary>
+            <br><br><p><i><strong>Citation: </strong>Bepler, T., Morin, A., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2018). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs.<a href="https://arxiv.org/abs/1803.08207" target="_blank"> arXiv.</a></i>
+			</div>
+          </ul>
+        </div>
+
         </div>
       </div> <!-- end of display_area -->
     </div> <!-- end of middle_panel -->
@@ -1001,48 +1282,122 @@ POSSIBILITY OF SUCH DAMAGE.
 		</ul>
         </div> <!-- end of menubar -->
       </div> <!-- endof #top_panel -->
-	  <h3>&nbsp&nbsp&nbsp Topaz Training Command Generator</h3>
-	  <p>&nbsp&nbsp&nbsp Create commands for training network using particle picks.<br>&nbsp&nbsp&nbsp Values you may want to change are <b>bolded</b>. Values you need to change are <u>underlined</u>. Values you may want to optomize are <b><i>bold-italicized</i></b>.</p>
-	  <br>&nbsp&nbsp&nbsp <strong>Fill in parameters and run the resulting command:</strong></br>
-	  <br><table>
-	  <tr title="Rescaling factor for image downsampling. Recommended: 4, 8, or 16 (e.g. a 4k x 4k image downsampled by 4 results in a 1k x 1k image) (type: even integer)"><td>&nbsp&nbsp <b>Scale factor:</b></td><td>&nbsp <input id="scale" class="preprocessing_inputs" style="width:3em" value="8"></td></tr>
-	  <tr title="Number of CPU cores to use for parallel image downsampling (type: integer)"><td>&nbsp&nbsp <u>Number of CPUs:</u></td><td>&nbsp <input id="numworkers" class="preprocessing_inputs" style="width:3em"></td></tr>
-	  <tr title="Pixel sampling factor for model fit (type: integer)"><td>&nbsp&nbsp Pixel sampling:</td><td>&nbsp <input id="pixelsampling" class="preprocessing_inputs" style="width:3em" value="200"></td></tr>
-	  <tr title="Number of iterations to run for model fit (type: integer)"><td>&nbsp&nbsp Number of iterations:</td><td>&nbsp <input id="niters" class="preprocessing_inputs" style="width:3em" value="100"></td></tr>
-	  <tr title="Random seed for model initialization (type: integer)"><td>&nbsp&nbsp Random seed:</td><td>&nbsp <input id="seed" class="preprocessing_inputs" style="width:3em" value="1"></td></tr>
-	  <tr title="Output directory (type: string; full path)"><td>&nbsp&nbsp <u>Output folder:</u></td><td>&nbsp <input id="output" class="preprocessing_inputs" style="width:20em" value="/path/to/output/preprocessed/images/"></td></tr>
-	  <tr title="Input micrographs for preprocessing (type: string; full path with wildcard for mrc files)"><td>&nbsp&nbsp <u>Input micrographs:</u></td><td>&nbsp <input id="input" class="preprocessing_inputs" style="width:20em" value="/path/to/input/images/*.mrc"></td></tr>
+	  <span class="tab1"><table><tr><td><span class="training_logo"></span></td><td><h2>&nbsp&nbsp&nbsp&nbspTopaz Training Command Generator</h2></td></tr></table></span>
+	  <span class="tab2"><p style=line-height:1.3>Create a command for training a network using particle picks.
+	  <br><br><br><br><strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
+	  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
+	  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
+	  <hl5><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Optimizable</font></span></hl5> 
+	  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7></p>
+	  <hr width="20%">
+	  <br><table style="height:23.5em">
+	  <tr title="Path to input micrographs for training (type: string; full path)"><td><hl2><span><font size="3" color="white">Training images folder</font></span></hl2></td><td><input id="trainimages2" class="training_inputs" style="width:20em" value="/path/to/preprocessed/images/"></td></tr>
+	  <tr title="Training particles in CSV, star, or tab-delimited format (type: string; full file path)"><td><hl2><span><font size="3" color="white">Training particles</font></span></hl2></td><td><input id="traintargets2" class="training_inputs" style="width:20em" value="/path/to/training_particles.csv"></td></tr>
+	  <tr title="Path prefix to save trained models for each epoch (type: string; full path)"><td><hl2><span><font size="3" color="white">Save prefix</font></span></hl2></td><td><input id="saveprefix2" class="training_inputs" style="width:20em" value="/path/to/model"></td></tr>
+	  <tr title="Destination to write the train/test curve (type: string; full file path)"><td><hl2><span><font size="3" color="white">Output</font></span></hl2></td><td><input id="output2" class="training_inputs" style="width:20em" value="/path/to/unique/output/model.txt"></td></tr>
+	  <tr title="Number of subsets to divide the training data into. This will determine the train/test dataset sizes. E.g. '5' splits the picks into five subsets where one will be used as the test dataset. (type: integer)"><td><hl4><span><font size="3" color="white">K-fold</font></span></hl4></td><td><input id="kfold2" class="training_inputs" style="width:3em" value="5"></td></tr>
+	  <tr title="Number of CPU cores to use for parallel image downsampling. -1 means use all CPUs (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers2" class="training_inputs" style="width:3em" value="-1"></td></tr>
+	  <tr title="Augment the method with an autoencoder where the weight is on the reconstruction error (type: float)"><td><hl4><span><font size="3" color="white">Autoencoder</font></span></hl4></td><td><input id="autoencoder2" class="training_inputs" style="width:3em" value="0"></td></tr>
+	  <tr title="Number of training epochs (type: integer)"><td><hl4><span><font size="3" color="white">Number of epochs</font></span></hl4></td><td><input id="numepochs2" class="training_inputs" style="width:3em" value="10"></td></tr>
+	  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU extraction (type: integer)"><td><hl4><span><font size="3" color="white">Device</font></span></hl4></td><td><input id="device2" class="training_inputs" style="width:3em" value="0"></td></tr>
+	  <tr title="Model type to fit (options: resnet8, conv31, conv63, conv127) (type: string)"><td><hl6><span><font size="3" color="white">CNN model</font></span></hl6></td><td><input id="model2" class="training_inputs" style="width:6em" value="resnet8"></td></tr>
+	  <tr title="Objective function to use for learning the region classifier (options: PN, GE-KL, GE-binomial, PU) (type: string)"><td><hl6><span><font size="3" color="white">Method</font></span></hl6></td><td><input id="method2" class="training_inputs" style="width:6em" value="GE-binomial"></td></tr>
+	  <tr title="Pixel radius around particle centers to consider (type: integer)"><td><hl6><span><font size="3" color="white">Particle radius</font></span></hl6></td><td><input id="radius2" class="training_inputs" style="width:3em" value="4"></td></tr>
+	  <tr title="Fraction of data that is expected to be positive. Usually between 0.03 and 0.05 (type: float)"><td><hl6><span><font size="3" color="white">Pi (π)</font></span></hl6></td><td><input id="pi2" class="training_inputs" style="width:3em" value="0.035"></td></tr>
 	  </table>
-	  <br/>
-	  <div id="result">
-	  &nbsp&nbsp&nbsp <code>topaz preprocess --scale 8 --num-workers ## --pixel-sampling 200 --niters 100 --seed 1 -o /path/to/output/preprocessed/images/ --verbose /path/to/input/images/*.mrc</code>
-	  </div></p>
+	  <br><section><details><summary class="collapsibleoptions" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
+		<div class="content">
+		  <table style="height:23.5em">
+		  <tr title="Which fold out the k-folds will be used as the test dataset (type: integer)"><td><hl8><span><font size="3" color="white">Fold</font></span></hl8></td><td><input id="fold2" class="training_inputs" style="width:3em" value="0"></td></tr>
+		  <tr title="Number of units model parameter (type: integer)"><td><hl8><span><font size="3" color="white">Units</font></span></hl8></td><td><input id="units2" class="training_inputs" style="width:3em" value="32"></td></tr>
+		  <tr title="Dropout rate model parameter (type: float)"><td><hl8><span><font size="3" color="white">Dropout</font></span></hl8></td><td><input id="dropout2" class="training_inputs" style="width:3em" value="0.0"></td></tr>
+		  <tr title="Use batch norm in the model (type: on/off)"><td><hl8><span><font size="3" color="white">Batch norm</font></span></hl8></td><td><input id="bn2" class="training_inputs" style="width:3em" value="on"></td></tr>
+		  <tr title="Pooling method to use (type: string)"><td><hl8><span><font size="3" color="white">Pooling</font></span></hl8></td><td><input id="pooling2" class="training_inputs" style="width:3em" value="none"></td></tr>
+		  <tr title="Scale the number of units up by this factor every layer (type: integer)"><td><hl8><span><font size="3" color="white">Unit scaling</font></span></hl8></td><td><input id="unitscaling2" class="training_inputs" style="width:3em" value="1"></td></tr>
+		  <tr title="Scaled number of units per layer in generative model, if used (type: integer)"><td><hl8><span><font size="3" color="white">Scaled num of units</font></span></hl8></td><td><input id="ngf2" class="training_inputs" style="width:3em" value="32"></td></tr>
+		  <tr title="L2 regularizer on the model parameters (type: integer)"><td><hl8><span><font size="3" color="white">L2</font></span></hl8></td><td><input id="l22" class="training_inputs" style="width:3em" value="0"></td></tr>
+		  <tr title="Learning rate for the optimizer (type: float)"><td><hl8><span><font size="3" color="white">Learning rate</font></span></hl8></td><td><input id="learningrate2" class="training_inputs" style="width:3em" value="0.001"></td></tr>
+		  <tr title="Number of data points per minibatch (type: integer)"><td><hl8><span><font size="3" color="white">Minibatch size</font></span></hl8></td><td><input id="minibatchsize2" class="training_inputs" style="width:3em" value="256"></td></tr>
+		  <tr title="Fraction minibatch that is positive data points (type: fraction)"><td><hl8><span><font size="3" color="white">Minibatch balance</font></span></hl8></td><td><input id="minibatchbalance2" class="training_inputs" style="width:3em" value="1/16"></td></tr>
+		  <tr title="Number of parameter updates per epoch (type: integer)"><td><hl8><span><font size="3" color="white">Epoch size</font></span></hl8></td><td><input id="epochsize2" class="training_inputs" style="width:3em" value="5000"></td></tr>
+		  <tr title="Batch size for calculating test set statistics (type: integer)"><td><hl8><span><font size="3" color="white">Test batch size</font></span></hl8></td><td><input id="testbatchsize2" class="training_inputs" style="width:3em" value="1"></td></tr>
+		  </table>
+		</details></summary>
+		</span>
+	  <br/><br/><strong>Command</strong><br/><hr width="20%"><br>
+	  <code><span id="cmd_copy2" class="tab0"><div id="result2" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
+	  topaz train --train-images /path/to/preprocessed/images/ --train-targets /path/to/training_particles.csv --k-fold 5 --fold 0 --radius 4 --model resnet8 --units 32 --dropout 0.0 --bn on --pooling none --unit-scaling 1 --ngf 32 --method GE-binomial --autoencoder 0 --pi 0.035 --l2 0 --learning-rate 0.001 --minibatch-size 256 --minibatch-balance 1/16 --epoch-size 5000 --num-epochs 10 --num-workers -1 --test-batch-size 1 --device 0 --save-prefix /path/to/model --output /path/to/unique/output/model.txt
+	  </div></span></code>
+	  </div>
 	</div>
-
+<!--
 	<div id="Crossvalidating" class="tabcontent">
       <div class="top_panel" id="ui_top_panel">
         <div class="menubar">
         <ul>
-          <li><a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo_small"></span></a></a></li>
+          <li><a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo_small"></span></a></li>
 		</ul>
-        </div> <!-- end of menubar -->
-      </div> <!-- endof #top_panel -->
-	  <h3>&nbsp&nbsp&nbsp Topaz Cross-validation Command Generator</h3>
-	  <p>&nbsp&nbsp&nbsp Create commands for cross-validating parameters for optimization. This is an optional Topaz step.</p>
+        </div> <!-- end of menubar 
+      </div> <!-- endof #top_panel 
+		<span class="tab4"><h2>Topaz Cross-validation Command Generator</h2></span>
+	  <span class="tab2"><p style=line-height:1.3>Create commands for cross-validating parameters for optimization. This is an optional Topaz step.<br>Values you may want to change are <b>bolded</b>. Values you need to change are <u>underlined</u>. Values you may want to optimize are <b><i>bold-italicized</i></b></p>
+	  <br><strong>Fill in parameters and run the resulting command:</strong></br>
+	  <br><table>
+	  <tr title="Rescaling factor for image downsampling. Recommended: 4, 8, or 16 (e.g. a 4k x 4k image downsampled by 4 results in a 1k x 1k image) (type: even integer)"><td><b>Scale factor</b>:</td><td><input id="scale" class="crossvalidating_inputs" style="width:3em" value="8"></td></tr>
+	  <tr title="Number of CPU cores to use for parallel image downsampling (type: integer)"><td><u>Number of CPUs</u>:</td><td><input id="numworkers" class="crossvalidating_inputs" style="width:3em"></td></tr>
+	  <tr title="Pixel sampling factor for model fit (type: integer)"><td>Pixel sampling:</td><td><input id="pixelsampling" class="crossvalidating_inputs" style="width:3em" value="200"></td></tr>
+	  <tr title="Number of iterations to run for model fit (type: integer)"><td>Number of iterations:</td><td><input id="niters" class="crossvalidating_inputs" style="width:3em" value="100"></td></tr>
+	  <tr title="Random seed for model initialization (type: integer)"><td>Random seed:</td><td><input id="seed" class="crossvalidating_inputs" style="width:3em" value="1"></td></tr>
+	  <tr title="Output directory (type: string; full path)"><td><u>Output folder</u>:</td><td><input id="output" class="crossvalidating_inputs" style="width:20em" value="/path/to/output/preprocessed/images/"></td></tr>
+	  <tr title="Input micrographs for preprocessing (type: string; full path with wildcard for mrc files)"><td><u>Input micrographs</u>:</td><td><input id="input" class="crossvalidating_inputs" style="width:20em" value="/path/to/input/images/*.mrc"></td></tr>
+	  </table></span>
+	  <br/>
+	  <code><span class="tab2"><div id="result3">
+	  topaz preprocess --scale 8 --num-workers ## --pixel-sampling 200 --niters 100 --seed 1  --verbose -o /path/to/output/preprocessed/images/ /path/to/input/images/*.mrc
+	  </div></span></code>
 	</div>
+-->
 
 	<div id="Extracting" class="tabcontent">
       <div class="top_panel" id="ui_top_panel">
         <div class="menubar">
         <ul>
-          <li><a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo_small"></span></a></a></li>
+          <li><a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo_small"></span></a></li>
 		</ul>
         </div> <!-- end of menubar -->
       </div> <!-- endof #top_panel -->
-	  <h3>&nbsp&nbsp&nbsp Topaz Picks Extraction Command Generator</h3>
-	  <p>&nbsp&nbsp&nbsp Create commands for extracting picks.</p>
+	  <span class="tab1"><table><tr><td><span class="extracting_logo"></span></td><td><h2>&nbsp&nbsp&nbspTopaz Picks Extraction Command Generator</h2></td></tr></table></span>
+	  <span class="tab2"><p style=line-height:1.3>Create a command for extracting particle coordinates.
+	  <br><br><br><br><strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
+	  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
+	  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
+	  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7></p>
+	  <hr width="20%">
+	  <br><table style="height:12.7em">
+	  <tr title="Input micrographs for extracting (type: string; full path with wildcard for tiff files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input4" class="extracting_inputs" style="width:20em" value="/path/to/preprocessed/images/*.tiff"></td></tr>
+	  <tr title="Output file. Supported file types: .star, .csv, and Topaz .txt (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output4" class="extracting_inputs" style="width:20em" value="/path/to/extracted/particles.[star|csv|txt]"></td></tr>
+	  <tr title="Path to network model from training (type: string; full path)"><td><hl2><span><font size="3" color="white">Model</font></span></hl2></td><td><input id="model4" class="extracting_inputs" style="width:20em" value="/path/to/model_epoch##.sav"></td></tr>
+	  <tr title="Pixel radius of the region to extract (type: integer)"><td><hl4><span><font size="3" color="white">Radius</font></span></hl4></td><td><input id="radius4" class="extracting_inputs" style="width:3em" value="4"></td></tr>
+	  <tr title="Lower Topaz score threshold for extraction (type: float)"><td><hl4><span><font size="3" color="white">Threshold</font></span></hl4></td><td><input id="threshold4" class="extracting_inputs" style="width:3em" value="0.5"></td></tr>
+	  <tr title="Number of CPU cores to use for extraction. -1 means use all CPUs (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers4" class="extracting_inputs" style="width:3em" value="-1"></td></tr>
+	  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU extraction (type: integer)"><td><hl4><span><font size="3" color="white">Device</font></span></hl4></td><td><input id="device4" class="extracting_inputs" style="width:3em" value="0"></td></tr>
+	  </table>
+	  <br><section><details><summary class="collapsibleoptions" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
+		<div class="content">
+		  <table style="height:5.5em">
+		  <tr title="Minimum radius for region extraction when tuning the radius parameter (type: integer)"><td><hl8><span><font size="3" color="white">Minimum radius</font></span></hl8></td><td><input id="minradius4" class="extracting_inputs" style="width:3em" value="5"></td></tr>
+		  <tr title="Maximum radius for region extraction when tuning the radius parameter (type: integer)"><td><hl8><span><font size="3" color="white">Maximum radius</font></span></hl8></td><td><input id="maxradius4" class="extracting_inputs" style="width:3em" value="100"></td></tr>
+		  <tr title="Grid size when searching for optimal radius parameter (type: integer)"><td><hl8><span><font size="3" color="white">Step radius</font></span></hl8></td><td><input id="stepradius4" class="extracting_inputs" style="width:3em" value="5"></td></tr>
+		  </table>
+		</details></summary>
+		</span>
+	  <br/><br/><strong>Command:</strong><br/><hr width="20%"><br>
+	  <code><span class="tab0"><div id="result4" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
+	  topaz extract --model /path/to/model_epoch##.sav --radius 4 --threshold 0.5 --min-radius 5 --max-radius 100 --step-radius 5 --num-workers -1 --device 0 --output /path/to/extracted/particles.[star|csv|txt] /path/to/preprocessed/images/*.tiff
+	  </div></span></code>
+	  </div>
 	</div>
-	
+
     <!-- this vertical spacer is needed to allow scrollbar to show
          items like Keyboard Shortcut hidden under the attributes panel -->
     <div style="width: 100%;" id="vertical_space"></div>
@@ -2714,7 +3069,7 @@ function _via_reg_canvas_mouseup_handler(e) {
           annotation_editor_hide();
         }
 
-        show_message('Region selected. If you intended to draw a region, click again inside the selected region to start drawing a region.')
+        show_message('Particle selected.')
       } else {
         if ( _via_is_user_drawing_region ) {
           // clear all region selection
@@ -7677,10 +8032,10 @@ function project_file_remove_with_confirm() {
   var filename = _via_img_metadata[img_id].filename;
   var region_count = _via_img_metadata[img_id].regions.length;
 
-  var config = {'title':'Remove File from Project' };
+  var config = {'title':'Remove Image from Project' };
   var input = { 'img_index': { type:'text', name:'File Id', value:(_via_image_index+1), disabled:true, size:8 },
                 'filename':{ type:'text', name:'Filename', value:filename, disabled:true, size:30},
-                'region_count':{ type:'text', name:'Number of regions', disabled:true, value:region_count, size:8}
+                'region_count':{ type:'text', name:'Number of picks', disabled:true, value:region_count, size:8}
               };
 
   invoke_with_user_inputs(project_file_remove_confirmed, input, config);
@@ -7808,9 +8163,9 @@ function project_file_add_local(event) {
 }
 
 function project_file_add_abs_path_with_input() {
-  var config = {'title':'Add File using Absolute Path' };
-  var input = { 'absolute_path': { type:'text', name:'add one absolute path', placeholder:'/home/abhishek/image1.jpg', disabled:false, size:50 },
-		'absolute_path_list': { type:'textarea', name:'or, add multiple paths (one path per line)', placeholder:'/home/abhishek/image1.jpg\n/home/abhishek/image2.jpg\n/home/abhishek/image3.png', disabled:false, rows:5, cols:80 }
+  var config = {'title':'Add Images using Absolute Path' };
+  var input = { 'absolute_path': { type:'text', name:'add one absolute path', placeholder:'/home/topazuser/image1.jpg', disabled:false, size:50 },
+		'absolute_path_list': { type:'textarea', name:'add multiple paths (one path per line)', placeholder:'/home/topazuser/image1.jpg\n/home/topazuser/image2.jpg\n/home/topazuser/image3.png', disabled:false, rows:5, cols:80 }
               };
 
   invoke_with_user_inputs(project_file_add_abs_path_input_done, input, config);
@@ -7822,7 +8177,7 @@ function project_file_add_abs_path_input_done(input) {
     var img_id    = project_file_add_url(abs_path);
     var img_index = _via_image_id_list.indexOf(img_id);
     _via_show_img(img_index);
-    show_message('Added file at absolute path [' + abs_path + ']');
+    show_message('Added images with absolute path [' + abs_path + ']');
     update_img_fn_list();
     user_input_default_cancel_handler();
   } else {
@@ -7836,7 +8191,7 @@ function project_file_add_abs_path_input_done(input) {
 function project_file_add_url_with_input() {
   var config = {'title':'Add File using URL' };
   var input = { 'url': { type:'text', name:'add one URL', placeholder:'http://www.robots.ox.ac.uk/~vgg/software/via/images/swan.jpg', disabled:false, size:50 },
-		'url_list': { type:'textarea', name:'or, add multiple URL (one url per line)', placeholder:'http://www.example.com/image1.jpg\nhttp://www.example.com/image2.jpg\nhttp://www.example.com/image3.png', disabled:false, rows:5, cols:80 }
+		'url_list': { type:'textarea', name:'add multiple URL (one url per line)', placeholder:'http://www.example.com/image1.jpg\nhttp://www.example.com/image2.jpg\nhttp://www.example.com/image3.png', disabled:false, rows:5, cols:80 }
               };
 
   invoke_with_user_inputs(project_file_add_url_input_done, input, config);
@@ -9592,6 +9947,10 @@ function _via_img_buffer_add_image(img_index) {
       file_reader.addEventListener('load', function() {
         var img_id = _via_image_id_list[img_index];
         var bimg = document.createElement('img');
+        //var tiff = new Tiff({buffer: file_reader.result});
+        //var canvas = tiff.toCanvas();
+				//document.write(tiff);
+        //bimg.setAttribute('src', canvas.toDataURL());
         bimg.setAttribute('id', _via_img_buffer_get_html_id(img_index));
         bimg.setAttribute('src', file_reader.result);
         bimg.setAttribute('alt', 'Image loaded from base64 data of a local file selected by user.');
@@ -10282,6 +10641,7 @@ if ( ! _via_is_debug_mode ) {
     return 'Did you save your data?';
   };
 }
+
     </script>
     <script type="text/javascript">
       //<!--AUTO_INSERT_VIA_TEST_JS_HERE-->
@@ -10303,3 +10663,4 @@ if ( ! _via_is_debug_mode ) {
     -->
   </body>
 </html>
+
