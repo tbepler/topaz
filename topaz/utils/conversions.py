@@ -3,6 +3,10 @@ from __future__ import print_function,division
 import numpy as np
 import pandas as pd
 
+def mirror_y_axis(coords, n):
+    coords = coords.clone()
+    coords['y_coord'] = n-1-coords['y_coord']
+    return coords
 
 def boxes_to_coordinates(boxes, shape=None, invert_y=False, image_name=None):
     ## first 2 columns are x and y coordinates of lower left box corners

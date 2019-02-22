@@ -25,10 +25,17 @@ def add_arguments(parser):
 
     parser.add_argument('-m', '--model', help='path to trained subimage classifier, if no model is supplied input images must already be segmented')
 
+    ## extraction parameter arguments
     parser.add_argument('-r', '--radius', type=int, help='radius of the regions to extract')
     parser.add_argument('-t', '--threshold', default=0.5, type=float, help='score quantile giving threshold at which to terminate region extraction (default: 0.5)')
 
+    
+    ## coordinate scaling arguments
+    parser.add_argument('-s', '--down-scale', type=float, default=1, help='DOWN-scale coordinates by this factor. output coordinates will be coord_out = (x/s)*coord. (default: 1)')
+    parser.add_argument('-x', '--up-scale', type=float, default=1, help='UP-scale coordinates by this factor. output coordinates will be coord_out = (x/s)*coord. (default: 1)')
 
+
+    ## radius selection arguments
     parser.add_argument('--assignment-radius', type=int, help='maximum distance between prediction and labeled target allowed for considering them a match (default: same as extraction radius)')
     parser.add_argument('--min-radius', type=int, default=5, help='minimum radius for region extraction when tuning radius parameter (default: 5)')
     parser.add_argument('--max-radius', type=int, default=100, help='maximum radius for region extraction when tuning radius parameters (default: 100)')
@@ -236,10 +243,15 @@ def main(args):
     if args.output is not None:
         f = open(args.output, 'w')
 
+    scale = args.up_scale/args.down_scale
+
     if not args.only_validate:
         print('image_name\tx_coord\ty_coord\tscore', file=f)
         ## extract coordinates using radius 
         for name,score,coords in nms_iterator(scores, radius, threshold, pool=pool):
+            ## scale the coordinates
+            if scale != 1:
+                coords = np.round(coords*scale).astype(int)
             for i in range(len(score)):
                 print(name + '\t' + str(coords[i,0]) + '\t' + str(coords[i,1]) + '\t' + str(score[i]), file=f)
 

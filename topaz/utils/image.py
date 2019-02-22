@@ -1,6 +1,10 @@
 from __future__ import division, print_function
 
 import numpy as np
+from PIL import Image
+import os
+
+import topaz.mrc as mrc
 
 def downsample(x, factor):
     """ Downsample 2d array using fourier transform """
@@ -30,5 +34,36 @@ def unquantize(x, mi=-4, ma=4, dtype=np.float32):
     y = x*(ma-mi)/255 + mi
     return y
 
-    
+def save_image(x, path, f=None, verbose=False):
+    if f is None:
+        f = os.path.splitext(path)[1]
+        f = f[1:] # remove the period
+    else:
+        path = path + '.' + f
+
+    if verbose:
+        print('# saving:', path)
+
+    if f == 'mrc':
+        save_mrc(x, path)
+    elif f == 'tiff':
+        save_tiff(x, path)
+    elif f == 'png':
+        save_png(x, path)
+
+def save_mrc(x, path):
+    with open(path, 'wb') as f:
+        x = x[np.newaxis] # need to add z-axis for mrc write
+        mrc.write(f, x)
+
+def save_tiff(x, path):
+    im = Image.fromarray(x) 
+    im.save(path, 'tiff')
+
+def save_png(x, path):
+    # byte encode the image
+    im = Image.fromarray(quantize(x))
+    im.save(path, 'png')
+
+
 

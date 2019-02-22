@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image # for saving images
 
 from topaz.transform import ScaledGaussianMixture
-from topaz.utils.image import downsample
+from topaz.utils.image import downsample, save_image
 from topaz.utils.data.loader import load_image
 
 
@@ -20,6 +20,8 @@ def add_arguments(parser):
 
     parser.add_argument('-s', '--scale', default=4, type=int, help='rescaling factor for image downsampling (default: 4)')
     parser.add_argument('-t', '--num-workers', default=0, type=int, help='number of processes to use for parallel image downsampling (default: 0)')
+
+    parser.add_argument('--format', dest='format_', default='mrc', help='image format(s) to write. choices are mrc, tiff, and png. images can be written in multiple formats by specifying each in a comma separated list, e.g. mrc,png would write mrc and png format images (default: mrc)')
 
     parser.add_argument('--pixel-sampling', default=25, type=int, help='pixel sampling factor for model fit (default: 25)')
     parser.add_argument('--niters', default=200, type=int, help='number of iterations to run for model fit (default: 200)')
@@ -130,12 +132,12 @@ def main(args):
     if not os.path.exists(destdir):
         os.makedirs(destdir)
 
-    for name,im in zip(names, images):
-        im = Image.fromarray(im) 
-        path = os.path.join(destdir, name) + '.tiff'
-        if verbose:
-            print('# saving:', path)
-        im.save(path, 'tiff')
+    ## what image formats are we writing
+    formats = args.format_.split(',')
+    for name,x in zip(names, images):
+        base = os.path.join(destdir, name)
+        for f in formats:
+            save_image(x, base, f=f, verbose=verbose)
 
     ## save the metadata in json format
     path = os.path.join(destdir, 'metadata.json')

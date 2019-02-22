@@ -11,6 +11,38 @@ A pipeline for particle detection in cryo-electron microscopy images using convo
 
 # Installation
 
+**<details><summary> (Recommended) Click here to install *using Anaconda*</summary><p>**
+
+If you do not have the Anaconda python distribution, [please install it following the instructions on their website](https://www.anaconda.com/download).
+
+We strongly recommend installing Topaz into a separate conda environment. To create a conda environment for Topaz:
+```
+conda create -n topaz python=3.6 # or 2.7 if you prefer python 2
+source activate topaz # this changes to the topaz conda environment, 'conda activate topaz' can be used with anaconda >= 4.4 if properly configured
+# source deactivate # returns to the base conda environment
+```
+More information on conda environments can be found [here](https://conda.io/docs/user-guide/tasks/manage-environments.html).
+
+## Install Topaz
+
+__At the moment, prebuilt Topaz is only provided for 64-bit linux__
+
+To install the precompiled Topaz package and its dependencies, including pytorch:
+```
+conda install topaz -c tbepler -c soumith
+```
+This installs pytorch from the soumith channel. To install pytorch for cuda 8.0, you also need to install the 'cuda80' package:
+```
+conda install cuda80 -c soumith
+```
+or combined into a single command:
+```
+conda install topaz cuda80 -c tbepler -c soumith
+```
+That's it! Topaz is now installed in your anaconda environment.
+
+</p></details>
+
 **<details><summary>Click here to install *using Docker*</summary><p>**
 
 **<details><summary>Do you have Docker installed? If not, *click here*</summary><p>**
@@ -64,20 +96,19 @@ See https://conda.io/docs/user-guide/tasks/manage-environments.html or https://v
 
 #### Install the dependencies 
 
-Tested with python version 3.6, should work with python 2 but untested
+Tested with python 3.6 and 2.7
 
-- pytorch (0.2.0)
-- torchvision (0.1.9)
-- pillow (4.2.1)
-- numpy (1.13.1)
-- pandas (0.20.3) 
-- scipy (0.19.1)
-- scikit-learn (0.19.0)
-- cython (0.26)
+- pytorch (=0.2.0)
+- torchvision (=0.1.9)
+- pillow (>= 4.2.1)
+- numpy (>= 1.11)
+- pandas (>= 0.20.3) 
+- scipy (>= 0.19.1)
+- scikit-learn (>= 0.19.0)
 
 Easy installation of dependencies
 ```
-conda install numpy pandas scikit-learn cython
+conda install numpy pandas scikit-learn
 conda install -c soumith pytorch=0.2.0 torchvision
 ```
 To install PyTorch for CUDA 8
@@ -106,11 +137,6 @@ pip install .
 To install for development use
 ```
 pip install -e .
-```
-
-To only compile the cython files
-```
-python setup.py build_ext --inplace
 ```
 
 </p></details>
@@ -461,11 +487,17 @@ optional arguments:
 
 Bepler, T., Morin, A., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2018). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs. arXiv. https://arxiv.org/abs/1803.08207
 
-# Author
+# Authors
 
 <details><summary>Tristan Bepler</summary><p>
 
-  <img src="https://scontent-lga3-1.xx.fbcdn.net/v/t1.0-1/c31.94.389.389/s100x100/9756_10151396630122455_1428574906_n.jpg?_nc_cat=101&oh=a23c14188564ec224551309f838e05e2&oe=5C5518FF" width="120">
+  <img src="images/tbepler.png" width="120">
+  
+</p></details>
+
+<details><summary>Alex J. Noble</summary><p>
+
+  <img src="images/anoble.png" width="120">
   
 </p></details>
 

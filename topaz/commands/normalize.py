@@ -8,6 +8,7 @@ from PIL import Image # for saving images
 
 from topaz.transform import ScaledGaussianMixture
 from topaz.utils.data.loader import load_image
+from topaz.utils.image import save_image
 
 name = 'normalize'
 help = 'normalize a set of images using a per image scaled 2-component Gaussian mixture model'
@@ -17,8 +18,13 @@ def add_arguments(parser):
     parser.add_argument('-s', '--sample', default=25, type=int, help='pixel sampling factor for model fit (default: 25)')
     parser.add_argument('--niters', default=200, type=int, help='number of iterations to run for model fit (default: 200)')
     parser.add_argument('--seed', default=1, type=int, help='random seed for model initialization (default: 1)')
+
     parser.add_argument('-o', '--destdir', help='output directory')
+
+    parser.add_argument('--format', dest='format_', default='mrc', help='image format(s) to write. choices are mrc, tiff, and png. images can be written in multiple formats by specifying each in a comma separated list, e.g. mrc,png would write mrc and png format images (default: mrc)')
+    
     parser.add_argument('-v', '--verbose', action='store_true', help='verbose output')
+
     return parser
 
 
@@ -80,12 +86,13 @@ def main(args):
     if not os.path.exists(destdir):
         os.makedirs(destdir)
 
-    for name,im in zip(names, images):
-        im = Image.fromarray(im) 
-        path = os.path.join(destdir, name) + '.tiff'
-        if args.verbose:
-            print('# saving:', path)
-        im.save(path, 'tiff')
+    ## what image formats are we writing
+    verbose = args.verbose
+    formats = args.format_.split(',')
+    for name,x in zip(names, images):
+        base = os.path.join(destdir, name)
+        for f in formats:
+            save_image(x, base, f=f, verbose=verbose)
 
     ## save the metadata in json format
     path = os.path.join(destdir, 'metadata.json')

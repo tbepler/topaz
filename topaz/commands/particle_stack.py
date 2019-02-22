@@ -142,10 +142,10 @@ def main(args):
     star_path = os.path.splitext(args.output)[0] + '.star'
 
     ## create the star file
+    columns = ['MicrographName', star.X_COLUMN_NAME, star.Y_COLUMN_NAME]
     if 'score' in particles:
-        metadata = pd.DataFrame(metadata, columns=['MicrographName', 'CoordinateX', 'CoordinateY', 'ParticleScore'])
-    else:
-        metadata = pd.DataFrame(metadata, columns=['MicrographName', 'CoordinateX', 'CoordinateY'])
+        columns.append(star.SCORE_COLUMN_NAME)
+    metadata = pd.DataFrame(metadata, columns=columns)
     metadata['ImageName'] = [str(i+1) + '@' + image_name for i in range(len(metadata))]
     if mz > 1:
         metadata['NrOfFrames'] = mz
@@ -164,12 +164,7 @@ def main(args):
 
     ## write the star file
     with open(star_path, 'w') as f:
-        print('data_images', file=f)
-        print('loop_', file=f)
-        for i,name in enumerate(metadata.columns):
-            print('_rln' + name + ' #' + str(i+1), file=f)
-
-        metadata.to_csv(f, sep='\t', index=False, header=False)
+        star.write(metadata, f)
 
 
 

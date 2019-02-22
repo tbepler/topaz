@@ -54,22 +54,33 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter)
 
+    import topaz
+    parser.add_argument('--version', action='version', version='TOPAZ '+topaz.__version__)
+
     import topaz.commands.train
     import topaz.commands.segment
     import topaz.commands.extract
     import topaz.commands.precision_recall_curve
+    import topaz.commands.pimax
 
     import topaz.commands.downsample
     import topaz.commands.normalize
     import topaz.commands.preprocess
 
+    import topaz.commands.gui
+
+    import topaz.commands.convert
+    import topaz.commands.split
+    import topaz.commands.particle_stack
+    import topaz.commands.train_test_split
+
+    # deprecated
     import topaz.commands.scale_coordinates
     import topaz.commands.boxes_to_coordinates 
     import topaz.commands.star_to_coordinates 
     import topaz.commands.coordinates_to_star
     import topaz.commands.coordinates_to_boxes
     import topaz.commands.coordinates_to_eman2_json
-    import topaz.commands.particle_stack
     import topaz.commands.star_particles_threshold
 
     module_groups = [('Particle picking',
@@ -77,6 +88,7 @@ def main():
                        topaz.commands.segment,
                        topaz.commands.extract,
                        topaz.commands.precision_recall_curve,
+                       topaz.commands.pimax,
                       ]
                      ),
                      ('Image processing',
@@ -87,13 +99,25 @@ def main():
                      ),
                      ('File utilities',
                       [
+                       topaz.commands.convert,
+                       topaz.commands.split,
+                       topaz.commands.particle_stack,
+                       topaz.commands.train_test_split,
+                      ]
+                     ),
+                     ('GUI',
+                      [
+                       topaz.commands.gui,
+                      ]
+                     ),
+                     ('[Deprecated]',
+                      [
                        topaz.commands.scale_coordinates,
                        topaz.commands.boxes_to_coordinates,
                        topaz.commands.star_to_coordinates,
                        topaz.commands.coordinates_to_star,
                        topaz.commands.coordinates_to_boxes,
                        topaz.commands.coordinates_to_eman2_json,
-                       topaz.commands.particle_stack,
                        topaz.commands.star_particles_threshold,
                       ]
                      ),

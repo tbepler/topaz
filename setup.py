@@ -1,22 +1,33 @@
-#from distutils.core import setup
-#from distutils.extension import Extension
-
 from setuptools import setup, find_packages
-from setuptools.extension import Extension
 
-from Cython.Build import cythonize
-import numpy
+name = 'topaz'
+version = '0.0.0'
 
-ext_modules = [
-    Extension('topaz.utils.picks', ['topaz/utils/picks.pyx']),
-    Extension('topaz.metrics', ['topaz/metrics.pyx']),
-]
+description = 'Particle picking with positive-unlabeled CNNs'
+long_description = 'Particle picking software for single particle cryo-electron microscopy using convoluational neural networks and positive-unlabeled learning.'
+
+keywords = 'cryoEM particle-picking CNN positive-unlabeled topaz'
+
+url = 'https://github.com/tbepler/topaz'
+
+author = 'Tristan Bepler'
+author_email = 'tbepler@mit.edu'
+
+license = 'GPLv3'
 
 setup(
-    name = 'topaz',
+    name = name,
+    version=version,
+    description=description,
+    long_description=long_description,
+    keywords=keywords,
+    url=url,
+    author=author,
+    author_email=author_email,
+    license=license,
+
     packages=find_packages(),
     #package_dir = {'': 'topaz'},
     entry_points = {'console_scripts': ['topaz = topaz.main:main']},
-    ext_modules = cythonize(ext_modules),
-    include_dirs=[numpy.get_include()],
+    include_package_data = True
 )

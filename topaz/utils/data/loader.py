@@ -8,6 +8,7 @@ from PIL import Image
 import torch
 
 import topaz.mrc as mrc
+from topaz.utils.image import unquantize
 
 class ImageDirectoryLoader:
     def __init__(self, rootdir, pathspec=os.path.join('{source}', '{image_name}'), format='tiff'
@@ -53,7 +54,7 @@ def load_mrc(path, standardize=False):
         image /= header.rms
     return Image.fromarray(image)
 
-def load_pil(path, standardize=False):
+def load_tiff(path, standardize=False):
     image = Image.open(path)
     fp = image.fp
     image.load()
@@ -63,6 +64,24 @@ def load_pil(path, standardize=False):
         image = (image - image.mean())/image.std()
         image = Image.fromarray(image)
     return image
+
+def load_png(path, standardize=False):
+    image = Image.open(path)
+    fp = image.fp
+    image.load()
+    fp.close()
+    x = np.array(image, copy=False)
+    x = unquantize(x)
+    if standardize:
+        x = (x - x.mean())/x.std()
+    image = Image.fromarray(x)
+    return image
+
+
+def load_pil(path, standardize=False):
+    if path.endswith('.png'):
+        return load_png(path)
+    return load_tiff(path)
 
 
 def load_image(path, standardize=False):
@@ -103,6 +122,41 @@ def load_images_from_list(names, paths, sources=None, standardize=False):
             im = load_image(path, standardize=standardize)
             images[name] = im
     return images
+
+
+class LabeledRegionsDataset:
+    def __init__(self, images, labels, crop):
+        self.images = images
+        self.labels = labels
+        self.crop = crop
+
+        # precalculate the number of regions
+        n = len(self.images)
+        im = self.images[0]
+        self.size = im.width*im.height
+        self.n = n*self.size
+
+    def __len__(self):
+        return self.n
+
+    def __getitem__(self, k):
+        i = k//self.size
+        im = self.images[i]
+
+        j = k % self.size
+
+        label = self.labels[i].ravel()[j]
+
+        ## crop the image
+        x = j % im.width
+        y = j // im.width
+        xmi = x - self.crop//2
+        xma = xmi + self.crop
+        ymi = y - self.crop//2
+        yma = ymi + self.crop
+        im = im.crop((xmi, ymi, xma, yma))
+
+        return im, label
 
 
 class LabeledImageCropDataset:
