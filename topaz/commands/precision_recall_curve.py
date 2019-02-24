@@ -23,6 +23,7 @@ def add_arguments(parser):
     parser.add_argument('--targets', help='path to file specifying target particle coordinates') 
 
     parser.add_argument('-r', '--assignment-radius', required=True, type=int, help='maximum distance between prediction and labeled target allowed for considering them a match')
+    parser.add_argument('--images', choices=['target', 'predicted', 'union'], default='target', help='only count particles on micrographs with coordinates labeled in the targets file, the predicted file, or the union of those (default; target)')
 
     return parser
 
@@ -32,7 +33,15 @@ def main(args):
     targets = pd.read_csv(args.targets, sep='\t')
     predicts = pd.read_csv(args.predicted, sep='\t', comment='#')
 
-    image_list = set(targets.image_name.unique()) | set(predicts.image_name.unique())
+    if args.images == 'union':
+        image_list = set(targets.image_name.unique()) | set(predicts.image_name.unique())
+    elif args.images == 'target':
+        image_list = set(targets.image_name.unique())
+    elif args.images == 'predicted':
+        image_list = set(predicts.image_name.unique())
+    else:
+        raise Exception('Unknown image argument: ' + args.images)
+
     image_list = list(image_list)
 
     N = len(targets)
@@ -69,6 +78,7 @@ def main(args):
     print('# auprc={}, mae={}'.format(auprc,np.sqrt(mae)))     
 
     f1 = 2*precision*recall/(precision + recall)
+    f1[precision + recall == 0] = 0
 
     table = pd.DataFrame({'threshold': threshold})
     table['precision'] = precision
