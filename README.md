@@ -25,8 +25,6 @@ More information on conda environments can be found [here](https://conda.io/docs
 
 ## Install Topaz
 
-__At the moment, prebuilt Topaz is only provided for 64-bit linux__
-
 To install the precompiled Topaz package and its dependencies, including pytorch:
 ```
 conda install topaz -c tbepler -c soumith
