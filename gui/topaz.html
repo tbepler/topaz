@@ -87,7 +87,6 @@
 				var units2 = $('#units2').val() == '' ? '32' : $('#units2').val();
 				var dropout2 = $('#dropout2').val() == '' ? '0.0' : $('#dropout2').val();
 				var bn2 = $('#bn2').val() == '' ? 'on' : $('#bn2').val();
-				var pooling2 = $('#pooling2').val() == '' ? 'none' : $('#pooling2').val();
 				var unitscaling2 = $('#unitscaling2').val() == '' ? '2' : $('#unitscaling2').val();
 				var ngf2 = $('#ngf2').val() == '' ? '32' : $('#ngf2').val();
 				var method2 = $('#method2').val() == '' ? 'GE-binomial' : $('#method2').val();
@@ -105,7 +104,7 @@
 				var device2 = $('#device2').val() == '' ? '0' : $('#device2').val();
 				var saveprefix2 = $('#saveprefix2').val() == '' ? '/path/to/model' : $('#saveprefix2').val();
 				var output2 = $('#output2').val() == '' ? '/path/to/unique/output/model.txt' : $('#output2').val();
-				$('#result2').html("topaz train --train-images " + trainimages2 + " --train-targets " + traintargets2 + " --k-fold " + kfold2 + " --fold " + fold2 + " --radius " + radius2 + " --model " + model2 + " --image-ext " + imageext2 + " --units " + units2 + " --dropout " + dropout2 + " --bn " + bn2 + " --pooling " + pooling2 + " --unit-scaling " + unitscaling2 + " --ngf " + ngf2 + " --method " + method2 + " --autoencoder " + autoencoder2 + " --num-particles " + numparticles2 + " --l2 " + l22 + " --learning-rate " + learningrate2 + " --minibatch-size " + minibatchsize2 + " --minibatch-balance " + minibatchbalance2 + " --epoch-size " + epochsize2 + " --num-epochs " + numepochs2 + " --num-workers " + numworkers2 + " --test-batch-size " + testbatchsize2 + " --device " + device2 + " --save-prefix " + saveprefix2 + " --output " + output2);
+				$('#result2').html("topaz train --train-images " + trainimages2 + " --train-targets " + traintargets2 + " --k-fold " + kfold2 + " --fold " + fold2 + " --radius " + radius2 + " --model " + model2 + " --image-ext " + imageext2 + " --units " + units2 + " --dropout " + dropout2 + " --bn " + bn2 + " --unit-scaling " + unitscaling2 + " --ngf " + ngf2 + " --method " + method2 + " --autoencoder " + autoencoder2 + " --num-particles " + numparticles2 + " --l2 " + l22 + " --learning-rate " + learningrate2 + " --minibatch-size " + minibatchsize2 + " --minibatch-balance " + minibatchbalance2 + " --epoch-size " + epochsize2 + " --num-epochs " + numepochs2 + " --num-workers " + numworkers2 + " --test-batch-size " + testbatchsize2 + " --device " + device2 + " --save-prefix " + saveprefix2 + " --output " + output2);
 			});
 		});
 	});
@@ -721,8 +720,8 @@
 	  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7></p>
 	  <hr width="20%">
 	  <br><table style="height:7.3em">
-	  <tr title="Input micrographs for preprocessing (type: string; full path with wildcard for mrc files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input1" class="preprocessing_inputs" style="width:20em" value="/path/to/input/images/*.mrc"></td></tr>
-	  <tr title="Output directory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output1" class="preprocessing_inputs" style="width:20em" value="/path/to/output/preprocessed/images/"></td></tr>
+	  <tr title="Input micrographs for preprocessing (type: string; full path with wildcard for mrc files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input1" class="preprocessing_inputs" style="width:30em" value="/path/to/input/images/*.mrc"></td></tr>
+	  <tr title="Output directory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output1" class="preprocessing_inputs" style="width:30em" value="/path/to/output/preprocessed/images/"></td></tr>
 	  <tr title="Number of CPU cores to use for parallel image downsampling. -1 means use all CPUs (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers1" class="preprocessing_inputs" style="width:3em" value="-1"></td></tr>
 	  <tr title="Rescaling factor for image downsampling. Recommended: 4, 8, or 16 depending on particle size (e.g. a 4k x 4k image downsampled by 4 results in a 1k x 1k image) (type: even integer)"><td><hl4><span><font size="3" color="white">Scale factor</font></span></hl4></td><td><input id="scale1" class="preprocessing_inputs" style="width:3em" value="8"></td></tr>
 	  </table>
@@ -1007,6 +1006,14 @@
           </table>
         </div>
 
+        <button class="leftsidebar_accordion">Tips</button>
+        <div class="leftsidebar_accordion_panel">
+          <div style="display:block; text-align:left; padding:3px;"><li>Radius of the displayed pick is 3 pixels</li></div>
+          <div style="display:block; text-align:left; padding:3px;"><li>Pick 100-1000 particles (more is better)</li></div>
+          <div style="display:block; text-align:left; padding:3px;"><li>Pick all representative views</li></div>
+          <div style="display:block; text-align:left; padding:3px;"><li>Pick from several micrographs</li></div>
+          <div style="display:block; text-align:left; padding:3px;"><li>Incomplete picking is fine!</li></div>
+		</div>
       </div> <!-- end of leftsidebar -->
 
       <!-- Main display area: contains image canvas, ... -->
@@ -1295,10 +1302,10 @@ POSSIBILITY OF SUCH DAMAGE.
 	  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7></p>
 	  <hr width="20%">
 	  <br><table style="height:23.5em">
-	  <tr title="Path to input micrographs for training (type: string; full path)"><td><hl2><span><font size="3" color="white">Training images folder</font></span></hl2></td><td><input id="trainimages2" class="training_inputs" style="width:20em" value="/path/to/preprocessed/images/"></td></tr>
-	  <tr title="Training particles in CSV, star, or tab-delimited format (type: string; full file path)"><td><hl2><span><font size="3" color="white">Training particles</font></span></hl2></td><td><input id="traintargets2" class="training_inputs" style="width:20em" value="/path/to/training_particles.csv"></td></tr>
-	  <tr title="Path prefix to save trained models for each epoch (type: string; full path)"><td><hl2><span><font size="3" color="white">Save prefix</font></span></hl2></td><td><input id="saveprefix2" class="training_inputs" style="width:20em" value="/path/to/model"></td></tr>
-	  <tr title="Destination to write the train/test curve (type: string; full file path)"><td><hl2><span><font size="3" color="white">Output</font></span></hl2></td><td><input id="output2" class="training_inputs" style="width:20em" value="/path/to/unique/output/model.txt"></td></tr>
+	  <tr title="Path to input micrographs for training (type: string; full path)"><td><hl2><span><font size="3" color="white">Training images folder</font></span></hl2></td><td><input id="trainimages2" class="training_inputs" style="width:30em" value="/path/to/preprocessed/images/"></td></tr>
+	  <tr title="Training particles in CSV, star, or tab-delimited format (type: string; full file path)"><td><hl2><span><font size="3" color="white">Training particles</font></span></hl2></td><td><input id="traintargets2" class="training_inputs" style="width:30em" value="/path/to/training_particles.csv"></td></tr>
+	  <tr title="Path prefix to save trained models for each epoch (type: string; full path)"><td><hl2><span><font size="3" color="white">Save prefix</font></span></hl2></td><td><input id="saveprefix2" class="training_inputs" style="width:30em" value="/path/to/model"></td></tr>
+	  <tr title="Destination to write the train/test curve (type: string; full file path)"><td><hl2><span><font size="3" color="white">Output</font></span></hl2></td><td><input id="output2" class="training_inputs" style="width:30em" value="/path/to/unique/output/model.txt"></td></tr>
 	  <tr title="Number of subsets to divide the training data into. This will determine the train/test dataset sizes. E.g. '5' splits the picks into five subsets where one will be used as the test dataset. (type: integer)"><td><hl4><span><font size="3" color="white">K-fold</font></span></hl4></td><td><input id="kfold2" class="training_inputs" style="width:3em" value="5"></td></tr>
 	  <tr title="Number of CPU cores to use for parallel image downsampling. -1 means use all CPUs (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers2" class="training_inputs" style="width:3em" value="-1"></td></tr>
 	  <tr title="Augment the method with an autoencoder where the weight is on the reconstruction error (type: float)"><td><hl4><span><font size="3" color="white">Autoencoder</font></span></hl4></td><td><input id="autoencoder2" class="training_inputs" style="width:3em" value="0"></td></tr>
@@ -1311,13 +1318,12 @@ POSSIBILITY OF SUCH DAMAGE.
 	  </table>
 	  <br><section><details><summary class="collapsibleoptions" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
 		<div class="content">
-		  <table style="height:25.5em">
+		  <table style="height:23.5em">
 		  <tr title="Which fold out the k-folds will be used as the test dataset (type: integer)"><td><hl8><span><font size="3" color="white">Fold</font></span></hl8></td><td><input id="fold2" class="training_inputs" style="width:3em" value="0"></td></tr>
 		  <tr title="Sets the image extension if loading images from (options: .mrc, .tiff, or .png; include the '.') (type: string)"><td><hl8><span><font size="3" color="white">Image extension</font></span></hl8></td><td><input id="imageext2" class="training_inputs" style="width:3em" value=".mrc"></td></tr>
 		  <tr title="Number of units model parameter (type: integer)"><td><hl8><span><font size="3" color="white">Units</font></span></hl8></td><td><input id="units2" class="training_inputs" style="width:3em" value="32"></td></tr>
 		  <tr title="Dropout rate model parameter (type: float)"><td><hl8><span><font size="3" color="white">Dropout</font></span></hl8></td><td><input id="dropout2" class="training_inputs" style="width:3em" value="0.0"></td></tr>
 		  <tr title="Use batch norm in the model (type: on/off)"><td><hl8><span><font size="3" color="white">Batch norm</font></span></hl8></td><td><input id="bn2" class="training_inputs" style="width:3em" value="on"></td></tr>
-		  <tr title="Pooling method to use (type: string)"><td><hl8><span><font size="3" color="white">Pooling</font></span></hl8></td><td><input id="pooling2" class="training_inputs" style="width:3em" value="none"></td></tr>
 		  <tr title="Scale the number of units up by this factor every layer (type: integer)"><td><hl8><span><font size="3" color="white">Unit scaling</font></span></hl8></td><td><input id="unitscaling2" class="training_inputs" style="width:3em" value="2"></td></tr>
 		  <tr title="Scaled number of units per layer in generative model, if used (type: integer)"><td><hl8><span><font size="3" color="white">Scaled num of units</font></span></hl8></td><td><input id="ngf2" class="training_inputs" style="width:3em" value="32"></td></tr>
 		  <tr title="L2 regularizer on the model parameters (type: integer)"><td><hl8><span><font size="3" color="white">L2</font></span></hl8></td><td><input id="l22" class="training_inputs" style="width:3em" value="0"></td></tr>
@@ -1331,7 +1337,7 @@ POSSIBILITY OF SUCH DAMAGE.
 		</span>
 	  <br/><br/><strong>Command</strong><br/><hr width="20%"><br>
 	  <code><span id="cmd_copy2" class="tab0"><div id="result2" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
-	  topaz train --train-images /path/to/preprocessed/images/ --train-targets /path/to/training_particles.csv --k-fold 5 --fold 0 --radius 5 --model resnet8 --image-ext .mrc --units 32 --dropout 0.0 --bn on --pooling none --unit-scaling 2 --ngf 32 --method GE-binomial --autoencoder 0 --num-particles 300 --l2 0 --learning-rate 0.002 --minibatch-size 256 --minibatch-balance 0.0625 --epoch-size 5000 --num-epochs 10 --num-workers -1 --test-batch-size 1 --device 0 --save-prefix /path/to/model --output /path/to/unique/output/model.txt
+	  topaz train --train-images /path/to/preprocessed/images/ --train-targets /path/to/training_particles.csv --k-fold 5 --fold 0 --radius 5 --model resnet8 --image-ext .mrc --units 32 --dropout 0.0 --bn on --unit-scaling 2 --ngf 32 --method GE-binomial --autoencoder 0 --num-particles 300 --l2 0 --learning-rate 0.002 --minibatch-size 256 --minibatch-balance 0.0625 --epoch-size 5000 --num-epochs 10 --num-workers -1 --test-batch-size 1 --device 0 --save-prefix /path/to/model --output /path/to/unique/output/model.txt
 	  </div></span></code>
 	  </div>
 	</div>
@@ -1353,8 +1359,8 @@ POSSIBILITY OF SUCH DAMAGE.
 	  <tr title="Pixel sampling factor for model fit (type: integer)"><td>Pixel sampling:</td><td><input id="pixelsampling" class="crossvalidating_inputs" style="width:3em" value="200"></td></tr>
 	  <tr title="Number of iterations to run for model fit (type: integer)"><td>Number of iterations:</td><td><input id="niters" class="crossvalidating_inputs" style="width:3em" value="100"></td></tr>
 	  <tr title="Random seed for model initialization (type: integer)"><td>Random seed:</td><td><input id="seed" class="crossvalidating_inputs" style="width:3em" value="1"></td></tr>
-	  <tr title="Output directory (type: string; full path)"><td><u>Output folder</u>:</td><td><input id="output" class="crossvalidating_inputs" style="width:20em" value="/path/to/output/preprocessed/images/"></td></tr>
-	  <tr title="Input micrographs for preprocessing (type: string; full path with wildcard for mrc files)"><td><u>Input micrographs</u>:</td><td><input id="input" class="crossvalidating_inputs" style="width:20em" value="/path/to/input/images/*.mrc"></td></tr>
+	  <tr title="Output directory (type: string; full path)"><td><u>Output folder</u>:</td><td><input id="output" class="crossvalidating_inputs" style="width:30em" value="/path/to/output/preprocessed/images/"></td></tr>
+	  <tr title="Input micrographs for preprocessing (type: string; full path with wildcard for mrc files)"><td><u>Input micrographs</u>:</td><td><input id="input" class="crossvalidating_inputs" style="width:30em" value="/path/to/input/images/*.mrc"></td></tr>
 	  </table></span>
 	  <br/>
 	  <code><span class="tab2"><div id="result3">
@@ -1379,9 +1385,9 @@ POSSIBILITY OF SUCH DAMAGE.
 	  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7></p>
 	  <hr width="20%">
 	  <br><table style="height:14.5em">
-	  <tr title="Input micrographs for extracting (type: string; full path with wildcard for mrc/tiff/png files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input4" class="extracting_inputs" style="width:20em" value="/path/to/preprocessed/images/*.mrc"></td></tr>
-	  <tr title="Output file. Supported file types: .star, .csv, and Topaz .txt (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output4" class="extracting_inputs" style="width:20em" value="/path/to/extracted/particles.[star|csv|txt]"></td></tr>
-	  <tr title="Path to network model from training (type: string; full path)"><td><hl2><span><font size="3" color="white">Model</font></span></hl2></td><td><input id="model4" class="extracting_inputs" style="width:20em" value="/path/to/model_epoch##.sav"></td></tr>
+	  <tr title="Input micrographs for extracting (type: string; full path with wildcard for mrc/tiff/png files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input4" class="extracting_inputs" style="width:30em" value="/path/to/preprocessed/images/*.mrc"></td></tr>
+	  <tr title="Output file. Supported file types: .star, .csv, and Topaz .txt (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output4" class="extracting_inputs" style="width:30em" value="/path/to/extracted/particles.[star|csv|txt]"></td></tr>
+	  <tr title="Path to network model from training (type: string; full path)"><td><hl2><span><font size="3" color="white">Model</font></span></hl2></td><td><input id="model4" class="extracting_inputs" style="width:30em" value="/path/to/model_epoch##.sav"></td></tr>
 	  <tr title="Pixel radius of the region to extract (type: integer)"><td><hl4><span><font size="3" color="white">Radius</font></span></hl4></td><td><input id="radius4" class="extracting_inputs" style="width:3em" value="4"></td></tr>
 	  <tr title="Lower Topaz score threshold for extraction (type: float)"><td><hl4><span><font size="3" color="white">Threshold</font></span></hl4></td><td><input id="threshold4" class="extracting_inputs" style="width:3em" value="0.5"></td></tr>
 	  <tr title="Upscale the pick coordinates by this factor (type: integer)"><td><hl4><span><font size="3" color="white">Upscale picks</font></span></hl4></td><td><input id="upscale4" class="extracting_inputs" style="width:3em" value="1"></td></tr>
