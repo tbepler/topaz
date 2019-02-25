@@ -150,7 +150,7 @@
 			$(this).on('keyup', function() {
 				var input4 = $('#input4').val() == '' ? '/path/to/preprocessed/images/*.mrc' : $('#input4').val();
 				var model4 = $('#model4').val() == '' ? '/path/to/model_epoch##.sav' : $('#model4').val();
-				var radius4 = $('#radius4').val() == '' ? '4' : $('#radius4').val();
+				var radius4 = $('#radius4').val() == '' ? '10' : $('#radius4').val();
 				var threshold4 = $('#threshold4').val() == '' ? '0.5' : $('#threshold4').val();
 				var upscale4 = $('#upscale4').val() == '' ? '1' : $('#upscale4').val();
 				var minradius4 = $('#minradius4').val() == '' ? '5' : $('#minradius4').val();
@@ -158,8 +158,10 @@
 				var stepradius4 = $('#stepradius4').val() == '' ? '5' : $('#stepradius4').val();
 				var numworkers4 = $('#numworkers4').val() == '' ? '-1' : $('#numworkers4').val();
 				var device4 = $('#device4').val() == '' ? '0' : $('#device4').val();
-				var output4 = $('#output4').val() == '' ? '/path/to/extracted/particles.[star|csv|txt]' : $('#output4').val();
-				$('#result4').html("topaz extract --model " + model4 + " --radius " + radius4 + " --threshold " + threshold4 + " --up-scale " + upscale4 + " --min-radius " + minradius4 + " --max-radius " + maxradius4 + " --step-radius " + stepradius4 + " --num-workers " + numworkers4 + " --device " + device4 + " --output " + output4 + " " + input4);
+				var output4 = $('#output4').val() == '' ? '/path/to/extracted/particles' : $('#output4').val();
+				$('#result4').html("topaz extract --model " + model4 + " --radius " + radius4 + " --threshold " + threshold4 + " --up-scale " + upscale4 + " --min-radius " + minradius4 + " --max-radius " + maxradius4 + " --step-radius " + stepradius4 + " --num-workers " + numworkers4 + " --device " + device4 + " --output " + output4 + ".txt " + input4
+				+ "<br><br>topaz convert --output " + output4 + ".csv " + output4 + ".txt"
+				+ "<br><br>topaz convert --output " + output4 + ".star " + output4 + ".txt");
 			});
 		});
 	});
@@ -499,6 +501,16 @@
 		border-radius:0.45rem;
 	  }
 	  
+	  hl1b {
+	    text-align: left;
+	  }
+	  
+	  hl1b span {
+	    background-color: #6ca646;
+	    padding: 0.75px;
+		border-radius:0.3rem;
+	  }
+	  
 	  hl2 {
 	    text-align: left;
 	  }
@@ -517,6 +529,16 @@
 	    background-color: #5573b8;
 	    padding: 3px;
 		border-radius:0.45rem;
+	  }
+	  
+	  hl3b {
+	    text-align: left;
+	  }
+	  
+	  hl3b span {
+	    background-color: #5573b8;
+	    padding: 0.75px;
+		border-radius:0.3rem;
 	  }
 	  
 	  hl4 {
@@ -539,6 +561,16 @@
 		border-radius:0.45rem;
 	  }
 	  
+	  hl5b {
+	    text-align: left;
+	  }
+	  
+	  hl5b span {
+	    background-color: #f5a153;
+	    padding: 0.75px;
+		border-radius:0.3rem;
+	  }
+	  
 	  hl6 {
 	    text-align: left;
 	  }
@@ -557,6 +589,16 @@
 	    background-color: #c8c8c8;
 	    padding: 3px;
 		border-radius:0.45rem;
+	  }
+	  
+	  hl7b {
+	    text-align: left;
+	  }
+	  
+	  hl7b span {
+	    background-color: #c8c8c8;
+	    padding: 0.75px;
+		border-radius:0.3rem;
 	  }
 	  
 	  hl8 {
@@ -1159,24 +1201,21 @@
         </div> <!-- end of file not found panel -->
 
         <div id="page_getting_started" class="display_area_content display_none narrow_page_content">
-          <ol>
-            <li><strong>Convert MRCs to PNGs</strong>: Use Topaz to convert your mrc files to PNGs so you can use this GUI to make training picks and analyze Topaz results:
+          <font size="+1"><ol>
+            <li><strong>Preprocess MRCs</strong>: Use Topaz to downsample, normalize, and convert micrographs to PNG (for use in Topaz GUI) and MRC (for use with Topaz training).</li>
               <ul>
-                <br><code>topaz preprocess /full/path/to/mrcs/*.mrc -s [binning] -o /full/path/to/input/images/ -t [number_of_CPU_threads]</code></br></br>
+                <li>Topaz normalization uses image statistics for all input micrographs. A Gaussian mixture model is used to effectively make the ice region of each micrograph visible, even if there is gold in the image.
+                </li>
               </ul>
-            </li>
             <li><strong>Pick Particles</strong>: Add images then pick particles:
-
               <ul>
                 <li>To add images:
                   <ul>
-                    <li>Click <span class="text_button" onclick="sel_local_images()"><code>Add Images</code></span> under 'Project' to the left, or</li>
-                    <li>In the 'Project' menu, select <span class="text_button" onclick="project_file_add_abs_path_with_input()"><code>Add images using absolute paths</code></span>.</li>
+                    <li>Click <span class="text_button" onclick="sel_local_images()"><code>Add Images</code></span> or <span class="text_button" onclick="project_file_add_abs_path_with_input()"><code>Add Image Paths</code></span> under 'Project' to the left</li>
                     <li><b>Note</b>: This Topaz GUI  accepts JPEG, PNG, and BMP files.</li>
                   </ul>
                 </li>
               </ul>
-
               <ul>
                 <li>To pick particles:
                   <ul>
@@ -1184,15 +1223,26 @@
                     <li>To zoom in/out, either press Ctrl and scroll your mouse wheel on an image or press + or - (equal '=' will reset the zoom).</li>
                     <li>To delete a misplaced point, click the point again and press 'd'.</li>
                     <li>To adjust a point's location, click the point again and either use the arrow keys on your keyboard or click-and-drag to move it.</li>
-                    <li><b>Note</b>: Topaz works best if you identify 500+ particles representing all orientations of the particle and if you pick across several images. More training particles and views means more accurate Topaz picks.</li>
+                    <li><b>Note</b>: Topaz works best if you identify 500+ particles representing all orientations of the particle and if you pick across several images. More training particles and views means more accurate Topaz-trained picks.</li>
+                    <li><b>Note</b>: The radius of the displayed pick is 3 pixels.</li>
+
                   </ul>
                 </li>
-              </ul></br>
+              </ul>
+
+            <li><strong>Train a model</strong>: Use Topaz to train a neural network model to pick your particles.
+			</li>
+              <ul>
+                <li>Several parameters are optimizable by cross-validation.
+                </li>
+              </ul>
+				
 
             <li><strong>Export Particles</strong>: To export particles, click <span class="text_button" onclick="download_all_region_data('csv')"><code>Particle Picks &rarr; Export Picks</code></span> in the top menu. These picks may then be used in Topaz training.</li>
-            <br><li><strong>Analyze Topaz Picks</strong>: Load Topaz picks by clicking <span class="text_button" onclick="sel_local_data_file('annotations')"><code>Particle Picks &rarr; Import Picks.</code></span></li>
-            <br><strong>Note</strong>: It is good practice to save your particles/project regularly. Do this by clicking <span class="text_button" onclick="download_all_region_data('csv')"><code>Particle Picks &rarr; Export Picks</code></span> or <span class="text_button" onclick="project_save_with_confirm()"><code>Project &rarr; Save</code></span> in the top menu.</li>
-          </ol>
+            <li><strong>Analyze Topaz Picks</strong>: Load Topaz picks by clicking <span class="text_button" onclick="sel_local_data_file('annotations')"><code>Particle Picks &rarr; Import Picks.</code></span></li>
+            <br><strong>Note</strong>: It is good practice to save your particles/project regularly. Do this by clicking <span class="text_button" onclick="download_all_region_data('csv')"><code>Particle Picks &rarr; Export Picks</code></span> or <span class="text_button" onclick="project_save_with_confirm()"><code>Project &rarr; Save</code></span> in the top menu.</li></br>
+            <br><strong>Note</strong>: Parameters are categorized by those that <hl1b><span><font size="3" color="white">need to be modified</font></span></hl1b>, <hl3b><span><font size="3" color="white">might need to be modified</font></span></hl3b>, <hl5b><span><font size="3" color="white">are optimizable</font></span></hl5b>, and <hl7b><span><font size="3" color="white">are rarely modified</font></span></hl7b>. Training parameters that are <hl5b><span><font size="3" color="white">optimizable</font></span></hl5b> may be optimized using cross-validation.</li>
+          </ol></font>
         </div>
 
         <div id="page_load_ongoing" class="display_area_content narrow_page_content">
@@ -1259,12 +1309,12 @@ POSSIBILITY OF SUCH DAMAGE.
             <p><font size="+2"><b>Quickstart Guide</b></font></p>
 			<section><details><summary class="collapsible"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Particle picking for training</summary>
 			<div class="content">
-			  <p style=line-height:1.3>
+			  <p style=line-height:1.4>
 			  <font size="+1"><b>1) </b>To start picking, <span class="text_button" title="Load or Add Images" onclick="sel_local_images()"><font size="+2">select images</font></span> or add images from <span class="text_button" title="Add images from absolute path (e.g. /my/beautiful/particles.jpg)" onclick="project_file_add_abs_path_with_input()">absolute path.</span></font></br>
-              <font size="+1"><b>2) </b>Pick 500+ particles representing as many particle orientations as possible.</font></br>
+              <font size="+1"><b>2) </b>Pick 100-1,000 particles (more is better) representing all orientations.</font></br>
               <font size="+1">&nbsp&nbsp&nbsp&nbsp• Pick across several representative images.</font></br>
               <font size="+1">&nbsp&nbsp&nbsp&nbsp• Not all particles need to be picked from each image.</font></br>
-              <font size="+1"><b>3) </b>Export your particle picks as a CSV file and proceed to Topaz training.</font></br>
+              <font size="+1"><b>3) </b>Export your particle picks and proceed to Topaz training.</font></br>
               <br><font size="+1">• <span class="text_button" onclick="download_all_region_data('csv')"><font size="+1">Save your particles</font></span> and <span class="text_button" onclick="project_save_with_confirm()">project</span> regularly. You may <span class="text_button" onclick="sel_local_data_file('annotations')">load</span> <span class="text_button" onclick="project_open_select_project_file()">them</span> later to continue.</font></br>
               <br><font size="+1">• For further help, see the <span class="text_button" onclick="set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_GETTING_STARTED)">Getting Started</span> page.</font>
 			  </p>
@@ -1386,11 +1436,11 @@ POSSIBILITY OF SUCH DAMAGE.
 	  <hr width="20%">
 	  <br><table style="height:14.5em">
 	  <tr title="Input micrographs for extracting (type: string; full path with wildcard for mrc/tiff/png files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input4" class="extracting_inputs" style="width:30em" value="/path/to/preprocessed/images/*.mrc"></td></tr>
-	  <tr title="Output file. Supported file types: .star, .csv, and Topaz .txt (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output4" class="extracting_inputs" style="width:30em" value="/path/to/extracted/particles.[star|csv|txt]"></td></tr>
 	  <tr title="Path to network model from training (type: string; full path)"><td><hl2><span><font size="3" color="white">Model</font></span></hl2></td><td><input id="model4" class="extracting_inputs" style="width:30em" value="/path/to/model_epoch##.sav"></td></tr>
-	  <tr title="Pixel radius of the region to extract (type: integer)"><td><hl4><span><font size="3" color="white">Radius</font></span></hl4></td><td><input id="radius4" class="extracting_inputs" style="width:3em" value="4"></td></tr>
+	  <tr title="Basename for output files. A .star, .csv, and Topaz .txt file will be written (type: string; full file path without extension)"><td><hl2><span><font size="3" color="white">Output filenames</font></span></hl2></td><td><input id="output4" class="extracting_inputs" style="width:30em" value="/path/to/extracted/particles"></td></tr>
+	  <tr title="Pixel radius of the region to extract (type: integer)"><td><hl4><span><font size="3" color="white">Particle radius</font></span></hl4></td><td><input id="radius4" class="extracting_inputs" style="width:3em" value="10"></td></tr>
 	  <tr title="Lower Topaz score threshold for extraction (type: float)"><td><hl4><span><font size="3" color="white">Threshold</font></span></hl4></td><td><input id="threshold4" class="extracting_inputs" style="width:3em" value="0.5"></td></tr>
-	  <tr title="Upscale the pick coordinates by this factor (type: integer)"><td><hl4><span><font size="3" color="white">Upscale picks</font></span></hl4></td><td><input id="upscale4" class="extracting_inputs" style="width:3em" value="1"></td></tr>
+	  <tr title="Upscale the pick coordinates by this factor. '1' means no scaling (type: integer)"><td><hl4><span><font size="3" color="white">Upscale picks</font></span></hl4></td><td><input id="upscale4" class="extracting_inputs" style="width:3em" value="1"></td></tr>
 	  <tr title="Number of CPU cores to use for extraction. -1 means use all CPUs (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers4" class="extracting_inputs" style="width:3em" value="-1"></td></tr>
 	  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU extraction (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU Device</font></span></hl4></td><td><input id="device4" class="extracting_inputs" style="width:3em" value="0"></td></tr>
 	  </table>
@@ -1405,7 +1455,9 @@ POSSIBILITY OF SUCH DAMAGE.
 		</span>
 	  <br/><br/><strong>Command:</strong><br/><hr width="20%"><br>
 	  <code><span class="tab0"><div id="result4" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
-	  topaz extract --model /path/to/model_epoch##.sav --radius 4 --threshold 0.5 --up-scale 1 --min-radius 5 --max-radius 100 --step-radius 5 --num-workers -1 --device 0 --output /path/to/extracted/particles.[star|csv|txt] /path/to/preprocessed/images/*.mrc
+	  topaz extract --model /path/to/model_epoch##.sav --radius 10 --threshold 0.5 --up-scale 1 --min-radius 5 --max-radius 100 --step-radius 5 --num-workers -1 --device 0 --output /path/to/extracted/particles.txt /path/to/preprocessed/images/*.mrc<br><br>
+	  topaz convert --output /path/to/extracted/particles.csv /path/to/extracted/particles.txt<br><br>
+	  topaz convert --output /path/to/extracted/particles.star /path/to/extracted/particles.txt
 	  </div></span></code>
 	  </div>
 	</div>
