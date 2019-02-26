@@ -64,12 +64,13 @@
 			$(this).on('keyup', function() {
 				var scale1 = $('#scale1').val() == '' ? '8' : $('#scale1').val();
 				var numworkers1 = $('#numworkers1').val() == '' ? '-1' : $('#numworkers1').val();
-				var pixelsampling1 = $('#pixelsampling1').val() == '' ? '200' : $('#pixelsampling1').val();
-				var niters1 = $('#niters1').val() == '' ? '100' : $('#niters1').val();
+				var pixelsampling1 = $('#pixelsampling1').val() == '' ? '25' : $('#pixelsampling1').val();
+				var format1 = $('#format1').val() == '' ? 'mrc,png' : $('#format1').val();
+				var niters1 = $('#niters1').val() == '' ? '200' : $('#niters1').val();
 				var seed1 = $('#seed1').val() == '' ? '1' : $('#seed1').val();
 				var output1 = $('#output1').val() == '' ? '/path/to/output/preprocessed/images/' : $('#output1').val();
 				var input1 = $('#input1').val() == '' ? '/path/to/input/images/*.mrc' : $('#input1').val();
-				$('#result1').html("topaz preprocess --scale " + scale1 + " --num-workers " + numworkers1 + " --pixel-sampling " + pixelsampling1 + " --niters " + niters1 + " --seed " + seed1 + " --verbose -o " + output1 + " " + input1);
+				$('#result1').html("topaz preprocess --scale " + scale1 + " --num-workers " + numworkers1 + " --format " + format1 + " --pixel-sampling " + pixelsampling1 + " --niters " + niters1 + " --seed " + seed1 + " --verbose -o " + output1 + " " + input1);
 			});
 		});
 	});
@@ -78,24 +79,24 @@
 			$(this).on('keyup', function() {
 				var trainimages2 = $('#trainimages2').val() == '' ? '/path/to/preprocessed/images/' : $('#trainimages2').val();
 				var traintargets2 = $('#traintargets2').val() == '' ? '/path/to/training_particles.csv' : $('#traintargets2').val();
+				var imageext2 = $('#imageext2').val() == '' ? 'mrc' : $('#imageext2').val();
 				var kfold2 = $('#kfold2').val() == '' ? '5' : $('#kfold2').val();
 				var fold2 = $('#fold2').val() == '' ? '0' : $('#fold2').val();
-				var radius2 = $('#radius2').val() == '' ? '4' : $('#radius2').val();
+				var radius2 = $('#radius2').val() == '' ? '5' : $('#radius2').val();
 				var model2 = $('#model2').val() == '' ? 'resnet8' : $('#model2').val();
 				var units2 = $('#units2').val() == '' ? '32' : $('#units2').val();
 				var dropout2 = $('#dropout2').val() == '' ? '0.0' : $('#dropout2').val();
 				var bn2 = $('#bn2').val() == '' ? 'on' : $('#bn2').val();
-				var pooling2 = $('#pooling2').val() == '' ? 'none' : $('#pooling2').val();
-				var unitscaling2 = $('#unitscaling2').val() == '' ? '1' : $('#unitscaling2').val();
+				var unitscaling2 = $('#unitscaling2').val() == '' ? '2' : $('#unitscaling2').val();
 				var ngf2 = $('#ngf2').val() == '' ? '32' : $('#ngf2').val();
 				var method2 = $('#method2').val() == '' ? 'GE-binomial' : $('#method2').val();
 				var autoencoder2 = $('#autoencoder2').val() == '' ? '0' : $('#autoencoder2').val();
-				var pi2 = $('#pi2').val() == '' ? '0.035' : $('#pi2').val();
+				var numparticles2 = $('#numparticles2').val() == '' ? '300' : $('#numparticles2').val();
 				var slack2 = $('#slack2').val() == '' ? '1' : $('#slack2').val();
 				var l22 = $('#l22').val() == '' ? '0' : $('#l22').val();
-				var learningrate2 = $('#learningrate2').val() == '' ? '0.001' : $('#learningrate2').val();
+				var learningrate2 = $('#learningrate2').val() == '' ? '0.002' : $('#learningrate2').val();
 				var minibatchsize2 = $('#minibatchsize2').val() == '' ? '256' : $('#minibatchsize2').val();
-				var minibatchbalance2 = $('#minibatchbalance2').val() == '' ? '1/16' : $('#minibatchbalance2').val();
+				var minibatchbalance2 = $('#minibatchbalance2').val() == '' ? '0.0625' : $('#minibatchbalance2').val();
 				var epochsize2 = $('#epochsize2').val() == '' ? '5000' : $('#epochsize2').val();
 				var numepochs2 = $('#numepochs2').val() == '' ? '10' : $('#numepochs2').val();
 				var numworkers2 = $('#numworkers2').val() == '' ? '-1' : $('#numworkers2').val();
@@ -103,7 +104,7 @@
 				var device2 = $('#device2').val() == '' ? '0' : $('#device2').val();
 				var saveprefix2 = $('#saveprefix2').val() == '' ? '/path/to/model' : $('#saveprefix2').val();
 				var output2 = $('#output2').val() == '' ? '/path/to/unique/output/model.txt' : $('#output2').val();
-				$('#result2').html("topaz train --train-images " + trainimages2 + " --train-targets " + traintargets2 + " --k-fold " + kfold2 + " --fold " + fold2 + " --radius " + radius2 + " --model " + model2 + " --units " + units2 + " --dropout " + dropout2 + " --bn " + bn2 + " --pooling " + pooling2 + " --unit-scaling " + unitscaling2 + " --ngf " + ngf2 + " --method " + method2 + " --autoencoder " + autoencoder2 + " --pi " + pi2 + " --l2 " + l22 + " --learning-rate " + learningrate2 + " --minibatch-size " + minibatchsize2 + " --minibatch-balance " + minibatchbalance2 + " --epoch-size " + epochsize2 + " --num-epochs " + numepochs2 + " --num-workers " + numworkers2 + " --test-batch-size " + testbatchsize2 + " --device " + device2 + " --save-prefix " + saveprefix2 + " --output " + output2);
+				$('#result2').html("topaz train --train-images " + trainimages2 + " --train-targets " + traintargets2 + " --k-fold " + kfold2 + " --fold " + fold2 + " --radius " + radius2 + " --model " + model2 + " --image-ext " + imageext2 + " --units " + units2 + " --dropout " + dropout2 + " --bn " + bn2 + " --unit-scaling " + unitscaling2 + " --ngf " + ngf2 + " --method " + method2 + " --autoencoder " + autoencoder2 + " --num-particles " + numparticles2 + " --l2 " + l22 + " --learning-rate " + learningrate2 + " --minibatch-size " + minibatchsize2 + " --minibatch-balance " + minibatchbalance2 + " --epoch-size " + epochsize2 + " --num-epochs " + numepochs2 + " --num-workers " + numworkers2 + " --test-batch-size " + testbatchsize2 + " --device " + device2 + " --save-prefix " + saveprefix2 + " --output " + output2);
 			});
 		});
 	});
@@ -131,7 +132,7 @@
 				var l2 = $('#l2').val() == '' ? '0' : $('#l2').val();
 				var learningrate = $('#learningrate').val() == '' ? '0.001' : $('#learningrate').val();
 				var minibatchsize = $('#minibatchsize').val() == '' ? '256' : $('#minibatchsize').val();
-				var minibatchbalance = $('#minibatchbalance').val() == '' ? '1/16' : $('#minibatchbalance').val();
+				var minibatchbalance = $('#minibatchbalance').val() == '' ? '0.0625' : $('#minibatchbalance').val();
 				var epochsize = $('#epochsize').val() == '' ? '5000' : $('#epochsize').val();
 				var numepochs = $('#numepochs').val() == '' ? '10' : $('#numepochs').val();
 				var numworkers = $('#numworkers').val() == '' ? '##' : $('#numworkers').val();
@@ -147,17 +148,20 @@
 	$( document ).ready(function() {
 		$('.extracting_inputs').each(function() {
 			$(this).on('keyup', function() {
-				var input4 = $('#input4').val() == '' ? '/path/to/preprocessed/images/*.tiff' : $('#input4').val();
+				var input4 = $('#input4').val() == '' ? '/path/to/preprocessed/images/*.mrc' : $('#input4').val();
 				var model4 = $('#model4').val() == '' ? '/path/to/model_epoch##.sav' : $('#model4').val();
-				var radius4 = $('#radius4').val() == '' ? '4' : $('#radius4').val();
+				var radius4 = $('#radius4').val() == '' ? '10' : $('#radius4').val();
 				var threshold4 = $('#threshold4').val() == '' ? '0.5' : $('#threshold4').val();
+				var upscale4 = $('#upscale4').val() == '' ? '1' : $('#upscale4').val();
 				var minradius4 = $('#minradius4').val() == '' ? '5' : $('#minradius4').val();
 				var maxradius4 = $('#maxradius4').val() == '' ? '100' : $('#maxradius4').val();
 				var stepradius4 = $('#stepradius4').val() == '' ? '5' : $('#stepradius4').val();
 				var numworkers4 = $('#numworkers4').val() == '' ? '-1' : $('#numworkers4').val();
 				var device4 = $('#device4').val() == '' ? '0' : $('#device4').val();
-				var output4 = $('#output4').val() == '' ? '/path/to/extracted/particles.[star|csv|txt]' : $('#output4').val();
-				$('#result4').html("topaz extract --model " + model4 + " --radius " + radius4 + " --threshold " + threshold4 + " --min-radius " + minradius4 + " --max-radius " + maxradius4 + " --step-radius " + stepradius4 + " --num-workers " + numworkers4 + " --device " + device4 + " --output " + output4 + " " + input4);
+				var output4 = $('#output4').val() == '' ? '/path/to/extracted/particles' : $('#output4').val();
+				$('#result4').html("topaz extract --model " + model4 + " --radius " + radius4 + " --threshold " + threshold4 + " --up-scale " + upscale4 + " --min-radius " + minradius4 + " --max-radius " + maxradius4 + " --step-radius " + stepradius4 + " --num-workers " + numworkers4 + " --device " + device4 + " --output " + output4 + ".txt " + input4
+				+ "<br><br>topaz convert --output " + output4 + ".csv " + output4 + ".txt"
+				+ "<br><br>topaz convert --output " + output4 + ".star " + output4 + ".txt");
 			});
 		});
 	});
@@ -497,6 +501,16 @@
 		border-radius:0.45rem;
 	  }
 	  
+	  hl1b {
+	    text-align: left;
+	  }
+	  
+	  hl1b span {
+	    background-color: #6ca646;
+	    padding: 0.75px;
+		border-radius:0.3rem;
+	  }
+	  
 	  hl2 {
 	    text-align: left;
 	  }
@@ -515,6 +529,16 @@
 	    background-color: #5573b8;
 	    padding: 3px;
 		border-radius:0.45rem;
+	  }
+	  
+	  hl3b {
+	    text-align: left;
+	  }
+	  
+	  hl3b span {
+	    background-color: #5573b8;
+	    padding: 0.75px;
+		border-radius:0.3rem;
 	  }
 	  
 	  hl4 {
@@ -537,6 +561,16 @@
 		border-radius:0.45rem;
 	  }
 	  
+	  hl5b {
+	    text-align: left;
+	  }
+	  
+	  hl5b span {
+	    background-color: #f5a153;
+	    padding: 0.75px;
+		border-radius:0.3rem;
+	  }
+	  
 	  hl6 {
 	    text-align: left;
 	  }
@@ -555,6 +589,16 @@
 	    background-color: #c8c8c8;
 	    padding: 3px;
 		border-radius:0.45rem;
+	  }
+	  
+	  hl7b {
+	    text-align: left;
+	  }
+	  
+	  hl7b span {
+	    background-color: #c8c8c8;
+	    padding: 0.75px;
+		border-radius:0.3rem;
 	  }
 	  
 	  hl8 {
@@ -718,23 +762,24 @@
 	  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7></p>
 	  <hr width="20%">
 	  <br><table style="height:7.3em">
-	  <tr title="Input micrographs for preprocessing (type: string; full path with wildcard for mrc files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input1" class="preprocessing_inputs" style="width:20em" value="/path/to/input/images/*.mrc"></td></tr>
-	  <tr title="Output directory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output1" class="preprocessing_inputs" style="width:20em" value="/path/to/output/preprocessed/images/"></td></tr>
+	  <tr title="Input micrographs for preprocessing (type: string; full path with wildcard for mrc files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input1" class="preprocessing_inputs" style="width:30em" value="/path/to/input/images/*.mrc"></td></tr>
+	  <tr title="Output directory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output1" class="preprocessing_inputs" style="width:30em" value="/path/to/output/preprocessed/images/"></td></tr>
 	  <tr title="Number of CPU cores to use for parallel image downsampling. -1 means use all CPUs (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers1" class="preprocessing_inputs" style="width:3em" value="-1"></td></tr>
 	  <tr title="Rescaling factor for image downsampling. Recommended: 4, 8, or 16 depending on particle size (e.g. a 4k x 4k image downsampled by 4 results in a 1k x 1k image) (type: even integer)"><td><hl4><span><font size="3" color="white">Scale factor</font></span></hl4></td><td><input id="scale1" class="preprocessing_inputs" style="width:3em" value="8"></td></tr>
 	  </table>
 	  <br><section><details><summary class="collapsibleoptions" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
 		<div class="content">
-		  <table style="height:5.5em">
-		  <tr title="Pixel sampling factor for model fit (type: integer)"><td><hl8><span><font size="3" color="white">Pixel sampling</font></span></hl8></td><td><input id="pixelsampling1" class="preprocessing_inputs" style="width:3em" value="200"></td></tr>
-		  <tr title="Number of iterations to run for model fit (type: integer)"><td><hl8><span><font size="3" color="white">Number of iterations</font></span></hl8></td><td><input id="niters1" class="preprocessing_inputs" style="width:3em" value="100"></td></tr>
+		  <table style="height:7.3em">
+		  <tr title="Output formate for preprocessed images (any combination of options: mrc,tiff,png) (type: string)"><td><hl8><span><font size="3" color="white">Output format</font></span></hl8></td><td><input id="format1" class="preprocessing_inputs" style="width:6em" value="mrc,png"></td></tr>
+		  <tr title="Pixel sampling factor for model fit (type: integer)"><td><hl8><span><font size="3" color="white">Pixel sampling</font></span></hl8></td><td><input id="pixelsampling1" class="preprocessing_inputs" style="width:3em" value="25"></td></tr>
+		  <tr title="Number of iterations to run for model fit (type: integer)"><td><hl8><span><font size="3" color="white">Number of iterations</font></span></hl8></td><td><input id="niters1" class="preprocessing_inputs" style="width:3em" value="200"></td></tr>
 		  <tr title="Random seed for model initialization (type: integer)"><td><hl8><span><font size="3" color="white">Random seed</font></span></hl8></td><td><input id="seed1" class="preprocessing_inputs" style="width:3em" value="1"></td></tr>
 		  </table>
 		</details></summary>
 		</span>
 	  <br/><br/><strong>Command:</strong><br/><hr width="20%"><br>
 	  <code><span class="tab0"><div id="result1" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
-	  topaz preprocess --scale 8 --num-workers -1 --pixel-sampling 200 --niters 100 --seed 1  --verbose -o /path/to/output/preprocessed/images/ /path/to/input/images/*.mrc
+	  topaz preprocess --scale 8 --num-workers -1 --format mrc,png --pixel-sampling 25 --niters 200 --seed 1  --verbose -o /path/to/output/preprocessed/images/ /path/to/input/images/*.mrc
 	  </div></span></code>
 	  </div>
 	</div>
@@ -816,7 +861,7 @@
               <li class="submenu_divider"></li>
               <li title="If you have an issue with this GUI, please report it and include as much information as possible"><a href="https://github.com/tbepler/topaz/issues" target="_blank">Report an Issue</a></li>
               <li class="submenu_divider"></li>
-              <li onclick="set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_LICENSE)" title="View license for VIA">License</li>
+              <li onclick="set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_LICENSE)" title="View license for VIA">VIA License</li>
               <li onclick="set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_ABOUT)" title="Show more details about this GUI">About Topaz and VIA</li>
             </ul>
           </li>
@@ -1003,6 +1048,14 @@
           </table>
         </div>
 
+        <button class="leftsidebar_accordion">Tips</button>
+        <div class="leftsidebar_accordion_panel">
+          <div style="display:block; text-align:left; padding:3px;"><li>The radius of the displayed pick is 3 pixels</li></div>
+          <div style="display:block; text-align:left; padding:3px;"><li>Pick 100-1000 particles (more is better)</li></div>
+          <div style="display:block; text-align:left; padding:3px;"><li>Pick all representative views</li></div>
+          <div style="display:block; text-align:left; padding:3px;"><li>Pick from several micrographs</li></div>
+          <div style="display:block; text-align:left; padding:3px;"><li>Incomplete picking is fine!</li></div>
+		</div>
       </div> <!-- end of leftsidebar -->
 
       <!-- Main display area: contains image canvas, ... -->
@@ -1148,24 +1201,21 @@
         </div> <!-- end of file not found panel -->
 
         <div id="page_getting_started" class="display_area_content display_none narrow_page_content">
-          <ol>
-            <li><strong>Convert MRCs to PNGs</strong>: Use Topaz to convert your mrc files to PNGs so you can use this GUI to make training picks and analyze Topaz results:
+          <font size="+1"><ol>
+            <li><strong>Preprocess MRCs</strong>: Use Topaz to downsample, normalize, and convert micrographs to PNG (for use in Topaz GUI) and MRC (for use with Topaz training).</li>
               <ul>
-                <br><code>topaz preprocess /full/path/to/mrcs/*.mrc -s [binning] -o /full/path/to/input/images/ -t [number_of_CPU_threads]</code></br></br>
+                <li>Topaz normalization uses image statistics for all input micrographs. A Gaussian mixture model is used to effectively make the ice region of each micrograph visible, even if there is gold in the image.
+                </li>
               </ul>
-            </li>
             <li><strong>Pick Particles</strong>: Add images then pick particles:
-
               <ul>
                 <li>To add images:
                   <ul>
-                    <li>Click <span class="text_button" onclick="sel_local_images()"><code>Add Images</code></span> under 'Project' to the left, or</li>
-                    <li>In the 'Project' menu, select <span class="text_button" onclick="project_file_add_abs_path_with_input()"><code>Add images using absolute paths</code></span>.</li>
+                    <li>Click <span class="text_button" onclick="sel_local_images()"><code>Add Images</code></span> or <span class="text_button" onclick="project_file_add_abs_path_with_input()"><code>Add Image Paths</code></span> under 'Project' to the left</li>
                     <li><b>Note</b>: This Topaz GUI  accepts JPEG, PNG, and BMP files.</li>
                   </ul>
                 </li>
               </ul>
-
               <ul>
                 <li>To pick particles:
                   <ul>
@@ -1173,15 +1223,26 @@
                     <li>To zoom in/out, either press Ctrl and scroll your mouse wheel on an image or press + or - (equal '=' will reset the zoom).</li>
                     <li>To delete a misplaced point, click the point again and press 'd'.</li>
                     <li>To adjust a point's location, click the point again and either use the arrow keys on your keyboard or click-and-drag to move it.</li>
-                    <li><b>Note</b>: Topaz works best if you identify 500+ particles representing all orientations of the particle and if you pick across several images. More training particles and views means more accurate Topaz picks.</li>
+                    <li><b>Note</b>: Topaz works best if you identify 500+ particles representing all orientations of the particle and if you pick across several images. More training particles and views means more accurate Topaz-trained picks.</li>
+                    <li><b>Note</b>: The radius of the displayed pick is 3 pixels.</li>
+
                   </ul>
                 </li>
-              </ul></br>
+              </ul>
+
+            <li><strong>Train a model</strong>: Use Topaz to train a neural network model to pick your particles.
+			</li>
+              <ul>
+                <li>Several parameters are optimizable by cross-validation.
+                </li>
+              </ul>
+				
 
             <li><strong>Export Particles</strong>: To export particles, click <span class="text_button" onclick="download_all_region_data('csv')"><code>Particle Picks &rarr; Export Picks</code></span> in the top menu. These picks may then be used in Topaz training.</li>
-            <br><li><strong>Analyze Topaz Picks</strong>: Load Topaz picks by clicking <span class="text_button" onclick="sel_local_data_file('annotations')"><code>Particle Picks &rarr; Import Picks.</code></span></li>
-            <br><strong>Note</strong>: It is good practice to save your particles/project regularly. Do this by clicking <span class="text_button" onclick="download_all_region_data('csv')"><code>Particle Picks &rarr; Export Picks</code></span> or <span class="text_button" onclick="project_save_with_confirm()"><code>Project &rarr; Save</code></span> in the top menu.</li>
-          </ol>
+            <li><strong>Analyze Topaz Picks</strong>: Load Topaz picks by clicking <span class="text_button" onclick="sel_local_data_file('annotations')"><code>Particle Picks &rarr; Import Picks.</code></span></li>
+            <br><strong>Note</strong>: It is good practice to save your particles/project regularly. Do this by clicking <span class="text_button" onclick="download_all_region_data('csv')"><code>Particle Picks &rarr; Export Picks</code></span> or <span class="text_button" onclick="project_save_with_confirm()"><code>Project &rarr; Save</code></span> in the top menu.</li></br>
+            <br><strong>Note</strong>: Parameters are categorized by those that <hl1b><span><font size="3" color="white">need to be modified</font></span></hl1b>, <hl3b><span><font size="3" color="white">might need to be modified</font></span></hl3b>, <hl5b><span><font size="3" color="white">are optimizable</font></span></hl5b>, and <hl7b><span><font size="3" color="white">are rarely modified</font></span></hl7b>. Training parameters that are <hl5b><span><font size="3" color="white">optimizable</font></span></hl5b> may be optimized using cross-validation.</li>
+          </ol></font>
         </div>
 
         <div id="page_load_ongoing" class="display_area_content narrow_page_content">
@@ -1201,14 +1262,14 @@
 			 </table>
           </div>
 
-          <p><a href="https://github.com/tbepler/topaz/" target="_blank">Topaz</a> is a pipeline for particle detection in cryo-electron microscopy images using convolutional neural networks trained from positive and unlabeled examples. The original research can be found <a href="https://arxiv.org/abs/1803.08207" target="_blank">here</a>.</p>
+          <p><a href="https://github.com/tbepler/topaz/" target="_blank">Topaz</a> is a pipeline for particle detection in cryo-electron microscopy images using convolutional neural networks trained from positive and unlabeled examples. The original research can be found <a href="https://arxiv.org/abs/1803.08207" target="_blank">here</a>. Topaz is released under the GPLv3 <a href="https://github.com/tbepler/topaz/blob/master/LICENSE" target="_blank">license</a>.</p>
           <p>Topaz GUI uses VGG Image Annotator (VIA), which is an image annotation tool that can be used to define regions in an image and create textual descriptions of those regions. VIA is an <a href="https://gitlab.com/vgg/via/" target="_blank">open source project</a> developed at the <a href="http://www.robots.ox.ac.uk/~vgg/" target="_blank">Visual Geometry Group</a> and released under the BSD-2 clause <a href="https://gitlab.com/vgg/via/blob/master/LICENSE" target="_blank">license</a>.</p>
           <p>Here is a list of some salient features of the Topaz GUI version of VIA:
             <ul>
               <li>based solely on HTML, CSS and Javascript</li>
-              <li>can be used off-line (full application in a single html file of size &lt; 0.5MB)</li>
-              <li>only requires a modern web browser (tested on Firefox, Chrome, and Safari)</li>
-              <li>import/export of particle picks in csv file format</li>
+              <li>can be used off-line (full application in a single html file that is &lt; 0.5MB)</li>
+              <li>only requires a modern web browser (tested on Chrome, Firefox, and Safari)</li>
+              <li>import/export particle picks in csv file format</li>
             </ul>
           </p>
           <p>For more Topaz details, visit <a href="https://github.com/tbepler/topaz/" target="_blank">https://github.com/tbepler/topaz/</a>.</p>
@@ -1248,12 +1309,12 @@ POSSIBILITY OF SUCH DAMAGE.
             <p><font size="+2"><b>Quickstart Guide</b></font></p>
 			<section><details><summary class="collapsible"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Particle picking for training</summary>
 			<div class="content">
-			  <p style=line-height:1.3>
+			  <p style=line-height:1.4>
 			  <font size="+1"><b>1) </b>To start picking, <span class="text_button" title="Load or Add Images" onclick="sel_local_images()"><font size="+2">select images</font></span> or add images from <span class="text_button" title="Add images from absolute path (e.g. /my/beautiful/particles.jpg)" onclick="project_file_add_abs_path_with_input()">absolute path.</span></font></br>
-              <font size="+1"><b>2) </b>Pick 500+ particles representing as many particle orientations as possible.</font></br>
+              <font size="+1"><b>2) </b>Pick 100-1,000 particles (more is better) representing all orientations.</font></br>
               <font size="+1">&nbsp&nbsp&nbsp&nbsp• Pick across several representative images.</font></br>
               <font size="+1">&nbsp&nbsp&nbsp&nbsp• Not all particles need to be picked from each image.</font></br>
-              <font size="+1"><b>3) </b>Export your particle picks as a CSV file and proceed to Topaz training.</font></br>
+              <font size="+1"><b>3) </b>Export your particle picks and proceed to Topaz training.</font></br>
               <br><font size="+1">• <span class="text_button" onclick="download_all_region_data('csv')"><font size="+1">Save your particles</font></span> and <span class="text_button" onclick="project_save_with_confirm()">project</span> regularly. You may <span class="text_button" onclick="sel_local_data_file('annotations')">load</span> <span class="text_button" onclick="project_open_select_project_file()">them</span> later to continue.</font></br>
               <br><font size="+1">• For further help, see the <span class="text_button" onclick="set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_GETTING_STARTED)">Getting Started</span> page.</font>
 			  </p>
@@ -1291,34 +1352,34 @@ POSSIBILITY OF SUCH DAMAGE.
 	  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7></p>
 	  <hr width="20%">
 	  <br><table style="height:23.5em">
-	  <tr title="Path to input micrographs for training (type: string; full path)"><td><hl2><span><font size="3" color="white">Training images folder</font></span></hl2></td><td><input id="trainimages2" class="training_inputs" style="width:20em" value="/path/to/preprocessed/images/"></td></tr>
-	  <tr title="Training particles in CSV, star, or tab-delimited format (type: string; full file path)"><td><hl2><span><font size="3" color="white">Training particles</font></span></hl2></td><td><input id="traintargets2" class="training_inputs" style="width:20em" value="/path/to/training_particles.csv"></td></tr>
-	  <tr title="Path prefix to save trained models for each epoch (type: string; full path)"><td><hl2><span><font size="3" color="white">Save prefix</font></span></hl2></td><td><input id="saveprefix2" class="training_inputs" style="width:20em" value="/path/to/model"></td></tr>
-	  <tr title="Destination to write the train/test curve (type: string; full file path)"><td><hl2><span><font size="3" color="white">Output</font></span></hl2></td><td><input id="output2" class="training_inputs" style="width:20em" value="/path/to/unique/output/model.txt"></td></tr>
+	  <tr title="Path to input micrographs for training (type: string; full path)"><td><hl2><span><font size="3" color="white">Training images folder</font></span></hl2></td><td><input id="trainimages2" class="training_inputs" style="width:30em" value="/path/to/preprocessed/images/"></td></tr>
+	  <tr title="Training particles in CSV, star, or tab-delimited format (type: string; full file path)"><td><hl2><span><font size="3" color="white">Training particles</font></span></hl2></td><td><input id="traintargets2" class="training_inputs" style="width:30em" value="/path/to/training_particles.csv"></td></tr>
+	  <tr title="Path prefix to save trained models for each epoch (type: string; full path)"><td><hl2><span><font size="3" color="white">Save prefix</font></span></hl2></td><td><input id="saveprefix2" class="training_inputs" style="width:30em" value="/path/to/model"></td></tr>
+	  <tr title="Destination to write the train/test curve (type: string; full file path)"><td><hl2><span><font size="3" color="white">Output</font></span></hl2></td><td><input id="output2" class="training_inputs" style="width:30em" value="/path/to/unique/output/model.txt"></td></tr>
 	  <tr title="Number of subsets to divide the training data into. This will determine the train/test dataset sizes. E.g. '5' splits the picks into five subsets where one will be used as the test dataset. (type: integer)"><td><hl4><span><font size="3" color="white">K-fold</font></span></hl4></td><td><input id="kfold2" class="training_inputs" style="width:3em" value="5"></td></tr>
 	  <tr title="Number of CPU cores to use for parallel image downsampling. -1 means use all CPUs (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers2" class="training_inputs" style="width:3em" value="-1"></td></tr>
 	  <tr title="Augment the method with an autoencoder where the weight is on the reconstruction error (type: float)"><td><hl4><span><font size="3" color="white">Autoencoder</font></span></hl4></td><td><input id="autoencoder2" class="training_inputs" style="width:3em" value="0"></td></tr>
 	  <tr title="Number of training epochs (type: integer)"><td><hl4><span><font size="3" color="white">Number of epochs</font></span></hl4></td><td><input id="numepochs2" class="training_inputs" style="width:3em" value="10"></td></tr>
-	  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU extraction (type: integer)"><td><hl4><span><font size="3" color="white">Device</font></span></hl4></td><td><input id="device2" class="training_inputs" style="width:3em" value="0"></td></tr>
+	  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU extraction (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU Device</font></span></hl4></td><td><input id="device2" class="training_inputs" style="width:3em" value="0"></td></tr>
 	  <tr title="Model type to fit (options: resnet8, conv31, conv63, conv127) (type: string)"><td><hl6><span><font size="3" color="white">CNN model</font></span></hl6></td><td><input id="model2" class="training_inputs" style="width:6em" value="resnet8"></td></tr>
 	  <tr title="Objective function to use for learning the region classifier (options: PN, GE-KL, GE-binomial, PU) (type: string)"><td><hl6><span><font size="3" color="white">Method</font></span></hl6></td><td><input id="method2" class="training_inputs" style="width:6em" value="GE-binomial"></td></tr>
-	  <tr title="Pixel radius around particle centers to consider (type: integer)"><td><hl6><span><font size="3" color="white">Particle radius</font></span></hl6></td><td><input id="radius2" class="training_inputs" style="width:3em" value="4"></td></tr>
-	  <tr title="Fraction of data that is expected to be positive. Usually between 0.03 and 0.05 (type: float)"><td><hl6><span><font size="3" color="white">Pi (π)</font></span></hl6></td><td><input id="pi2" class="training_inputs" style="width:3em" value="0.035"></td></tr>
+	  <tr title="Pixel radius around particle centers to consider (type: integer)"><td><hl6><span><font size="3" color="white">Particle radius</font></span></hl6></td><td><input id="radius2" class="training_inputs" style="width:3em" value="5"></td></tr>
+	  <tr title="Expected number of particles per micrograph (type: integer)"><td><hl6><span><font size="3" color="white">Num particles/image</font></span></hl6></td><td><input id="numparticles2" class="training_inputs" style="width:3em" value="300"></td></tr>
 	  </table>
 	  <br><section><details><summary class="collapsibleoptions" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
 		<div class="content">
 		  <table style="height:23.5em">
 		  <tr title="Which fold out the k-folds will be used as the test dataset (type: integer)"><td><hl8><span><font size="3" color="white">Fold</font></span></hl8></td><td><input id="fold2" class="training_inputs" style="width:3em" value="0"></td></tr>
+		  <tr title="Sets the image extension if loading images from (options: .mrc, .tiff, or .png; include the '.') (type: string)"><td><hl8><span><font size="3" color="white">Image extension</font></span></hl8></td><td><input id="imageext2" class="training_inputs" style="width:3em" value=".mrc"></td></tr>
 		  <tr title="Number of units model parameter (type: integer)"><td><hl8><span><font size="3" color="white">Units</font></span></hl8></td><td><input id="units2" class="training_inputs" style="width:3em" value="32"></td></tr>
 		  <tr title="Dropout rate model parameter (type: float)"><td><hl8><span><font size="3" color="white">Dropout</font></span></hl8></td><td><input id="dropout2" class="training_inputs" style="width:3em" value="0.0"></td></tr>
 		  <tr title="Use batch norm in the model (type: on/off)"><td><hl8><span><font size="3" color="white">Batch norm</font></span></hl8></td><td><input id="bn2" class="training_inputs" style="width:3em" value="on"></td></tr>
-		  <tr title="Pooling method to use (type: string)"><td><hl8><span><font size="3" color="white">Pooling</font></span></hl8></td><td><input id="pooling2" class="training_inputs" style="width:3em" value="none"></td></tr>
-		  <tr title="Scale the number of units up by this factor every layer (type: integer)"><td><hl8><span><font size="3" color="white">Unit scaling</font></span></hl8></td><td><input id="unitscaling2" class="training_inputs" style="width:3em" value="1"></td></tr>
+		  <tr title="Scale the number of units up by this factor every layer (type: integer)"><td><hl8><span><font size="3" color="white">Unit scaling</font></span></hl8></td><td><input id="unitscaling2" class="training_inputs" style="width:3em" value="2"></td></tr>
 		  <tr title="Scaled number of units per layer in generative model, if used (type: integer)"><td><hl8><span><font size="3" color="white">Scaled num of units</font></span></hl8></td><td><input id="ngf2" class="training_inputs" style="width:3em" value="32"></td></tr>
 		  <tr title="L2 regularizer on the model parameters (type: integer)"><td><hl8><span><font size="3" color="white">L2</font></span></hl8></td><td><input id="l22" class="training_inputs" style="width:3em" value="0"></td></tr>
-		  <tr title="Learning rate for the optimizer (type: float)"><td><hl8><span><font size="3" color="white">Learning rate</font></span></hl8></td><td><input id="learningrate2" class="training_inputs" style="width:3em" value="0.001"></td></tr>
+		  <tr title="Learning rate for the optimizer (type: float)"><td><hl8><span><font size="3" color="white">Learning rate</font></span></hl8></td><td><input id="learningrate2" class="training_inputs" style="width:3em" value="0.002"></td></tr>
 		  <tr title="Number of data points per minibatch (type: integer)"><td><hl8><span><font size="3" color="white">Minibatch size</font></span></hl8></td><td><input id="minibatchsize2" class="training_inputs" style="width:3em" value="256"></td></tr>
-		  <tr title="Fraction minibatch that is positive data points (type: fraction)"><td><hl8><span><font size="3" color="white">Minibatch balance</font></span></hl8></td><td><input id="minibatchbalance2" class="training_inputs" style="width:3em" value="1/16"></td></tr>
+		  <tr title="Fraction minibatch that is positive data points (type: fraction)"><td><hl8><span><font size="3" color="white">Minibatch balance</font></span></hl8></td><td><input id="minibatchbalance2" class="training_inputs" style="width:3em" value="0.0625"></td></tr>
 		  <tr title="Number of parameter updates per epoch (type: integer)"><td><hl8><span><font size="3" color="white">Epoch size</font></span></hl8></td><td><input id="epochsize2" class="training_inputs" style="width:3em" value="5000"></td></tr>
 		  <tr title="Batch size for calculating test set statistics (type: integer)"><td><hl8><span><font size="3" color="white">Test batch size</font></span></hl8></td><td><input id="testbatchsize2" class="training_inputs" style="width:3em" value="1"></td></tr>
 		  </table>
@@ -1326,7 +1387,7 @@ POSSIBILITY OF SUCH DAMAGE.
 		</span>
 	  <br/><br/><strong>Command</strong><br/><hr width="20%"><br>
 	  <code><span id="cmd_copy2" class="tab0"><div id="result2" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
-	  topaz train --train-images /path/to/preprocessed/images/ --train-targets /path/to/training_particles.csv --k-fold 5 --fold 0 --radius 4 --model resnet8 --units 32 --dropout 0.0 --bn on --pooling none --unit-scaling 1 --ngf 32 --method GE-binomial --autoencoder 0 --pi 0.035 --l2 0 --learning-rate 0.001 --minibatch-size 256 --minibatch-balance 1/16 --epoch-size 5000 --num-epochs 10 --num-workers -1 --test-batch-size 1 --device 0 --save-prefix /path/to/model --output /path/to/unique/output/model.txt
+	  topaz train --train-images /path/to/preprocessed/images/ --train-targets /path/to/training_particles.csv --k-fold 5 --fold 0 --radius 5 --model resnet8 --image-ext .mrc --units 32 --dropout 0.0 --bn on --unit-scaling 2 --ngf 32 --method GE-binomial --autoencoder 0 --num-particles 300 --l2 0 --learning-rate 0.002 --minibatch-size 256 --minibatch-balance 0.0625 --epoch-size 5000 --num-epochs 10 --num-workers -1 --test-batch-size 1 --device 0 --save-prefix /path/to/model --output /path/to/unique/output/model.txt
 	  </div></span></code>
 	  </div>
 	</div>
@@ -1348,8 +1409,8 @@ POSSIBILITY OF SUCH DAMAGE.
 	  <tr title="Pixel sampling factor for model fit (type: integer)"><td>Pixel sampling:</td><td><input id="pixelsampling" class="crossvalidating_inputs" style="width:3em" value="200"></td></tr>
 	  <tr title="Number of iterations to run for model fit (type: integer)"><td>Number of iterations:</td><td><input id="niters" class="crossvalidating_inputs" style="width:3em" value="100"></td></tr>
 	  <tr title="Random seed for model initialization (type: integer)"><td>Random seed:</td><td><input id="seed" class="crossvalidating_inputs" style="width:3em" value="1"></td></tr>
-	  <tr title="Output directory (type: string; full path)"><td><u>Output folder</u>:</td><td><input id="output" class="crossvalidating_inputs" style="width:20em" value="/path/to/output/preprocessed/images/"></td></tr>
-	  <tr title="Input micrographs for preprocessing (type: string; full path with wildcard for mrc files)"><td><u>Input micrographs</u>:</td><td><input id="input" class="crossvalidating_inputs" style="width:20em" value="/path/to/input/images/*.mrc"></td></tr>
+	  <tr title="Output directory (type: string; full path)"><td><u>Output folder</u>:</td><td><input id="output" class="crossvalidating_inputs" style="width:30em" value="/path/to/output/preprocessed/images/"></td></tr>
+	  <tr title="Input micrographs for preprocessing (type: string; full path with wildcard for mrc files)"><td><u>Input micrographs</u>:</td><td><input id="input" class="crossvalidating_inputs" style="width:30em" value="/path/to/input/images/*.mrc"></td></tr>
 	  </table></span>
 	  <br/>
 	  <code><span class="tab2"><div id="result3">
@@ -1373,14 +1434,15 @@ POSSIBILITY OF SUCH DAMAGE.
 	  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
 	  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7></p>
 	  <hr width="20%">
-	  <br><table style="height:12.7em">
-	  <tr title="Input micrographs for extracting (type: string; full path with wildcard for tiff files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input4" class="extracting_inputs" style="width:20em" value="/path/to/preprocessed/images/*.tiff"></td></tr>
-	  <tr title="Output file. Supported file types: .star, .csv, and Topaz .txt (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output4" class="extracting_inputs" style="width:20em" value="/path/to/extracted/particles.[star|csv|txt]"></td></tr>
-	  <tr title="Path to network model from training (type: string; full path)"><td><hl2><span><font size="3" color="white">Model</font></span></hl2></td><td><input id="model4" class="extracting_inputs" style="width:20em" value="/path/to/model_epoch##.sav"></td></tr>
-	  <tr title="Pixel radius of the region to extract (type: integer)"><td><hl4><span><font size="3" color="white">Radius</font></span></hl4></td><td><input id="radius4" class="extracting_inputs" style="width:3em" value="4"></td></tr>
+	  <br><table style="height:14.5em">
+	  <tr title="Input micrographs for extracting (type: string; full path with wildcard for mrc/tiff/png files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input4" class="extracting_inputs" style="width:30em" value="/path/to/preprocessed/images/*.mrc"></td></tr>
+	  <tr title="Path to network model from training (type: string; full path)"><td><hl2><span><font size="3" color="white">Model</font></span></hl2></td><td><input id="model4" class="extracting_inputs" style="width:30em" value="/path/to/model_epoch##.sav"></td></tr>
+	  <tr title="Basename for output files. A .star, .csv, and Topaz .txt file will be written (type: string; full file path without extension)"><td><hl2><span><font size="3" color="white">Output filenames</font></span></hl2></td><td><input id="output4" class="extracting_inputs" style="width:30em" value="/path/to/extracted/particles"></td></tr>
+	  <tr title="Pixel radius of the region to extract (type: integer)"><td><hl4><span><font size="3" color="white">Particle radius</font></span></hl4></td><td><input id="radius4" class="extracting_inputs" style="width:3em" value="10"></td></tr>
 	  <tr title="Lower Topaz score threshold for extraction (type: float)"><td><hl4><span><font size="3" color="white">Threshold</font></span></hl4></td><td><input id="threshold4" class="extracting_inputs" style="width:3em" value="0.5"></td></tr>
+	  <tr title="Upscale the pick coordinates by this factor. '1' means no scaling (type: integer)"><td><hl4><span><font size="3" color="white">Upscale picks</font></span></hl4></td><td><input id="upscale4" class="extracting_inputs" style="width:3em" value="1"></td></tr>
 	  <tr title="Number of CPU cores to use for extraction. -1 means use all CPUs (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers4" class="extracting_inputs" style="width:3em" value="-1"></td></tr>
-	  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU extraction (type: integer)"><td><hl4><span><font size="3" color="white">Device</font></span></hl4></td><td><input id="device4" class="extracting_inputs" style="width:3em" value="0"></td></tr>
+	  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU extraction (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU Device</font></span></hl4></td><td><input id="device4" class="extracting_inputs" style="width:3em" value="0"></td></tr>
 	  </table>
 	  <br><section><details><summary class="collapsibleoptions" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
 		<div class="content">
@@ -1393,7 +1455,9 @@ POSSIBILITY OF SUCH DAMAGE.
 		</span>
 	  <br/><br/><strong>Command:</strong><br/><hr width="20%"><br>
 	  <code><span class="tab0"><div id="result4" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
-	  topaz extract --model /path/to/model_epoch##.sav --radius 4 --threshold 0.5 --min-radius 5 --max-radius 100 --step-radius 5 --num-workers -1 --device 0 --output /path/to/extracted/particles.[star|csv|txt] /path/to/preprocessed/images/*.tiff
+	  topaz extract --model /path/to/model_epoch##.sav --radius 10 --threshold 0.5 --up-scale 1 --min-radius 5 --max-radius 100 --step-radius 5 --num-workers -1 --device 0 --output /path/to/extracted/particles.txt /path/to/preprocessed/images/*.mrc<br><br>
+	  topaz convert --output /path/to/extracted/particles.csv /path/to/extracted/particles.txt<br><br>
+	  topaz convert --output /path/to/extracted/particles.star /path/to/extracted/particles.txt
 	  </div></span></code>
 	  </div>
 	</div>
@@ -1950,7 +2014,7 @@ function sel_local_data_file(type) {
   if (invisible_file_input) {
     switch(type) {
     case 'annotations':
-      invisible_file_input.accept='.csv,.json';
+      invisible_file_input.accept='.csv';
       invisible_file_input.onchange = import_annotations_from_file;
       break;
 
@@ -7873,8 +7937,8 @@ function project_get_default_project_name() {
 function project_save_with_confirm() {
   var config = {'title':'Save Project' };
   var input = { 'project_name': { type:'text', name:'Project Name', value:_via_settings.project.name, disabled:false, size:30 },
-                'save_annotations':{ type:'checkbox', name:'Save region and file annotations (i.e. manual annotations)', checked:true, disabled:false},
-                'save_attributes':{ type:'checkbox', name:'Save region and file attributes.', checked:true},
+                'save_annotations':{ type:'checkbox', name:'Save picks and file annotations (i.e. manual annotations)', checked:true, disabled:false},
+                'save_attributes':{ type:'checkbox', name:'Save picks and file attributes.', checked:true},
                 'save_via_settings':{ type:'checkbox', name:'Save VIA application settings', checked:true},
                 //                'save_base64_data':{ type:'checkbox', name:'Save base64 data of images (if present)', checked:false},
                 //                'save_images':{type:'checkbox', 'name':'Save images <span class="warning">(WARNING: only recommended for projects containing small number of images)</span>', value:false},

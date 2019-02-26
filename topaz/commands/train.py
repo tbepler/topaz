@@ -200,8 +200,8 @@ def load_data(train_images, train_targets, test_images, test_targets, radius
              , k_fold=0, fold=0, cross_validation_seed=42, format_='auto', image_ext=''):
 
     # if train_images is a directory path, map to all images in the directory
-    if train_images.endswith(os.sep):
-        paths = glob.glob(train_images + '*' + image_ext)
+    if os.path.isdir(train_images):
+        paths = glob.glob(train_images + os.sep + '*' + image_ext)
         valid_paths = []
         image_names = []
         for path in paths:
@@ -266,8 +266,8 @@ def load_data(train_images, train_targets, test_images, test_targets, radius
 
     
     if test_images is not None:
-        if test_images.endswith(os.sep):
-            paths = glob.glob(test_images + '*' + image_ext)
+        if os.path.isdir(test_images):
+            paths = glob.glob(test_images + os.sep + '*' + image_ext)
             valid_paths = []
             image_names = []
             for path in paths:
