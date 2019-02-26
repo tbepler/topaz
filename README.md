@@ -141,9 +141,11 @@ pip install -e .
 
 # Tutorial
 
-[Click here](tutorial/01_walkthrough.ipynb) for a tutorial for using Topaz on a small demonstration dataset.
+To run the tutorials, [Jupyter notebook](http://jupyter.org/install) also needs to be installed
 
-To run the tutorial, [Jupyter notebook](http://jupyter.org/install) also needs to be installed
+1. [Quick start guide](tutorial/01_quick_start_guide.ipynb)
+2. [Complete walkthrough](tutorial/02_walkthrough.ipynb)
+3. [Cross validation](tutorial/03_cross_validation.ipynb)
 
 The tutorial data can be downloaded [here](http://bergerlab-downloads.csail.mit.edu/topaz/topaz-tutorial-data.tar.gz).
 
@@ -257,95 +259,9 @@ image_name	x_coord	y_coord
 ```
 
 #### Train region classifiers with labeled particles (topaz train)
-Models are trained using the `topaz train` command.
+Models are trained using the `topaz train` command. For a complete list of training arguments, see 
 ```
-usage: topaz train [-h] [--train-images TRAIN_IMAGES]
-                   [--train-targets TRAIN_TARGETS] [--test-images TEST_IMAGES]
-                   [--test-targets TEST_TARGETS] [-k K_FOLD] [--fold FOLD]
-                   [--cross-validation-seed CROSS_VALIDATION_SEED]
-                   [--radius RADIUS] [-m MODEL] [--units UNITS]
-                   [--dropout DROPOUT] [--bn {on,off}] [--pooling POOLING]
-                   [--unit-scaling UNIT_SCALING] [--ngf NGF]
-                   [--method {PN,GE-KL,GE-binomial,PU}]
-                   [--autoencoder AUTOENCODER] [--pi PI] [--slack SLACK]
-                   [--l2 L2] [--learning-rate LEARNING_RATE] [--natural]
-                   [--minibatch-size MINIBATCH_SIZE]
-                   [--minibatch-balance MINIBATCH_BALANCE]
-                   [--epoch-size EPOCH_SIZE] [--num-epochs NUM_EPOCHS]
-                   [--num-workers NUM_WORKERS]
-                   [--test-batch-size TEST_BATCH_SIZE] [-d DEVICE]
-                   [--save-prefix SAVE_PREFIX] [--output OUTPUT] [--describe]
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --train-images TRAIN_IMAGES
-                        path to file listing the training images
-  --train-targets TRAIN_TARGETS
-                        path to file listing the training particle coordinates
-  --test-images TEST_IMAGES
-                        path to file listing the test images, optional
-  --test-targets TEST_TARGETS
-                        path to file listing the testing particle coordinates,
-                        optional
-  -k K_FOLD, --k-fold K_FOLD
-                        option to split the training set into K folds for
-                        cross validation (default: not used)
-  --fold FOLD           when using K-fold cross validation, sets which fold is
-                        used as the heldout test set (default: 0)
-  --cross-validation-seed CROSS_VALIDATION_SEED
-                        random seed for partitioning data into folds (default:
-                        42)
-  --radius RADIUS       pixel radius around particle centers to consider
-                        positive (default: 0)
-  -m MODEL, --model MODEL
-                        model type to fit (default: resnet8)
-  --units UNITS         number of units model parameter (default: 32)
-  --dropout DROPOUT     dropout rate model parameter(default: 0.0)
-  --bn {on,off}         use batch norm in the model (default: on)
-  --pooling POOLING     pooling method to use (default: none)
-  --unit-scaling UNIT_SCALING
-                        scale the number of units up by this factor every
-                        layer (default: 1)
-  --ngf NGF             scaled number of units per layer in generative model
-                        if used (default: 32)
-  --method {PN,GE-KL,GE-binomial,PU}
-                        objective function to use for learning the region
-                        classifier (default: GE-binomial)
-  --autoencoder AUTOENCODER
-                        option to augment method with autoencoder. weight on
-                        reconstruction error (default: 0)
-  --pi PI               parameter specifying fraction of data that is expected
-                        to be positive
-  --slack SLACK         weight on GE penalty (default: 10 x number of
-                        particles for GE-KL, 1 for GE-binomial)
-  --l2 L2               l2 regularizer on the model parameters (default: 0)
-  --learning-rate LEARNING_RATE
-                        learning rate for the optimizer (default: 0.001)
-  --natural             sample unbiasedly from the data to form minibatches
-                        rather than sampling particles and not particles at
-                        ratio given by minibatch-balance parameter
-  --minibatch-size MINIBATCH_SIZE
-                        number of data points per minibatch (default: 256)
-  --minibatch-balance MINIBATCH_BALANCE
-                        fraction of minibatch that is positive data points
-                        (default: 1/16)
-  --epoch-size EPOCH_SIZE
-                        number of parameter updates per epoch (default: 5000)
-  --num-epochs NUM_EPOCHS
-                        maximum number of training epochs (default: 10)
-  --num-workers NUM_WORKERS
-                        number of worker processes for data augmentation
-                        (default: 0)
-  --test-batch-size TEST_BATCH_SIZE
-                        batch size for calculating test set statistics
-                        (default: 1)
-  -d DEVICE, --device DEVICE
-                        which device to use, set to -1 to force CPU (default:
-                        0)
-  --save-prefix SAVE_PREFIX
-                        path prefix to save trained models each epoch
-  --output OUTPUT       destination to write the train/test curve
-  --describe            only prints a description of the model, does not train
+topaz train --help
 ```
 
 #### Model choices
