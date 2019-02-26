@@ -81,7 +81,7 @@ def add_arguments(parser):
     training.add_argument('--natural', action='store_true', help='sample unbiasedly from the data to form minibatches rather than sampling particles and not particles at ratio given by minibatch-balance parameter')
 
     training.add_argument('--minibatch-size', default=256, type=int, help='number of data points per minibatch (default: 256)')
-    training.add_argument('--minibatch-balance', default=0.0625, type=float, help='fraction of minibatch that is positive data points (default: 1/16)')
+    training.add_argument('--minibatch-balance', default=0.0625, type=float, help='fraction of minibatch that is positive data points (default: 0.0625)')
     training.add_argument('--epoch-size', default=5000, type=int, help='number of parameter updates per epoch (default: 5000)')
     training.add_argument('--num-epochs', default=10, type=int, help='maximum number of training epochs (default: 10)')
 
