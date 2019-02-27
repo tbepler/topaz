@@ -397,7 +397,7 @@ optional arguments:
 
 </p></details>
 
-# References
+# Reference
 
 Bepler, T., Morin, A., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2018). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs. arXiv. https://arxiv.org/abs/1803.08207
 
