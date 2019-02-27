@@ -61,7 +61,6 @@ def main():
     import topaz.commands.segment
     import topaz.commands.extract
     import topaz.commands.precision_recall_curve
-    import topaz.commands.pimax
 
     import topaz.commands.downsample
     import topaz.commands.normalize
@@ -88,7 +87,6 @@ def main():
                        topaz.commands.segment,
                        topaz.commands.extract,
                        topaz.commands.precision_recall_curve,
-                       topaz.commands.pimax,
                       ]
                      ),
                      ('Image processing',
