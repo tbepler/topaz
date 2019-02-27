@@ -16,7 +16,7 @@ def main(args):
     import webbrowser
 
     # where is the GUI
-    root = os.path.dirname(_file__) # this is the commands dir
+    root = os.path.dirname(__file__) # this is the commands dir
     root = os.path.dirname(root) # now in the topaz root dir
     gui_path = os.path.join(root, 'gui', 'topaz.html')
 
