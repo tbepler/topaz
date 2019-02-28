@@ -42,6 +42,9 @@ def read_via_csv(path):
     table['image_name'] = table['filename'].apply(strip_ext) 
     table = table.drop('filename', axis=1)
 
+    # don't include images with region_count==0
+    table = table.loc[table['region_count'] > 0]
+
     regions = table['region_shape_attributes']
     x_coord = np.zeros(len(table), dtype=int)
     y_coord = np.zeros(len(table), dtype=int)

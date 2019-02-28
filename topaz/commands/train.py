@@ -81,7 +81,7 @@ def add_arguments(parser):
     training.add_argument('--natural', action='store_true', help='sample unbiasedly from the data to form minibatches rather than sampling particles and not particles at ratio given by minibatch-balance parameter')
 
     training.add_argument('--minibatch-size', default=256, type=int, help='number of data points per minibatch (default: 256)')
-    training.add_argument('--minibatch-balance', default=0.0625, type=float, help='fraction of minibatch that is positive data points (default: 1/16)')
+    training.add_argument('--minibatch-balance', default=0.0625, type=float, help='fraction of minibatch that is positive data points (default: 0.0625)')
     training.add_argument('--epoch-size', default=5000, type=int, help='number of parameter updates per epoch (default: 5000)')
     training.add_argument('--num-epochs', default=10, type=int, help='maximum number of training epochs (default: 10)')
 
@@ -200,8 +200,8 @@ def load_data(train_images, train_targets, test_images, test_targets, radius
              , k_fold=0, fold=0, cross_validation_seed=42, format_='auto', image_ext=''):
 
     # if train_images is a directory path, map to all images in the directory
-    if train_images.endswith(os.sep):
-        paths = glob.glob(train_images + '*' + image_ext)
+    if os.path.isdir(train_images):
+        paths = glob.glob(train_images + os.sep + '*' + image_ext)
         valid_paths = []
         image_names = []
         for path in paths:
@@ -266,8 +266,8 @@ def load_data(train_images, train_targets, test_images, test_targets, radius
 
     
     if test_images is not None:
-        if test_images.endswith(os.sep):
-            paths = glob.glob(test_images + '*' + image_ext)
+        if os.path.isdir(test_images):
+            paths = glob.glob(test_images + os.sep + '*' + image_ext)
             valid_paths = []
             image_names = []
             for path in paths:

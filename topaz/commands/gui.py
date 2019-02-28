@@ -2,7 +2,6 @@ from __future__ import print_function
 
 import os
 import sys
-import topaz.main
 
 name = 'gui'
 help = 'opens the topaz GUI in a web browser'
@@ -17,8 +16,8 @@ def main(args):
     import webbrowser
 
     # where is the GUI
-    root = os.path.dirname(topaz.main.__file__)
-    root = os.path.dirname(root)
+    root = os.path.dirname(__file__) # this is the commands dir
+    root = os.path.dirname(root) # now in the topaz root dir
     gui_path = os.path.join(root, 'gui', 'topaz.html')
 
     # open the GUI
