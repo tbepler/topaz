@@ -24,6 +24,8 @@ help = 'estimate an upper bound on pi using the alphamax algorithm'
 
 def add_arguments(parser):
 
+    parser.add_argument('cache', nargs='*', help='load cached histograms rather than retraining classifiers')
+
     # set GPU and number of worker threads
     parser.add_argument('-d', '--device', default=0, type=int, help='which device to use, set to -1 to force CPU (default: 0)')
     parser.add_argument('--num-workers', default=0, type=int, help='number of worker processes for data augmentation (default: 0)')
@@ -66,7 +68,7 @@ def add_arguments(parser):
 
 
     outputs = parser.add_argument_group('output file arguments (optional)')
-    outputs.add_argument('--save-prefix', help='path prefix to save trained models each epoch')
+    outputs.add_argument('--plot-prefix', help='path prefix for saving plots')
     outputs.add_argument('-o', '--output', help='destination to write the train/test curve')
 
     return parser
@@ -191,19 +193,22 @@ def make_train_val(partitions, fold, images, targets):
 
 
 def make_traindataset(X, Y, crop):
-    from topaz.utils.data.loader import LabeledRegionsDataset
+    #from topaz.utils.data.loader import LabeledRegionsDataset
+    from topaz.utils.data.loader import LabeledImageCropDataset
     from topaz.utils.data.sampler import RandomImageTransforms
     
     size = int(np.ceil(crop*np.sqrt(2)))
     if size % 2 == 0:
         size += 1
-    dataset = LabeledRegionsDataset(X, Y, size)
+    #dataset = LabeledRegionsDataset(X, Y, size)
+    dataset = LabeledImageCropDataset([X], [Y], size)
     transformed = RandomImageTransforms(dataset, crop=crop, to_tensor=True)
 
     return transformed
 
 
 def fit_steps(model, optim, data_iterator, num_steps, use_cuda=False):
+    model.train()
 
     criteria = nn.BCEWithLogitsLoss()
 
@@ -211,6 +216,7 @@ def fit_steps(model, optim, data_iterator, num_steps, use_cuda=False):
     loss_accum = 0
 
     for step in range(1, num_steps+1):
+
 
         x,y = next(data_iterator)
         if use_cuda:
@@ -255,19 +261,76 @@ def predict(models, images, use_cuda=False, padding=0):
             x = F.pad(x, (padding,padding,padding,padding))
         p = 0
         for model in models:
-            p = torch.sigmoid(model(x)).data + p
+            model.eval()
+            p = model(x).data + p
 
         p /= len(models)
         predicts.append(p.cpu().numpy())
 
     return predicts
 
+def make_trainiterator(dataset, batch_size, epoch_size, balance=0.1, num_workers=0):
+    """ epoch_size in data points not minibatches """
+
+    from topaz.utils.data.sampler import StratifiedCoordinateSampler
+    from torch.utils.data.dataloader import DataLoader
+
+    labels = dataset.data.labels
+    sampler = StratifiedCoordinateSampler(labels, size=epoch_size, balance=balance)
+    loader = DataLoader(dataset, batch_size=batch_size, sampler=sampler
+                       , num_workers=num_workers)
+
+    return loader
 
 def batch_iterator(dataset, batch_size, num_workers=0):
-    iterator = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    # upsample positives because they are likely rare...
+    # ratio doesn't matter since we use alphamax to fix ratio anyway
+
+    iterator = make_trainiterator(dataset, batch_size, 100000, balance=0.1, num_workers=num_workers)
+    #iterator = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     while True:
         for batch in iterator:
             yield batch
+
+
+def plot_histogram(x, x_1, bins, path='histogram.png'):
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+
+    print('# writing plot:', path)
+
+    fig,ax = plt.subplots(1)
+    ax.hist(x, bins=bins, label='unlabeled')
+    ax.hist(x_1, bins=bins, label='positive')
+    ax.legend(loc='best')
+    fig.savefig(path, bbox_inches='tight')
+    plt.close(fig)
+    
+
+def plot_curve(x, y, xlabel='', ylabel='', path='', x_mark=None):
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+
+    print('# writing plot:', path)
+
+    fig,ax = plt.subplots(1)
+    ax.plot(x, y)
+    if x_mark is not None:
+        ymin,ymax = ax.get_ylim()
+        xx = [x_mark, x_mark]
+        yy = [ymin, ymax]
+        ax.plot(xx, yy, '--r')
+
+    if xlabel != '':
+        ax.set_xlabel(xlabel)
+    if ylabel != '':
+        ax.set_ylabel(ylabel)
+    if path != '':
+        fig.savefig(path, bbox_inches='tight')
+    plt.close(fig)
+
 
 
 def main(args):
@@ -278,249 +341,295 @@ def main(args):
         if use_cuda:
             torch.cuda.set_device(args.device)
     report('Using device={} with cuda={}'.format(args.device, use_cuda))
-    
-    ## load the data
-    radius = args.radius # number of pixels around coordinates to label as positive
-    images, targets = \
-            load_data(args.train_images,
-                      args.train_targets,
-                      radius,
-                      format_=args.format_,
-                      image_ext=args.image_ext
-                     )
 
-    batch_size = args.minibatch_size
-    num_steps = args.num_steps
-    num_bags = args.bagging
-    lr = args.learning_rate
+    plot_prefix = args.plot_prefix
 
-    size = args.size
-    hidden_dim = args.hidden_dim
-    
-    ## fit classifiers with cross validation and bagging
-    partitions = cross_validation_split(args.k_fold, images, targets, seed=args.cross_validation_seed)
+    cache = args.cache
+    if len(cache) == 0:
+        ## load the data
+        radius = args.radius # number of pixels around coordinates to label as positive
+        images, targets = \
+                load_data(args.train_images,
+                          args.train_targets,
+                          radius,
+                          format_=args.format_,
+                          image_ext=args.image_ext
+                         )
 
-    labels = [] # these are the observed labels per region
-    logits = [] # these are the predicted logits per region
+        batch_size = args.minibatch_size
+        num_steps = args.num_steps
+        num_bags = args.bagging
+        lr = args.learning_rate
 
-    for fold in range(args.k_fold):
-        train_images,train_targets,test_images,test_targets = make_train_val(partitions, fold, images, targets)
+        #size = args.size
+        size = 31
+        #hidden_dim = args.hidden_dim
+        hidden_dim = 64
+        
+        ## fit classifiers with cross validation and bagging
+        partitions = cross_validation_split(args.k_fold, images, targets, seed=args.cross_validation_seed)
 
-        # make the iterator for the training images
-        train_dset = make_traindataset(train_images, train_targets, size)
-        train_iterator = batch_iterator(train_dset, batch_size, num_workers=args.num_workers)
+        labels = [] # these are the observed labels per region
+        logits = [] # these are the predicted logits per region
 
-        # fit the models to ensemble
-        models = []
-        for i in range(num_bags):
-            ## initialize the model
-            model = nn.Sequential(
-                        nn.Conv2d(1, hidden_dim, kernel_size=size),
-                        nn.ReLU(inplace=True),
-                        nn.Conv2d(hidden_dim, 1, kernel_size=1)
-            )
-            if use_cuda:
-                model = model.cuda()
+        for fold in range(args.k_fold):
+            train_images,train_targets,test_images,test_targets = make_train_val(partitions, fold, images, targets)
 
-            ## initialize the optimizer
-            optim = torch.optim.Adam(model.parameters(), lr=lr)
+            # make the iterator for the training images
+            train_dset = make_traindataset(train_images, train_targets, size)
+            train_iterator = batch_iterator(train_dset, batch_size, num_workers=args.num_workers)
 
-            ## fit the model
-            loss = fit_steps(model, optim, train_iterator, num_steps, use_cuda=use_cuda)
-            report('Fold: {}, model: {}, loss = {}'.format(fold, i+1, loss))
+            # fit the models to ensemble
+            models = []
+            for i in range(num_bags):
+                ## initialize the model
+                model = nn.Sequential(
+                            nn.Conv2d(1, hidden_dim, kernel_size=7, bias=False),
+                            nn.BatchNorm2d(hidden_dim),
+                            nn.ReLU(inplace=True),
+                            nn.Conv2d(hidden_dim, hidden_dim, kernel_size=5, dilation=2, bias=False),
+                            nn.BatchNorm2d(hidden_dim),
+                            nn.ReLU(inplace=True),
+                            nn.Conv2d(hidden_dim, hidden_dim, kernel_size=5, dilation=4, bias=False),
+                            nn.BatchNorm2d(hidden_dim),
+                            nn.ReLU(inplace=True),
+                            nn.Conv2d(hidden_dim, 1, kernel_size=1),
+                )
+                #model = nn.Sequential(
+                #            nn.Conv2d(1, hidden_dim, kernel_size=size),
+                #            nn.ReLU(inplace=True),
+                #            nn.Conv2d(hidden_dim, 1, kernel_size=1)
+                #)
+                if use_cuda:
+                    model = model.cuda()
 
-            models.append(model)
+                ## initialize the optimizer
+                optim = torch.optim.Adam(model.parameters(), lr=lr)
 
-        # classify the heldout data with the bag of classifiers
-        p = size//2
-        y_list = predict(models, test_images, use_cuda=use_cuda, padding=p)
+                ## fit the model
+                loss = fit_steps(model, optim, train_iterator, num_steps, use_cuda=use_cuda)
+                report('Fold: {}, model: {}, loss = {}'.format(fold, i+1, loss))
 
-        for i in range(len(test_targets)):
-            t = test_targets[i]
-            y = y_list[i]
-            labels.append(t.ravel())
-            logits.append(y.ravel())
-    
-    ## concatenate the labels and logits
-    ## then proceed with alphamax algorithm
+                models.append(model)
 
-    labels = np.concatenate(labels, 0)
-    logits = np.concatenate(logits, 0)
+            # classify the heldout data with the bag of classifiers
+            p = size//2
+            y_list = predict(models, test_images, use_cuda=use_cuda, padding=p)
 
-    print(len(labels), len(logits))
-    """
-    # subsample data if too big
-    ns = 500
-    if len(labels) > ns:
-        index = np.random.choice(len(labels), size=ns, replace=False)
-        labels = labels[index]
-        logits = logits[index]
-    """
+            for i in range(len(test_targets)):
+                t = test_targets[i]
+                y = y_list[i]
+                labels.append(t.ravel())
+                logits.append(y.ravel())
+        
+        ## concatenate the labels and logits
+        ## then proceed with alphamax algorithm
 
-    ## we need to estimate the density of the logits
-    ## using a non-parametric model (in this case, histogram based)
-    x_1 = logits[labels == 1] # these are our positive data points
-    x = logits # these are all data points
+        labels = np.concatenate(labels, 0)
+        logits = np.concatenate(logits, 0)
 
-    # make kernel density estimate based on histogram
-    mi = np.min(x)
-    ma = np.max(x)
-    bins = np.linspace(mi, ma, 201)
+        print(len(labels), len(logits))
+        """
+        # subsample data if too big
+        ns = 500
+        if len(labels) > ns:
+            index = np.random.choice(len(labels), size=ns, replace=False)
+            labels = labels[index]
+            logits = logits[index]
+        """
 
-    index = np.digitize(x, bins[1:-1])
-    index_1 = index[labels == 1]
+        ## we need to estimate the density of the logits
+        ## using a non-parametric model (in this case, histogram based)
+        x_1 = logits[labels == 1] # these are our positive data points
+        x = logits # these are all data points
 
-    # find the weight of each bin
-    c,_ = np.histogram(x, bins=bins)
-    w = c/c.sum()
-    c,_ = np.histogram(x_1, bins=bins)
-    w_1 = c/c.sum()
+
+        # make kernel density estimate based on histogram
+        mi = np.min(x)
+        ma = np.max(x)
+        bins = np.linspace(mi, ma, 201)
+
+        if plot_prefix is not None:
+            # plot the histograms
+            plot_histogram(x, x_1, bins, path=plot_prefix+'histogram.png')
+
+        index = np.digitize(x, bins[1:-1])
+        index_1 = index[labels == 1]
+
+        # find the weight of each bin
+        c,_ = np.histogram(x, bins=bins)
+        c_1,_ = np.histogram(x_1, bins=bins)
+
+        if plot_prefix is not None:
+            # cache the histograms
+            np.save(plot_prefix+'pimax_counts.npy', c)
+            np.save(plot_prefix+'pimax_counts_1.npy', c_1)
+
+    else: # load cached histograms
+        c = np.load(cache[0])
+        c_1 = np.load(cache[1])
+
+    #gamma = 1/np.sum(c)
+    #gamma_1 = 1/np.sum(c_1)
+    gamma = 1
+    gamma_1 = 1
 
     # now, make kernel density estimate
-    k = w[index]
-    k_1 = k[labels == 1]
+    w = c/c.sum()
+    w_1 = c_1/c_1.sum()
 
-    f_hat_1 = w_1[index]
-
-    index = torch.from_numpy(index)
-    index_1 = torch.from_numpy(index_1)
+    c = torch.from_numpy(c).double()
+    c_1 = torch.from_numpy(c_1).double()
     w = torch.from_numpy(w)
     w_1 = torch.from_numpy(w_1)
-    k = torch.from_numpy(k)
-    k_1 = torch.from_numpy(k_1)
-    f_hat_1 = torch.from_numpy(f_hat_1)
 
-    index = Variable(index, requires_grad=False)
-    index_1 = Variable(index_1, requires_grad=False)
+    c = Variable(c, requires_grad=False)
+    c_1 = Variable(c_1, requires_grad=False)
     w = Variable(w, requires_grad=False)
     w_1 = Variable(w_1, requires_grad=False)
-    k = Variable(k, requires_grad=False)
-    k_1 = Variable(k_1, requires_grad=False)
-    f_hat_1 = Variable(f_hat_1, requires_grad=False)
 
     # define the optimization problem
     def nll(beta):
         beta = torch.from_numpy(beta)
         beta = Variable(beta, requires_grad=False)
 
-        b = beta[index]
-        b_1 = beta[index_1]
-
-        h_1 = torch.sum(torch.log(b_1*k_1 + 1e-10))
-
         alpha = torch.sum(w*beta)
-        h_0 = (1-alpha)*(1-b)*k/torch.sum((1-beta)*w)
-        f_1 = alpha*b*f_hat_1/torch.sum(beta*w_1)
+    
+        # first, we calculate L(beta | positives) = log p(positives | beta) - log(alpha)
+        # for each positive, it's probability is: log p(x_i | beta) = log(beta_i*w_i)
+        log_h_1 = c_1*(torch.log(beta*w + 1e-10) - torch.log(alpha))
+        log_h_1 = torch.sum(log_h_1)
 
-        h = f_1 + h_0
-        h = torch.sum(torch.log(h + 1e-10))
+        # next, we calculate L(beta | unlabeled)
+        h_x_p = w_1
 
-        loss = -h_1 - h
+        Z = torch.sum((1-beta)*w)
+        h_x_n = (1-beta)*w/Z
+
+        h_x = alpha*h_x_p + (1-alpha)*h_x_n
+        log_h_x = torch.log(h_x + 1e-10)
+
+        log_h = c*log_h_x
+        log_h = torch.sum(log_h)
+
+        # combined likelihood
+        loss = -log_h_1*gamma_1 - log_h*gamma
         return loss.data[0]
+
 
     def nll_jac(beta): # Jacobian of the NLL
         beta = torch.from_numpy(beta)
         beta = Variable(beta, requires_grad=True)
 
-        b = beta[index]
-        b_1 = beta[index_1]
-
-        h_1 = torch.sum(torch.log(b_1*k_1 + 1e-10))
-
         alpha = torch.sum(w*beta)
-        h_0 = (1-alpha)*(1-b)*k/torch.sum((1-beta)*w)
-        f_1 = alpha*b*f_hat_1/torch.sum(beta*w_1)
+    
+        # first, we calculate L(beta | positives) = log p(positives | beta) - log(alpha)
+        # for each positive, it's probability is: log p(x_i | beta) = log(beta_i*w_i)
+        log_h_1 = c_1*(torch.log(beta*w + 1e-10) - torch.log(alpha))
+        #log_h_1 = c_1*(torch.log(beta) + torch.log(w) - torch.log(alpha))
+        log_h_1 = torch.sum(log_h_1)
 
-        h = f_1 + h_0
-        h = torch.sum(torch.log(h + 1e-10))
+        # next, we calculate L(beta | unlabeled)
+        h_x_p = w_1
 
-        nll = -h_1 - h
+        Z = torch.sum((1-beta)*w)
+        h_x_n = (1-beta)*w/Z
 
-        nll.backward()
+        h_x = alpha*h_x_p + (1-alpha)*h_x_n
+        log_h_x = torch.log(h_x + 1e-10)
+
+        log_h = c*log_h_x
+        log_h = torch.sum(log_h)
+
+        # combined likelihood
+        loss = -log_h_1*gamma_1 - log_h*gamma
+
+        loss.backward()
         beta_grad = beta.grad.data.numpy()
         return beta_grad
 
 
     # for each alpha slice, find optimal beta
-    from scipy.optimize import minimize
+    from scipy.optimize import minimize, LinearConstraint
 
     # what values do we want to try?
+    w_numpy = w.data.numpy()
+
     alphas = np.linspace(0, 0.5, 101)
     alphas = alphas[1:] # discard pi=0
     loglike = np.zeros(len(alphas))
+    beta = np.zeros(len(c))
+    alpha0 = 0
+
     for i in range(len(alphas)):
         alpha = alphas[i]
-        beta_init = alpha*np.ones(len(bins)-1)
+        # use previous solution to beta + difference in alphas as initialization
+        beta_init = beta + (alpha-alpha0)
+        #beta_init = alpha*np.ones(len(c))
+
         # define constraint
-        constraint = {'type': 'eq'
-                     ,'fun': lambda a: np.mean(a) - alpha
-                     ,'jac': lambda a: np.ones_like(a)/len(a)
-                     }
+        constraint = LinearConstraint(w_numpy, alpha, alpha)
+        #constraint = {'type': 'eq'
+        #             ,'fun': lambda a: np.sum(a*w_numpy) - alpha
+        #             ,'jac': lambda a: w_numpy
+        #             }
+
         bounds = [(0,1)]*len(beta_init)
         result = minimize(nll, jac=nll_jac, x0=beta_init, bounds=bounds, constraints=constraint)
+
+        alpha0 = alpha
+        beta = result.x
         loglike[i] = -result.fun
+
         print(alpha, loglike[i])
 
-    """
-    # make kernel density estimate based on Gaussian KDE
-    s2 = 0.1
-    k = np.exp(-(x - x[:,np.newaxis])**2/s2)/len(x)
-    k_1 = k[labels == 1]
-    log_k = -(x - x[:,np.newaxis])**2/s2 - np.log(len(x))
-    log_k_1 = log_k[labels == 1]
-    log_k_hat_1 = -(x_1 - x[:,np.newaxis])**2/s2 - np.log(len(x_1)) # estimate for all x using only x_1
-    k_hat_1 = np.exp(log_k_hat_1) # estimate for all x using only x_1
-    f_hat_1 = np.sum(k_hat_1, 1) # probability of x given x_1
+    if plot_prefix is not None:
+        # plot the raw curve
+        plot_curve(alphas, loglike, xlabel='$\pi$', ylabel='$L$', path=plot_prefix+'pi_curve.png')
 
-    def logsumexp(a):
-        ma = np.max(a, axis=1, keepdims=True)
-        s = np.exp(a - ma).sum(axis=1, keepdims=True)
-        ls = ma + np.log(s)
-        return ls[:,0]
+    # smooth the curve
+    from scipy.signal import medfilt
+    k = 7
+    loglike_smooth = medfilt(loglike, kernel_size=k)
 
-    def logsumexp2(a, b):
-        ma = np.maximum(a, b)
-        s = np.exp(a - ma) + np.exp(b - ma)
-        return ma + np.log(s)
+    if plot_prefix is not None:
+        # plot the smoothed curve
+        plot_curve(alphas, loglike_smooth, xlabel='$\pi$', ylabel='$L$', path=plot_prefix+'pi_curve_smoothed.png')
+
+    # find transition region in slope using the smoothed likelihood curve
+    # based on where slope becomes < 0
+    from numpy.linalg import lstsq
+    slopes = np.zeros(len(loglike))
+    for i in range(len(loglike) - k + 1):
+        x = alphas[i:i+k]
+        x = np.stack([x, np.ones_like(x)], axis=1)
+        y = loglike_smooth[i:i+k]
+        # estimate parameters of line
+        beta,_,_,_ = lstsq(x, y)
+        slopes[i + k//2] = beta[0]
+
+    if plot_prefix is not None:
+        # plot the slopes curve
+        plot_curve(alphas, slopes, xlabel='$\pi$', ylabel='slope', path=plot_prefix+'pi_slope.png')
+
+    # to estimate the upper bound on pi, we first find the maximum loglikelihood
+    where = np.argwhere(loglike_smooth == np.max(loglike_smooth))
+    i = np.max(where)
+    #i = np.argmax(loglike_smooth)
+
+    # from the max, we find the first point where the slope become < 0
+    while slopes[i] >= -1e-5: # add some tolerance
+        i += 1
+
+    # this marks the point where the log likelihood curve starts to decrease
+    pimax = alphas[i]
+
+    if plot_prefix is not None:
+        # plot the smoothed curve with pimax annotated
+        plot_curve(alphas, loglike_smooth, x_mark=pimax, xlabel='$\pi$', ylabel='$L$', path=plot_prefix+'pi_curve_smoothed_pimax.png')
 
 
-    # define the optimization problem
-    def nll(beta):
-        log_beta = np.log(beta)
-        # first term is over only positives
-        log_h_1 = np.sum(logsumexp(log_beta + log_k_1))
-
-        alpha = np.mean(beta)
-        log_1_m_beta = np.log(1-beta)
-
-        log_h_0 = logsumexp(log_1_m_beta + log_k) + np.log(1-alpha)
-        log_f_1 = np.log(f_hat_1) + np.log(alpha)
-        log_h = np.sum(logsumexp2(log_f_1, log_h_0))
-
-        return -log_h_1 - log_h
-
-    # for each alpha slice, find optimal beta
-    from scipy.optimize import minimize
-
-    # what values do we want to try?
-    alphas = np.linspace(0.001, 0.5, 100)
-    loglike = np.zeros(len(alphas))
-    for i in range(len(alphas)):
-        alpha = alphas[i]
-        beta_init = alpha*np.ones(len(x))
-        # define constraint
-        constraint = {'type': 'eq'
-                     ,'fun': lambda a: np.mean(a) - alpha
-                     }
-        bounds = [(0,1)]*len(beta_init)
-        result = minimize(nll, x0=beta_init, bounds=bounds, constraints=constraint)
-        loglike[i] = -result.fun
-        print(alpha, loglike[i])
-    """
-        
-    print(alphas)
-    print(loglike)
-
+    print('# estimated upper bound on pi =', pimax, file=sys.stderr)
 
     report('Done!')
 
