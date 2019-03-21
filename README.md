@@ -141,13 +141,22 @@ pip install -e .
 
 # Tutorial
 
-To run the tutorials, [Jupyter notebook](http://jupyter.org/install) also needs to be installed
+The tutorials are presented in Jupyter notebooks. Please install Jupyter following the instructions [here](http://jupyter.org/install).
 
 1. [Quick start guide](tutorial/01_quick_start_guide.ipynb)
 2. [Complete walkthrough](tutorial/02_walkthrough.ipynb)
 3. [Cross validation](tutorial/03_cross_validation.ipynb)
 
 The tutorial data can be downloaded [here](http://bergerlab-downloads.csail.mit.edu/topaz/topaz-tutorial-data.tar.gz).
+
+To run the tutorial steps on your own system, you will need to install [Jupyter](http://jupyter.org/install) and [matplotlib](https://matplotlib.org/) which is used for visualization.
+
+With Anaconda this can be done with:
+```
+conda install jupyter matplotlib
+```
+
+If you installed Topaz using anaconda, make sure these are installed into your Topaz evironment.
 
 # User guide
 
