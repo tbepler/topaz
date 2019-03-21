@@ -1,6 +1,6 @@
 package:
     name: "topaz"
-    version: "0.0.0"
+    version: {{ GIT_DESCRIBE_TAG }}
 
 source:
     git_url: https://github.com/tbepler/topaz.git
@@ -23,7 +23,7 @@ requirements:
 
 build:
     noarch: python
-    number: 3
+    number: 2
     script: "{{ PYTHON }} setup.py install --single-version-externally-managed --record=record.txt"
 
 

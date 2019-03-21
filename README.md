@@ -3,9 +3,7 @@ A pipeline for particle detection in cryo-electron microscopy images using convo
 
 # Prerequisites
 
-- Linux for installation from source, or any modern operating system for Docker installation.
-
-- An Nvidia GPU.
+- An Nvidia GPU with CUDA support for GPU acceleration.
 
 - Basic Unix/Linux knowledge.
 
@@ -104,7 +102,7 @@ Tested with python 3.6 and 2.7
 - scipy (>= 0.19.1)
 - scikit-learn (>= 0.19.0)
 
-Easy installation of dependencies
+Easy installation of dependencies with conda
 ```
 conda install numpy pandas scikit-learn
 conda install -c soumith pytorch=0.2.0 torchvision
@@ -125,6 +123,11 @@ git clone https://github.com/tbepler/topaz
 Move to the source code directory
 ```
 cd topaz
+```
+
+By default, this will be the most recent version of the topaz source code. To install a specific older version, checkout that commit. For example, for v0.1.0 of Topaz:
+```
+git checkout v0.1.0
 ```
 
 Install Topaz into your Python path including the topaz command line interface
@@ -406,7 +409,7 @@ optional arguments:
 
 </p></details>
 
-# References
+# Reference
 
 Bepler, T., Morin, A., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2018). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs. arXiv. https://arxiv.org/abs/1803.08207
 
