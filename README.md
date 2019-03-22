@@ -85,6 +85,16 @@ docker build -t topaz .
 
 </p></details>
 
+**<details><summary> Click here to install *using Singularity*</summary><p>**
+
+A prebuilt Singularity image for Topaz is available [here](https://singularity-hub.org/collections/2517) and can be installed with:
+```
+singularity pull shub://dallakyan/topaz_singularity
+```
+
+</p></details>
+
+
 **<details><summary>Click here to install *from source*</summary><p>**
 
 _Recommended: install Topaz into a virtual Python environment_  
@@ -141,6 +151,8 @@ pip install -e .
 ```
 
 </p></details>
+
+Topaz is also available through [SBGrid](https://sbgrid.org/software/titles/topaz).
 
 # Tutorial
 
