@@ -53,9 +53,26 @@ def read_via_csv(path):
         x_coord[i] = region['cx']
         y_coord[i] = region['cy']
 
+    # parse region_attributes for scores
+    scores = None
+    attributes = table['region_attributes']
+    if len(table) > 0:
+        # check that we have score attributes
+        att = json.loads(attributes.iloc[0])
+        if 'score' in att:
+            scores = np.zeros(len(table), dtype=np.float32) - np.inf
+            for i in range(len(attributes)):
+                att = json.loads(attributes.iloc[i])
+                if 'score' in att:
+                    scores[i] = att['score']
+
+
     table = table.drop(['file_size', 'file_attributes', 'region_count', 'region_id', 'region_shape_attributes', 'region_attributes'], 1)
     table['x_coord'] = x_coord
     table['y_coord'] = y_coord
+
+    if scores is not None:
+        table['score'] = scores
 
     return table
 
@@ -84,7 +101,15 @@ def write_via_csv(path, table):
 
     via_table['region_shape_attributes'] = regions
 
-    via_table['region_attributes'] = '{}'
+    if 'score' in table.columns:
+        scores = []
+        template = '{{"score":{}}}'
+        for i in range(len(table)):
+            score = template.format(table['score'].iloc[i])
+            scores.append(score)
+        via_table['region_attributes'] = scores
+    else:
+        via_table['region_attributes'] = '{}'
 
     via_table.to_csv(path, index=False)
 
