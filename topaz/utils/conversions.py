@@ -9,6 +9,13 @@ def mirror_y_axis(coords, n):
     return coords
 
 def boxes_to_coordinates(boxes, shape=None, invert_y=False, image_name=None):
+    if len(boxes) < 1: # boxes are empty, return empty coords table
+        columns = ['x_coord', 'y_coord']
+        if image_name is not None:
+            columns.append('image_name')
+        coords = pd.DataFrame(columns=columns)
+        return coords
+
     ## first 2 columns are x and y coordinates of lower left box corners
     ## next 2 columns are width and height
 

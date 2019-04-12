@@ -407,20 +407,14 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
                             , autoencoder=autoencoder)
 
     elif method == 'GE-KL':
-        #split = 'pn'
         if slack < 0:
             slack = 10
-        assert positive_fraction <= pi
-        pi = pi - positive_fraction
         optim = optim(classifier.parameters(), lr=lr)
         trainer = methods.GE_KL(classifier, optim, criteria, pi, l2=l2, slack=slack)
 
     elif method == 'GE-binomial':
-        #split = 'pu'
         if slack < 0:
             slack = 1
-        assert positive_fraction <= pi
-        pi = pi - positive_fraction
         optim = optim(classifier.parameters(), lr=lr)
         trainer = methods.GE_binomial(classifier, optim, criteria, pi
                                      , l2=l2, slack=slack

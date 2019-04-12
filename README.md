@@ -85,6 +85,16 @@ docker build -t topaz .
 
 </p></details>
 
+**<details><summary> Click here to install *using Singularity*</summary><p>**
+
+A prebuilt Singularity image for Topaz is available [here](https://singularity-hub.org/collections/2517) and can be installed with:
+```
+singularity pull shub://dallakyan/topaz_singularity
+```
+
+</p></details>
+
+
 **<details><summary>Click here to install *from source*</summary><p>**
 
 _Recommended: install Topaz into a virtual Python environment_  
@@ -141,6 +151,8 @@ pip install -e .
 ```
 
 </p></details>
+
+Topaz is also available through [SBGrid](https://sbgrid.org/software/titles/topaz).
 
 # Tutorial
 
@@ -276,40 +288,6 @@ Models are trained using the `topaz train` command. For a complete list of train
 topaz train --help
 ```
 
-#### Model choices
-Currently, there are several model architectures available for use as the region classifier
-- resnet8 [receptive field = 75]
-- conv127 [receptive field = 127]
-- conv63 [receptive field = 63]
-- conv31 [receptive field = 31]
-
-ResNet8 gives a good balance of performance and receptive field size. Conv63 and Conv31 can be better choices when less complex models are needed.
-
-The number of units in the base layer can be set with the --units flag. ResNet8 always doubles the number of units when the image is strided during processing. Conv31, Conv63, and Conv127 do not by default, but the --unit-scaling flag can be used to set a multiplicative factor on the number of units when striding occurs. 
-
-The pooling scheme can be changed for the conv\* models. The default is not to perform any pooling, but max pooling and average pooling can be used by specifying "--pooling=max" or "--pooling=avg".
-
-For a detailed layout of the architectures, use the --describe flag.
-
-#### Training method, criteria, and parameters
-
-##### Methods
-
-The PN method option treats every coordinate not labeled as positive (y=1) as negative (y=0) and then optimizes the standard classification objective:
-$$ \piE_{y=1}[L(g(x),1)] + (1-\pi)E_{y=0}[L(g(x),0)] $$
-where $\pi$ is a parameter weighting the positives and negatives, $L$ is the misclassifiaction cost function, and $g(x)$ is the model output.
-
-The GE-binomial method option instead treats coordinates not labeled as positive (y=1) as unlabeled (y=?) and then optimizes an objective including a generalized expectation criteria designed to work well with minibatch SGD.
-
-The GE-KL method option instead treats coordinates not labeled as positive (y=1) as unlabeled (y=?) and then optimizes the objective:
-$$ E_{y=1}[L(g(x),1)] + \lambdaKL(\pi, E_{y=?}[g(x)]) $$ 
-where $\lambda$ is a slack parameter (--slack flag) that specifies how strongly to weight the KL divergence of the expecation of the classifier over the unlabeled data from $\pi$.
-
-The PU method uses an objective function proposed by Kiryo et al. (2017) 
-
-##### Radius
-This sets how many pixels around each particle coordinate are treated as positive, acting as a form of data augmentation. These coordinates follow a distribution that results from which pixel was selected as the particle center when the data was labeled. The radius should be chosen to be large enough that it covers a reasonable region of pixels likely to have been selected but not so large that pixels outside of the particles are labeled as positives.
-
 
 ### Segmentation and particle extraction
 
@@ -408,6 +386,39 @@ optional arguments:
 ```
 
 </p></details>
+
+#### Model architectures
+Currently, there are several model architectures available for use as the region classifier
+- resnet8 [receptive field = 71]
+- conv127 [receptive field = 127]
+- conv63 [receptive field = 63]
+- conv31 [receptive field = 31]
+
+ResNet8 gives a good balance of performance and receptive field size. Conv63 and Conv31 can be better choices when less complex models are needed.
+
+The number of units in the base layer can be set with the --units flag. ResNet8 always doubles the number of units when the image is strided during processing. Conv31, Conv63, and Conv127 do not by default, but the --unit-scaling flag can be used to set a multiplicative factor on the number of units when striding occurs. 
+
+The pooling scheme can be changed for the conv\* models. The default is not to perform any pooling, but max pooling and average pooling can be used by specifying "--pooling=max" or "--pooling=avg".
+
+For a detailed layout of the architectures, use the --describe flag.
+
+#### Training methods
+
+The PN method option treats every coordinate not labeled as positive (y=1) as negative (y=0) and then optimizes the standard classification objective:
+$$ \piE_{y=1}[L(g(x),1)] + (1-\pi)E_{y=0}[L(g(x),0)] $$
+where $\pi$ is a parameter weighting the positives and negatives, $L$ is the misclassifiaction cost function, and $g(x)$ is the model output.
+
+The GE-binomial method option instead treats coordinates not labeled as positive (y=1) as unlabeled (y=?) and then optimizes an objective including a generalized expectation criteria designed to work well with minibatch SGD.
+
+The GE-KL method option instead treats coordinates not labeled as positive (y=1) as unlabeled (y=?) and then optimizes the objective:
+$$ E_{y=1}[L(g(x),1)] + \lambdaKL(\pi, E_{y=?}[g(x)]) $$ 
+where $\lambda$ is a slack parameter (--slack flag) that specifies how strongly to weight the KL divergence of the expecation of the classifier over the unlabeled data from $\pi$.
+
+The PU method uses the objective function proposed by Kiryo et al. (2017) 
+
+#### Radius
+
+This sets how many pixels around each particle coordinate are treated as positive, acting as a form of data augmentation. These coordinates follow a distribution that results from which pixel was selected as the particle center when the data was labeled. The radius should be chosen to be large enough that it covers a reasonable region of pixels likely to have been selected but not so large that pixels outside of the particles are labeled as positives.
 
 # Reference
 

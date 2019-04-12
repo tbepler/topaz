@@ -52,8 +52,13 @@ def get_image_path(image_name, root, ext):
         if path is None:
             print('ERROR: unable to find .tiff, .mrc, or .png image matching to image_name='+image_name, file=sys.stderr)
             sys.exit(1)
-    else:
+    elif len(paths) == 0:
         path = paths[0]
+    else:
+        # no matches for thie image name
+        print('WARNING: no micrograph found matching image name "' + image_name + '". Skipping it.', file=sys.stderr)
+        return None
+
 
     ## make absolute path
     path = os.path.abspath(path)
@@ -111,12 +116,14 @@ def main(args):
     paths_train = []
     for image_name in image_names_train:
         path = get_image_path(image_name, root, ext)
-        paths_train.append(path)
+        if path is not None:
+            paths_train.append(path)
 
     paths_test = []
     for image_name in image_names_test:
         path = get_image_path(image_name, root, ext)
-        paths_test.append(path)
+        if path is not None:
+            paths_test.append(path)
 
     image_list_train = pd.DataFrame({'image_name': image_names_train, 'path': paths_train})
     image_list_test = pd.DataFrame({'image_name': image_names_test, 'path': paths_test})
