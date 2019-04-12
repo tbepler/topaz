@@ -119,6 +119,10 @@ def read_coordinates(path, format='auto'):
              'MicrographName': 'image_name',
              star.X_COLUMN_NAME: 'x_coord',
              star.Y_COLUMN_NAME: 'y_coord',
+             star.VOLTAGE: 'voltage',
+             star.DETECTOR_PIXEL_SIZE: 'detector_pixel_size',
+             star.MAGNIFICATION: 'magnification',
+             star.AMPLITUDE_CONTRAST: 'amplitude_contrast',
              }
 
         for k,v in d.items():
@@ -165,6 +169,10 @@ def write_coordinates(path, table, format='auto', boxsize=0, image_ext='.mrc', s
              'image_name': 'MicrographName',
              'x_coord': star.X_COLUMN_NAME,
              'y_coord': star.Y_COLUMN_NAME,
+             'voltage': star.VOLTAGE,
+             'detector_pixel_size': star.DETECTOR_PIXEL_SIZE,
+             'magnification': star.MAGNIFICATION,
+             'amplitude_contrast': star.AMPLITUDE_CONTRAST,
              }
         table = table.copy()
         for k,v in d.items():
