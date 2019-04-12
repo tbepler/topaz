@@ -30,6 +30,12 @@ def add_arguments(parser):
     parser.add_argument('-s', '--down-scale', type=float, default=1, help='DOWN-scale coordinates by this factor. new coordinates will be coord_new = (x/s)*coord_cur. (default: 1)')
     parser.add_argument('-x', '--up-scale', type=float, default=1, help='UP-scale coordinates by this factor. new coordinates will be coord_new = (x/s)*coord_cur. (default: 1)')
 
+    # metadata arguments that can be added to particle files
+    parser.add_argument('--voltage', type=float, default=-1, help='voltage metadata (optional)')
+    parser.add_argument('--detector-pixel-size', type=float, default=-1, help='detector pixel size metadata (optional)')
+    parser.add_argument('--magnification', type=float, default=-1, help='magnification metadata (optional)')
+    parser.add_argument('--amplitude-contrast', type=float, default=-1, help='amplitude contrast metadata (optional)')
+
     # arguments for file format specific parameters
     parser.add_argument('--invert-y', action='store_true', help='invert (mirror) the y-axis particle coordinates. requires also specifying --imagedir.')
     parser.add_argument('--imagedir', help='directory of images. only required to invert the y-axis - sometimes necessary for particles picked on .tiff images')
@@ -132,6 +138,15 @@ def main(args):
             y_coord = table[star.Y_COLUMN_NAME].values
             y_coord = np.round(scale*y_coord).astype(int)
             table[star.Y_COLUMN_NAME] = y_coord
+        # add metadata if specified
+        if args.voltage > 0:
+            table[star.VOLTAGE] = args.voltage
+        if args.detector_pixel_size > 0:
+            table[star.DETECTOR_PIXEL_SIZE] = args.detector_pixel_size
+        if args.magnification > 0:
+            table[star.MAGNIFICATION] = args.magnification
+        if args.amplitude_contrast > 0:
+            table[star.AMPLITUDE_CONTRAST] = args.amplitude_contrast
         # write output file
         if output is None:
             with open(output_path, 'w') as f:
@@ -162,6 +177,16 @@ def main(args):
             y_coord = coords['y_coord'].values
             y_coord = np.round(scale*y_coord).astype(int)
             coords['y_coord'] = y_coord
+
+        # add metadata if specified
+        if args.voltage > 0:
+            coords['voltage'] = args.voltage
+        if args.detector_pixel_size > 0:
+            coords['detector_pixel_size'] = args.detector_pixel_size
+        if args.magnification > 0:
+            coords['magnification'] = args.magnification
+        if args.amplitude_contrast > 0:
+            coords['amplitude_contrast'] = args.amplitude_contrast
 
         # invert y-axis coordinates if specified
         invert_y = args.invert_y

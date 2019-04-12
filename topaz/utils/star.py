@@ -7,6 +7,11 @@ Y_COLUMN_NAME = 'CoordinateY'
 SCORE_COLUMN_NAME = 'AutopickFigureOfMerit'
 OLD_SCORE_COLUMN_NAME = 'ParticleScore'
 
+VOLTAGE = 'Voltage'
+DETECTOR_PIXEL_SIZE = 'DetectorPixelSize'
+MAGNIFICATION = 'Magnification'
+AMPLITUDE_CONTRAST = 'AmplitudeContrast'
+
 def parse_star(f):
     return parse(f)
 
@@ -51,6 +56,14 @@ def parse_star_body(lines):
         table[Y_COLUMN_NAME] = table[Y_COLUMN_NAME].astype(float).astype(int)
     if SCORE_COLUMN_NAME in table:
         table[SCORE_COLUMN_NAME] = table[SCORE_COLUMN_NAME].astype(float)
+    if VOLTAGE in table:
+        table[VOLTAGE] = table[VOLTAGE].astype(float)
+    if DETECTOR_PIXEL_SIZE in table:
+        table[DETECTOR_PIXEL_SIZE] = table[DETECTOR_PIXEL_SIZE].astype(float)
+    if MAGNIFICATION in table:
+        table[MAGNIFICATION] = table[MAGNIFICATION].astype(float)
+    if AMPLITUDE_CONTRAST in table:
+        table[AMPLITUDE_CONTRAST] = table[AMPLITUDE_CONTRAST].astype(float)
 
     return table
 
