@@ -37,9 +37,6 @@ class PN:
 
     def step(self, X, Y):
 
-        X = Variable(X)
-        Y = Variable(Y)
-
         if self.autoencoder > 0:
             recon_error, score = autoencoder_loss(self.model, X)
         else:
@@ -57,10 +54,10 @@ class PN:
             full_loss = full_loss + recon_error*self.autoencoder
         full_loss.backward()
 
-        p_hat = F.sigmoid(score)
-        precision = p_hat[Y == 1].sum().data[0]/p_hat.sum().data[0]
-        tpr = p_hat[Y == 1].mean().data[0]
-        fpr = p_hat[Y == 0].mean().data[0]
+        p_hat = torch.sigmoid(score)
+        precision = p_hat[Y == 1].sum().item()/p_hat.sum().item()
+        tpr = p_hat[Y == 1].mean().item()
+        fpr = p_hat[Y == 0].mean().item()
 
         if self.l2 > 0:
             r = sum(torch.sum(w**2) for w in self.model.features.parameters())
@@ -72,8 +69,8 @@ class PN:
         self.optim.zero_grad()
 
         if self.autoencoder > 0:
-            return loss.data[0], recon_error.data[0], precision, tpr, fpr
-        return (loss.data[0],precision,tpr,fpr)
+            return loss.item(), recon_error.item(), precision, tpr, fpr
+        return (loss.item(),precision,tpr,fpr)
 
 
 class GE_binomial:
@@ -99,9 +96,6 @@ class GE_binomial:
 
     def step(self, X, Y):
 
-        X = Variable(X)
-        Y = Variable(Y)
-
         if self.autoencoder > 0:
             recon_error, score = autoencoder_loss(self.model, X)
         else:
@@ -114,17 +108,16 @@ class GE_binomial:
         ## by the classifier
         select = (Y.data == 0)
         N = select.sum()
-        p_hat = F.sigmoid(score[select])
+        p_hat = torch.sigmoid(score[select])
         q_mu = p_hat.sum()
         q_var = torch.sum(p_hat*(1-p_hat))
 
-        count_vector = torch.arange(0,N+1)
-        if q_var.is_cuda:
-            count_vector = count_vector.cuda()
-        count_vector = Variable(count_vector)
+        count_vector = torch.arange(0,N+1).float()
+        count_vector = count_vector.to(q_mu.device)
+
 
         q_discrete = -0.5*(q_mu-count_vector)**2/(q_var + 1e-10) # add small epsilon to prevent NaN
-        q_discrete = F.softmax(q_discrete) # dim=0 doesn't work for pytorch=0.2.0
+        q_discrete = F.softmax(q_discrete, dim=0)
 
         ## KL of w from the binomial distribution with pi
         log_binom = scipy.stats.binom.logpmf(np.arange(0,N+1),N,self.pi)
@@ -151,10 +144,10 @@ class GE_binomial:
 
         loss.backward()
 
-        p_hat = F.sigmoid(score)
-        precision = p_hat[Y == 1].sum().data[0]/p_hat.sum().data[0]
-        tpr = p_hat[Y == 1].mean().data[0]
-        fpr = p_hat[Y == 0].mean().data[0]
+        p_hat = torch.sigmoid(score)
+        precision = p_hat[Y == 1].sum().item()/p_hat.sum().item()
+        tpr = p_hat[Y == 1].mean().item()
+        fpr = p_hat[Y == 0].mean().item()
 
         if self.l2 > 0:
             r = sum(torch.sum(w**2) for w in self.model.features.parameters())
@@ -166,9 +159,9 @@ class GE_binomial:
         self.optim.zero_grad()
 
         if self.autoencoder > 0:
-            return classifier_loss.data[0], ge_penalty.data[0], recon_error.data[0], precision, tpr, fpr
+            return classifier_loss.item(), ge_penalty.item(), recon_error.item(), precision, tpr, fpr
         
-        return classifier_loss.data[0], ge_penalty.data[0], precision, tpr, fpr
+        return classifier_loss.item(), ge_penalty.item(), precision, tpr, fpr
 
 
 class GE_KL:
@@ -201,21 +194,21 @@ class GE_KL:
         classifier_loss = self.criteria(score[select], Y[select])
 
         select = (Y.data == 0)
-        p_hat = F.sigmoid(score[select]).mean()
+        p_hat = torch.sigmoid(score[select]).mean()
 
         ## if labeled_fraction is > 0 then we are using positives in calculating the sample expectation
         #if self.labeled_fraction > 0:
         #    select = (Y.data == 1)
         #    p_label = p_hat.data.new(1).fill_(self.labeled_fraction)
         #    p_label = Variable(p_label, requires_grad=False)
-        #    p_hat = (1.0-p_label)*p_hat + p_label*F.sigmoid(score[select]).mean()
+        #    p_hat = (1.0-p_label)*p_hat + p_label*torch.sigmoid(score[select]).mean()
 
         ## p_hat is the expectation of the classifier over the data estimated from this minibatch
         ## if momentum is < 1 we are using an exponential running average of this quantity
         ## to include estimates from past minibatches
         if self.momentum < 1:
             p_hat = self.momentum*p_hat + (1-self.momentum)*self.running_expectation
-            self.running_expectation = p_hat.data[0]
+            self.running_expectation = p_hat.item()
 
         entropy = self.pi*np.log(self.pi) + (1-self.pi)*np.log1p(-self.pi)
         ge_penalty = -torch.log(p_hat)*self.pi - torch.log1p(-p_hat)*(1-self.pi) + entropy 
@@ -224,14 +217,14 @@ class GE_KL:
         entropy_loss = 0
         if self.entropy_penalty > 0:
             select = (Y.data == 0)
-            #p_hat = F.sigmoid(score)
+            #p_hat = torch.sigmoid(score)
             #sign = (score > self.pi).float().detach()
             #entropy_loss = self.criteria(score[select], sign[select])
 
             ## penalize the entropy of the unlabeled data
             abs_score = torch.abs(score)
             log_p = F.logsigmoid(abs_score)
-            one_minus_p = F.sigmoid(-abs_score)
+            one_minus_p = torch.sigmoid(-abs_score)
             entropy = abs_score*one_minus_p - log_p
             #log_one_minus_p = F.logsigmoid(-score)
             #p_hat = torch.exp(log_p)
@@ -246,10 +239,10 @@ class GE_KL:
         loss = classifier_loss + ge_penalty + entropy_loss
         loss.backward()
 
-        p_hat = F.sigmoid(score)
-        precision = p_hat[Y == 1].sum().data[0]/p_hat.sum().data[0]
-        tpr = p_hat[Y == 1].mean().data[0]
-        fpr = p_hat[Y == 0].mean().data[0]
+        p_hat = torch.sigmoid(score)
+        precision = p_hat[Y == 1].sum().item()/p_hat.sum().item()
+        tpr = p_hat[Y == 1].mean().item()
+        fpr = p_hat[Y == 0].mean().item()
 
         if self.l2 > 0:
             r = 0.5*self.l2*sum(torch.sum(w**2) for w in self.model.parameters())
@@ -258,7 +251,7 @@ class GE_KL:
         self.optim.step()
         self.optim.zero_grad()
 
-        return classifier_loss.data[0], ge_penalty.data[0], precision, tpr, fpr
+        return classifier_loss.item(), ge_penalty.item(), precision, tpr, fpr
 
 
 class PU:
@@ -292,7 +285,7 @@ class PU:
         loss_un = self.criteria(score[Y==0], Y[Y==0])
 
         loss_u = loss_un - loss_pn*self.pi # estimate loss for negative data in unlabeled set
-        if loss_u.data[0] < -self.beta:
+        if loss_u.item() < -self.beta:
             ## clip loss_u as in NNPU method https://arxiv.org/pdf/1703.00593.pdf
             ## in that paper they recommend taking a gradient step in the
             ## -loss_u direction in this case
@@ -308,10 +301,10 @@ class PU:
             backprop_loss = backprop_loss + recon_error*self.autoencoder
         backprop_loss.backward()
 
-        p_hat = F.sigmoid(score)
-        precision = p_hat[Y == 1].sum().data[0]/p_hat.sum().data[0]
-        tpr = p_hat[Y == 1].mean().data[0]
-        fpr = p_hat[Y == 0].mean().data[0]
+        p_hat = torch.sigmoid(score)
+        precision = p_hat[Y == 1].sum().item()/p_hat.sum().item()
+        tpr = p_hat[Y == 1].mean().item()
+        fpr = p_hat[Y == 0].mean().item()
 
         if self.l2 > 0:
             r = sum(torch.sum(w**2) for w in self.model.features.parameters())
@@ -323,7 +316,7 @@ class PU:
         self.optim.zero_grad()
 
         if self.autoencoder > 0:
-            return loss.data[0], recon_error.data[0], precision, tpr, fpr
+            return loss.item(), recon_error.item(), precision, tpr, fpr
 
-        return (loss.data[0],precision,tpr,fpr)
+        return (loss.item(),precision,tpr,fpr)
 

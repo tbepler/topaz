@@ -6,6 +6,7 @@ import numpy as np
 from PIL import Image
 
 import torch
+import torch.utils.data
 
 def enumerate_pn_coordinates(Y):
     """
@@ -56,7 +57,7 @@ def enumerate_pu_coordinates(Y):
 
     return P, U
 
-class ShuffledSampler:
+class ShuffledSampler(torch.utils.data.Sampler):
     def __init__(self, x, random=np.random):
         self.x = x
         self.random = random
@@ -79,7 +80,7 @@ class ShuffledSampler:
     def __iter__(self):
         return self
 
-class StratifiedCoordinateSampler:
+class StratifiedCoordinateSampler(torch.utils.data.Sampler):
     def __init__(self, labels, balance=0.5, size=None, random=np.random, split='pn'):
 
         groups = []
