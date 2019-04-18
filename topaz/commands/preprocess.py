@@ -66,6 +66,8 @@ def downsample_images(image_iterator, scale, num_workers=0):
     else:
 
         for x in image_iterator:
+            # need to convert PIL to numpy array
+            x = np.array(x, copy=False)
             yield x
 
 def sgmm_scaling(X, niters, sample, seed, verbose):
