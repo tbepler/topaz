@@ -52,7 +52,7 @@ def get_image_path(image_name, root, ext):
         if path is None:
             print('ERROR: unable to find .tiff, .mrc, or .png image matching to image_name='+image_name, file=sys.stderr)
             sys.exit(1)
-    elif len(paths) == 0:
+    elif len(paths) == 1:
         path = paths[0]
     else:
         # no matches for thie image name
