@@ -66,7 +66,7 @@ def add_arguments(parser):
     
     training = parser.add_argument_group('training arguments (optional)')
     # training parameters
-    training.add_argument('--radius', default=3, type=int, help='pixel radius around particle centers to consider positive (default: 3)')
+    training.add_argument('-r', '--radius', default=3, type=int, help='pixel radius around particle centers to consider positive (default: 3)')
 
     methods = ['PN', 'GE-KL', 'GE-binomial', 'PU']
     training.add_argument('--method', choices=methods, default='GE-binomial', help='objective function to use for learning the region classifier (default: GE-binomial)')
@@ -482,23 +482,22 @@ def evaluate_model(classifier, criteria, data_iterator, use_cuda=False):
     scores = []
     Y_true = []
 
-    for X,Y in data_iterator:
-        Y = Y.view(-1)
-        Y_true.append(Y.numpy())
-        if use_cuda:
-            X = X.cuda()
-            Y = Y.cuda()
-        X = Variable(X, volatile=True)
-        Y = Variable(Y, volatile=True)
+    with torch.no_grad():
+        for X,Y in data_iterator:
+            Y = Y.view(-1)
+            Y_true.append(Y.numpy())
+            if use_cuda:
+                X = X.cuda()
+                Y = Y.cuda()
 
-        score = classifier(X).view(-1)
+            score = classifier(X).view(-1)
 
-        scores.append(score.data.cpu().numpy())
-        this_loss = criteria(score, Y).data[0]
+            scores.append(score.data.cpu().numpy())
+            this_loss = criteria(score, Y).item()
 
-        n += Y.size(0)
-        delta = Y.size(0)*(this_loss - loss)
-        loss += delta/n
+            n += Y.size(0)
+            delta = Y.size(0)*(this_loss - loss)
+            loss += delta/n
 
     scores = np.concatenate(scores, axis=0)
     Y_true = np.concatenate(Y_true, axis=0)

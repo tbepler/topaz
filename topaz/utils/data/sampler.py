@@ -57,7 +57,7 @@ def enumerate_pu_coordinates(Y):
 
     return P, U
 
-class ShuffledSampler(torch.utils.data.Sampler):
+class ShuffledSampler(torch.utils.data.sampler.Sampler):
     def __init__(self, x, random=np.random):
         self.x = x
         self.random = random
@@ -80,7 +80,7 @@ class ShuffledSampler(torch.utils.data.Sampler):
     def __iter__(self):
         return self
 
-class StratifiedCoordinateSampler(torch.utils.data.Sampler):
+class StratifiedCoordinateSampler(torch.utils.data.sampler.Sampler):
     def __init__(self, labels, balance=0.5, size=None, random=np.random, split='pn'):
 
         groups = []
@@ -149,7 +149,14 @@ class StratifiedCoordinateSampler(torch.utils.data.Sampler):
         g = self.groups[i]
         sample = next(g)
 
-        return i//2, sample
+        i = i//2
+        j,c = sample
+
+        # code as integer
+        # unfortunate hack required because pytorch converts index to integer...
+        h = i*2**56 + j*2**32 + c
+        return h
+        #return i//2, sample
 
     # for python 2.7 compatability
     next = __next__

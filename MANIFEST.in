@@ -1,2 +1,3 @@
 include README.md
 include topaz/gui/topaz.html
+include topaz/pretrained/denoise/*.sav
