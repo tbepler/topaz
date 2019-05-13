@@ -104,8 +104,8 @@ See https://conda.io/docs/user-guide/tasks/manage-environments.html or https://v
 
 Tested with python 3.6 and 2.7
 
-- pytorch (=0.2.0)
-- torchvision (=0.1.9)
+- pytorch (>= 0.4.0)
+- torchvision
 - pillow (>= 4.2.1)
 - numpy (>= 1.11)
 - pandas (>= 0.20.3) 
@@ -115,13 +115,9 @@ Tested with python 3.6 and 2.7
 Easy installation of dependencies with conda
 ```
 conda install numpy pandas scikit-learn
-conda install -c soumith pytorch=0.2.0 torchvision
+conda install -c pytorch pytorch torchvision
 ```
-To install PyTorch for CUDA 8
-```
-conda install -c soumith pytorch=0.2.0 torchvision cuda80
-```
-For more info on installing pytorch see http://pytorch.org
+For more info on installing pytorch for your CUDA version see http://pytorch.org
 
 #### Download the source code
 ```
@@ -139,6 +135,7 @@ By default, this will be the most recent version of the topaz source code. To in
 ```
 git checkout v0.1.0
 ```
+Note that older Topaz versions may have different dependencies. Refer to the README for the specific Topaz version.
 
 Install Topaz into your Python path including the topaz command line interface
 ```
