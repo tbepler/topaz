@@ -103,7 +103,7 @@ def write_via_csv(path, table):
 
     if 'score' in table.columns:
         scores = []
-        template = '{{"score":{}}}'
+        template = '{{"score":"{}"}}'
         for i in range(len(table)):
             score = template.format(table['score'].iloc[i])
             scores.append(score)
