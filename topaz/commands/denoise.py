@@ -41,6 +41,7 @@ def add_arguments(parser):
 
     parser.add_argument('--bin', type=int, default=1)
     parser.add_argument('-s', '--patch-size', type=int, default=-1, help='denoises micrographs in patches of this size. not used if <1 (default: -1)')
+    parser.add_argument('-p', '--patch-padding', type=int, default=128, help='padding around each patch to remove edge artifacts (default: 128)')
 
     parser.add_argument('-n', '--noise', default=1.0, type=float, help='standard deviation of the noise (default: 1.0)')
     parser.add_argument('--lr', default=0.001, type=float, help='learning rate for the optimizer (default: 0.001)')
@@ -163,6 +164,7 @@ def main(args):
 
         bin_ = args.bin
         ps = args.patch_size
+        padding = args.patch_padding
 
         # now, stream the micrographs and denoise them
         for path in args.micrographs:
@@ -175,7 +177,7 @@ def main(args):
 
             # denoise
             mic = (mic - mu)/std
-            mic = dn.denoise(model, mic, patch_size=ps, use_cuda=use_cuda)
+            mic = dn.denoise(model, mic, patch_size=ps, padding=padding, use_cuda=use_cuda)
 
             if normalize:
                 mic = (mic - mic.mean())/mic.std()
