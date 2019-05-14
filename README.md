@@ -1,6 +1,12 @@
 # Topaz
 A pipeline for particle detection in cryo-electron microscopy images using convolutional neural networks trained from positive and unlabeled examples.
 
+## New in v0.2.0
+
+- Topaz now supports the newest versions of pytorch (>= 0.4.0). If you have pytorch installed for an older version of topaz, it will need to be upgraded. See installation instructions for details.
+- Added __topaz denoise__, a command for denoising micrographs using neural networks.
+- Usability improvements to the GUI.
+
 # Prerequisites
 
 - An Nvidia GPU with CUDA support for GPU acceleration.
@@ -25,17 +31,40 @@ More information on conda environments can be found [here](https://conda.io/docs
 
 To install the precompiled Topaz package and its dependencies, including pytorch:
 ```
-conda install topaz -c tbepler -c soumith
+conda install topaz -c tbepler -c pytorch
 ```
-This installs pytorch from the soumith channel. To install pytorch for cuda 8.0, you also need to install the 'cuda80' package:
+This installs pytorch from the official channel. To install pytorch for specific cuda versions, you will need to add the 'cudatoolkit=X.X' package. E.g. to install pytorch for CUDA 9.1:
 ```
-conda install cuda80 -c soumith
+conda install cudatoolkit=9.1 -c pytorch
 ```
 or combined into a single command:
 ```
-conda install topaz cuda80 -c tbepler -c soumith
+conda install topaz cudatoolkit=9.1 -c tbepler -c pytorch
 ```
+See [here](https://pytorch.org/get-started/locally/) for additional pytorch installation instructions.
+
 That's it! Topaz is now installed in your anaconda environment.
+
+</p></details>
+
+**<details><summary> Click here to install *using Pip*</summary><p>**
+
+We strongly recommend installing Topaz into a _virtual environment_. See [installation instructions](https://virtualenv.pypa.io/en/latest/installation/) and [user guide](https://virtualenv.pypa.io/en/latest/userguide/) for virtualenv.
+
+## Install Topaz
+
+To install Topaz for Python 3.X
+```
+pip3 install topaz
+```
+
+for Python 2.7
+```
+pip install topaz
+```
+See [here](https://pytorch.org/get-started/locally/) for additional pytorch installation instructions, including how to install pytorch for specific CUDA versions.
+
+That's it! Topaz is now installed through pip.
 
 </p></details>
 
@@ -117,7 +146,7 @@ Easy installation of dependencies with conda
 conda install numpy pandas scikit-learn
 conda install -c pytorch pytorch torchvision
 ```
-For more info on installing pytorch for your CUDA version see http://pytorch.org
+For more info on installing pytorch for your CUDA version see https://pytorch.org/get-started/locally/
 
 #### Download the source code
 ```

@@ -21,7 +21,9 @@ def load_model(name):
     path = 'pretrained/denoise/' + name
     f = pkg_resources.resource_stream(pkg, path)
 
-    model = torch.load(f)
+    state_dict = torch.load(f)
+    model = UDenoiseNet()
+    model.load_state_dict(state_dict)
 
     return model
 

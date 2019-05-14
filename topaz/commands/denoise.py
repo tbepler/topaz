@@ -17,7 +17,7 @@ from topaz.utils.image import downsample
 import topaz.mrc as mrc
 
 name = 'denoise'
-help = 'denoise micrographs using different denoising algorithms'
+help = 'denoise micrographs with various denoising algorithms'
 
 def add_arguments(parser):
 

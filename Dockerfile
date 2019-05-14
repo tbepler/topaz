@@ -20,7 +20,7 @@ RUN curl -o ~/miniconda.sh -O  https://repo.continuum.io/miniconda/Miniconda3-la
 
 ENV PATH /opt/conda/bin:$PATH
 ENV PATH /opt/conda/envs/$NAME/bin:$PATH
-RUN conda install --name $NAME -c soumith pytorch=0.2.0 torchvision cuda80
+RUN conda install --name $NAME -c pytorch pytorch torchvision
 
 # setup topaz install directory
 WORKDIR /opt/topaz
