@@ -6,7 +6,7 @@
         VGG Image Annotator (via)
         www.robots.ox.ac.uk/~vgg/software/via/
 
-        Copyright (c) 2016-2018, Abhishek Dutta, Visual Geometry Group, Oxford University.
+        Copyright (c) 2016-2019, Abhishek Dutta, Visual Geometry Group, Oxford University.
         All rights reserved.
 
         Redistribution and use in source and binary forms, with or without
@@ -68,7 +68,12 @@
 				var seed1 = $('#seed1').val() == '' ? '1' : $('#seed1').val();
 				var output1 = $('#output1').val() == '' ? '/path/to/output/preprocessed/images/' : $('#output1').val();
 				var input1 = $('#input1').val() == '' ? '/path/to/input/images/*.mrc' : $('#input1').val();
-				$('#result1').html("topaz preprocess " + input1 + " --scale " + scale1 + " --num-workers " + numworkers1 + " --format " + format1 + " --pixel-sampling " + pixelsampling1 + " --niters " + niters1 + " --seed " + seed1 + " --verbose --destdir " + output1);
+				var device1 = $('#device1').val() == '' ? '0' : $('#device1').val();
+				$('#result1').html("topaz preprocess " + input1 + " --scale " + scale1 + " --num-workers " + numworkers1 + " --format " + format1 + " --pixel-sampling " + pixelsampling1 + " --niters " + niters1 + " --seed " + seed1 + " --verbose --destdir " + output1
+				+ "<br><br>mkdir " + output1 + "/{denoisedL0,denoisedL1,denoisedL2}"
+				+ "<br><br>topaz denoise " + output1 + "/*.mrc --format png -m L0 -d " + device1 + " --output "  + output1 + "/denoisedL0/"
+				+ "<br>topaz denoise " + output1 + "/*.mrc --format png -m L1 -d " + device1 + " --output "  + output1 + "/denoisedL1/"
+				+ "<br>topaz denoise " + output1 + "/*.mrc --format png -m L2 -d " + device1 + " --output "  + output1 + "/denoisedL2/");
 			});
 		});
 	});
@@ -101,7 +106,7 @@
 				var testbatchsize2 = $('#testbatchsize2').val() == '' ? '1' : $('#testbatchsize2').val();
 				var device2 = $('#device2').val() == '' ? '0' : $('#device2').val();
 				var output2 = $('#output2').val() == '' ? '/output/path/' : $('#output2').val();
-				$('#result2').html("topaz train --train-images " + trainimages2 + " --train-targets " + traintargets2 + " --k-fold " + kfold2 + " --fold " + fold2 + " --radius " + radius2 + " --model " + model2 + " --image-ext " + imageext2 + " --units " + units2 + " --dropout " + dropout2 + " --bn " + bn2 + " --unit-scaling " + unitscaling2 + " --ngf " + ngf2 + " --method " + method2 + " --autoencoder " + autoencoder2 + " --num-particles " + numparticles2 + " --l2 " + l22 + " --learning-rate " + learningrate2 + " --minibatch-size " + minibatchsize2 + " --minibatch-balance " + minibatchbalance2 + " --epoch-size " + epochsize2 + " --num-epochs " + numepochs2 + " --num-workers " + numworkers2 + " --test-batch-size " + testbatchsize2 + " --device " + device2 + " --save-prefix " + output2 + "/model --output " + output2 + "/results.txt");
+				$('#result2').html("topaz train --train-images " + trainimages2 + " --train-targets " + traintargets2 + " --k-fold " + kfold2 + " --fold " + fold2 + " --radius " + radius2 + " --model " + model2 + " --image-ext ." + imageext2 + " --units " + units2 + " --dropout " + dropout2 + " --bn " + bn2 + " --unit-scaling " + unitscaling2 + " --ngf " + ngf2 + " --method " + method2 + " --autoencoder " + autoencoder2 + " --num-particles " + numparticles2 + " --l2 " + l22 + " --learning-rate " + learningrate2 + " --minibatch-size " + minibatchsize2 + " --minibatch-balance " + minibatchbalance2 + " --epoch-size " + epochsize2 + " --num-epochs " + numepochs2 + " --num-workers " + numworkers2 + " --test-batch-size " + testbatchsize2 + " --device " + device2 + " --save-prefix " + output2 + "/model --output " + output2 + "/results.txt");
 			});
 		});
 	});
@@ -157,10 +162,86 @@
 				var device4 = $('#device4').val() == '' ? '0' : $('#device4').val();
 				var output4 = $('#output4').val() == '' ? '/path/to/extracted/particles' : $('#output4').val();
 				$('#result4').html("topaz extract " + input4 + " --model " + model4 + " --radius " + radius4 + " --threshold " + threshold4 + " --up-scale " + upscale4 + " --min-radius " + minradius4 + " --max-radius " + maxradius4 + " --step-radius " + stepradius4 + " --num-workers " + numworkers4 + " --device " + device4 + " --output " + output4 + ".txt "
-				+ "<br><br>topaz convert " + output4 + ".txt --verbose 1 --output " + output4 + ".star");
+				+ "<br><br>topaz convert " + output4 + ".txt --verbose 1 --output " + output4 + ".star"
+				+ "<br><br>topaz convert " + output4 + ".txt --verbose 1 --output " + output4 + ".csv");
 			});
 		});
 	});
+	$( document ).ready(function() {
+		$('.converting_inputs').each(function() {
+			$(this).on('keyup', function() {
+				var input5 = $('#input5').val() == '' ? '/path/to/input/coordinate/file.[csv|star|txt]' : $('#input5').val();
+				var threshold5 = $('#threshold5').val() == '' ? '-9999' : $('#threshold5').val();
+				var upscale5 = $('#upscale5').val() == '' ? '1' : $('#upscale5').val();
+				var downscale5 = $('#downscale5').val() == '' ? '1' : $('#downscale5').val();
+				var output5 = $('#output5').val() == '' ? '/path/to/output/coordinate/file.[csv|star|txt]' : $('#output5').val();
+				var voltage5 = $('#voltage5').val() == '' ? '-1' : $('#voltage5').val();
+				var detectorpixelsize5 = $('#detectorpixelsize5').val() == '' ? '-1' : $('#detectorpixelsize5').val();
+				var magnification5 = $('#magnification5').val() == '' ? '-1' : $('#magnification5').val();
+				var ampcontrast5 = $('#ampcontrast5').val() == '' ? '-1' : $('#ampcontrast5').val();
+				var boxsize5 = $('#boxsize5').val() == '' ? '0' : $('#boxsize5').val();
+				var imageext5 = $('#imageext5').val() == '' ? 'mrc' : $('#imageext5').val();
+				$('#result5').html("topaz convert " + input5 + " --threshold " + threshold5 + " --up-scale " + upscale5 + " --down-scale " + downscale5 + " --voltage " + voltage5 + " --detector-pixel-size " + detectorpixelsize5 + " --magnification " + magnification5 + " --amplitude-contrast " + ampcontrast5 + " --boxsize " + boxsize5 + " --image-ext ." + imageext5 + " --verbose 1 --output " + output5);
+			});
+		});
+	});
+	$( document ).ready(function() {
+		$('.particle_extracting_inputs').each(function() {
+			$(this).on('keyup', function() {
+				var coordinateinput6 = $('#coordinateinput6').val() == '' ? '/path/to/Topaz/coordinate/file.txt' : $('#coordinateinput6').val();
+				var imageroot6 = $('#imageroot6').val() == '' ? '/path/to/full/micrographs/' : $('#imageroot6').val();
+				var boxsize6 = $('#boxsize6').val() == '' ? '192' : $('#boxsize6').val();
+				var threshold6 = $('#threshold6').val() == '' ? '-9999' : $('#threshold6').val();
+				var resize6 = $('#resize6').val() == '' ? '-1' : $('#resize6').val();
+				var imageext6 = $('#imageext6').val() == '' ? 'mrc' : $('#imageext6').val();
+				/* var metadata6 = $('#metadata6').val() == '' ? '' : $('#metadata6').val(); */
+				var output6 = $('#output6').val() == '' ? '/path/to/output/particles.mrcs' : $('#output6').val();
+				$('#result6').html("topaz particle_stack " + coordinateinput6 + " --image-root " + imageroot6 + " --size " + boxsize6 + " --threshold " + threshold6 + " --resize " + resize6 + " --image-ext ." + imageext6 + " --output " + output6);
+			});
+		});
+	});
+	$( document ).ready(function() {
+		$('.denoise_micrographs_inputs').each(function() {
+			$(this).on('keyup', function() {
+				var input7 = $('#input7').val() == '' ? '/path/to/input/images/*.mrc' : $('#input7').val();
+				var model7 = $('#model7').val() == '' ? 'L2' : $('#model7').val();
+				var device7 = $('#device7').val() == '' ? '0' : $('#device7').val();
+				var format7 = $('#format7').val() == '' ? 'mrc' : $('#format7').val();
+				var bin7 = $('#bin7').val() == '' ? '1' : $('#bin7').val();
+				var patchsize7 = $('#patchsize7').val() == '' ? '-1' : $('#patchsize7').val();
+				var patchpadding7 = $('#patchpadding7').val() == '' ? '128' : $('#patchpadding7').val();
+				var output7 = $('#output7').val() == '' ? '/path/to/output/folder' : $('#output7').val();
+				$('#result7').html("topaz denoise " + input7 + " --model " + model7 + " --device " + device7 + " --format " + format7 + " --bin " + bin7 + " --patch-size " + patchsize7 + " --patch-padding " + patchpadding7 + " --normalize --output " + output7);
+			});
+		});
+	});
+	$( document ).ready(function() {
+		$('.denoise_stack_inputs').each(function() {
+			$(this).on('keyup', function() {
+				var input8 = $('#input8').val() == '' ? '/path/to/particle/stack.mrcs' : $('#input8').val();
+				var model8 = $('#model8').val() == '' ? 'L2' : $('#model8').val();
+				var device8 = $('#device8').val() == '' ? '0' : $('#device8').val();
+				var format8 = $('#format8').val() == '' ? 'mrc' : $('#format8').val();
+				var bin8 = $('#bin8').val() == '' ? '1' : $('#bin8').val();
+				var output8 = $('#output8').val() == '' ? '/path/to/output/folder' : $('#output8').val();
+				$('#result8').html("topaz denoise " + input8 + " --model " + model8 + " --device " + device8 + " --format " + format8 + " --bin " + bin8 + " --stack --normalize --output " + output8);
+			});
+		});
+	});
+	/*$( document ).ready(function() {
+		$('.denoise_training_inputs').each(function() {
+			$(this).on('keyup', function() {
+				var coordinateinput9 = $('#coordinateinput9').val() == '' ? '/path/to/Topaz/coordinate/file.txt' : $('#coordinateinput9').val();
+				var imageroot9 = $('#imageroot9').val() == '' ? '/path/to/full/micrographs/' : $('#imageroot9').val();
+				var boxsize9 = $('#boxsize9').val() == '' ? '192' : $('#boxsize9').val();
+				var threshold9 = $('#threshold9').val() == '' ? '-9999' : $('#threshold9').val();
+				var resize9 = $('#resize9').val() == '' ? '-1' : $('#resize9').val();
+				var imageext9 = $('#imageext9').val() == '' ? 'mrc' : $('#imageext9').val();
+				var output9 = $('#output9').val() == '' ? '/path/to/output/particles.mrcs' : $('#output9').val();
+				$('#result9').html("topaz particle_stack " + coordinateinput9 + " --image-root " + imageroot9 + " --size " + boxsize9 + " --threshold " + threshold9 + " --resize " + resize9 + " --image-ext ." + imageext9 + " --output " + output9);
+			});
+		});
+	});*/
 	</script>
 
     <!-- CSS style definition -->
@@ -332,6 +413,9 @@
       ul.region_shape li:hover { cursor:pointer; fill:#ffffff; stroke:#ff0000; }
       ul.region_shape .selected { fill:#ffffff; stroke:#ff0000; }
 
+      /* cursor coordinates inside region shape selection panel in leftsidebar */
+      #region_info { font-size:0.8em; margin-bottom:0.4em; }
+
       /* Loaded image list shown in leftsidebar panel */
       #img_fn_list    { display:none; font-size:small; overflow:scroll; min-height:10rem; max-height:25rem; }
       #img_fn_list ul { position:relative; line-height:1.3em; margin:0; padding:0; list-style-type:none;}
@@ -376,6 +460,8 @@
       .narrow_page_content { width:60%; }
 
       .force_small_font { font-size:small !important; }
+	  
+	  .key { font-family:monospace; padding:1px 6px; background:linear-gradient(to bottom,#f0f0f0,#fcfcfc);; border:1px solid #e0e0e0; white-space:nowrap; color:#303030; border-bottom-width:2px; border-radius:3px; font-size:1.2em; }
 	  
 	  * {box-sizing: border-box}
 	  body {font-family: "Lato", sans-serif;}
@@ -457,6 +543,7 @@
 	  .collapsible {
 	    background-color: #fafafa;
 	    cursor: pointer;
+	    transition: 0.1s;
 	    padding: 16px;
 	    width: 50%;
 	    border: none;
@@ -483,8 +570,8 @@
 	  .collapsibleoptions {
 	    background-color: #fafafa;
 	    cursor: pointer;
-	    padding: 0px;
-	    width: 11%;
+	    padding: 4px;
+	    width: 12%;
 	    border: none;
 	    text-align: left;
 	    outline: none;
@@ -492,6 +579,22 @@
 	  }
 
 	  .active, .collapsibleoptions:hover {
+	    background-color: #f2f2f2;
+	  }
+
+	  /* Collapsible options 2 */
+	  .collapsibleoptions2 {
+	    background-color: #fafafa;
+	    cursor: pointer;
+	    padding: 4px;
+	    width: 15%;
+	    border: none;
+	    text-align: left;
+	    outline: none;
+	    font-size: 16px;
+	  }
+
+	  .active, .collapsibleoptions2:hover {
 	    background-color: #f2f2f2;
 	  }
 
@@ -508,6 +611,7 @@
 	  .collapsibletools {
 	    background-color: #fafafa;
 	    cursor: pointer;
+	    transition: 0.1s;
 	    padding: 16px;
 	    width: 25%;
 	    border: none;
@@ -664,8 +768,40 @@
 		max-width: 800px;
 		margin-left: 0;
 		background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0));
-	}
+	  }
 	  
+	  /* Mote Tools tabs */
+	  .tablinks2 {
+		background-color: #f2f2f2;
+		color: black;
+		float: left;
+		border: none;
+		outline: none;
+	    text-align: center;
+		cursor: pointer;
+	    transition: 0.25s;
+		padding: 14px 16px;
+		font-size: 17px;
+		width: 30%;
+	  }
+	  
+	  /* Change background color of buttons on hover */
+	  .tablinks2 button:hover {
+	    background-color: #ddd;
+	  }
+
+	  /* Create an active/current "tablinks2 button" class */
+	  .tablinks2 button.active {
+	    background-color: #ccc;
+	  }
+
+	.tabcontent2 {
+	  color: black;
+	  display: none;
+	  padding: 100px 20px;
+	  height: 100%;
+	}
+
 	  /* Logos - Compressed using https://www.ps2pdf.com/compress-png then converted using https://dataurl.sveinbjorn.org/#dataurlmaker */
 	  .topaz_logo { background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAvYAAADjCAMAAADZu6ATAAAACXBIWXMAAAsSAAALEgHS3X78AAAARVBMVEX6+vqXl5cBXKjT1NW0tLQDc8XExMSenp4AAAD///+Hh4fk6OsIj+eRkZGoqKl3d3clKC1jY2NISUlYm8wEM3mWyOxNs/PDmuUGAAAgAElEQVR42uSdi5riqhKFI4REBA25vv+jHgpI1BZygSI6Z2NPfzPTrcbkZ7EoqkhR/DuNb7fiv9D+Yx8372kszvmTdqkLQau6aTvdlGv6r21zL6kocsFw6Ox8oefjvfLvXO9TqN8jpAitiATDPpmWjWb9Gmyqay+Vg//cMeasUUe/sBC0fDzqy+VeP+rH3NnRejby9f7hIYnzsjuttfTwaYAzJ2jdrgD/2rqmpgXe2YY3L2/t9gdr2+Z2r+u8ow5t1GdnL9PfSr/yLcv1bu70N8Hn/HY9samD3MNJqxp17E26Gxr5nN/V0Y8Iow4V6ORz3gY+ruCpr1ypbFe8KXiWcS/tVTm9ntraA8cLH47eoq5IZ2SGp5/eLrZ/t/eqwCRfd0CMc+p/afUjV3z/EJx4ZkMS8n25hw/26BJOd5muCWlDobpVAs9uiTCbZSIDIuslL5G51y9Xt7e0M8u7c7G/PvYdLfToS6IIdY9UTSiTe3lDsdzWSg/skt6C80fWK95hmz16G4ahrVJObNbxzdcuew4WoL8jHFlXJ50blKEQB/x1u0XTsG/yDvCCY0LPx15TTwZVJ8RHT8f+vuNYecRMMgR+AnQcaSjEAH994KmTBvzcRhcRe/05R0nIQNigyJSwDnQy9dfb5qFqRkrEzniLPjl4U71WJM8ymmw+Ijv2FHFeL3qiG4Mm5RR9WsXZ2DdbR6p/jjvoRke212aRZx3Dzh5Y8Vz+6Zewh5ULDf3ARt2k1OCPsWf117DXEyyV4T2jzk6FG7/muTzOnjH0/wB7TT3YG0J6UQihuddtjDutp3v79QvE88yv2qiTwyvUQYcmzMC2fEjKtPEfMTkwmSV6MqsGMglok+E+zuD/1pRW/yyP8kQxh4v9ziBWpN0qU7Bv/g3sNfVkuGrse631+ktzP0Ua/NOxXws66FEs1+Gox/GTg419PPf8kjxlilr//R3s9cebiIlbanPfA/Sj457FcH/6ctXKmh1PXx5CDfKhY78rehtpQ1JcDv157IF6psVek88Yc9SDvZ/i9D53Tz9gQjmvj71Ubu7xsY/U+z1cpricIu+QLzgG9VIywhhEL6cRoAfurb2X8jD3uT/yfvZ2Uq+6rrnUj7KqaFWVj/pya1fT8F/aUZ+TAfsovd+VGtSmuJz6S0p3iHppwWe9pd58l5KQOO7piTZH3ZKoV+29pJ5yCFE9mk6hc+/Hvms7/fX+MNVe2fR+X4SRpkxqH0u1WlLD7pCLNjtZh6UqOb60SWrXAz85GrLQ1FRl6FGaP3N7VN687EaL7t9WwuO9wSutdMrNfKiueYi1Wh5ab+flH0sG9GKvCn85laBlfWt2VMNEVNqU+fzTMwcqplF4LC0gXHVyOUAxOjMDk1ptcaYn95INJMrnHKoTU36WksvtNrMA23LtFWbVv3eb4y3Pgv1Skwe1WArXjewMMKq0BAX9AY4//rQuy4z2ST0zUZzpFftJEhbr79Owf6TXmG7EcFRT7ajTM79Qrsc8uiPrtX6TE3Cqr55rfdi5HNalfTa0Skz7ieosr92+wQ6tzvF6IJ5Za99PUz/1BvgJvjT3LHZem5YZUmO8ndpI5Nqdpb+RxtakYr8xQXOGa7Um7Ghh5ackeCcyzXerVkMBAJpOPZvFnslp1NSD2k8WfMDe/JixKR/3CiFAcjAureojVVLwq6tJywfs/SG1/3sQaFUhPhV9PLJETNKuYZdjQqslRD4tDgOpt9hbtdffnMth+fSe58F+dZmwOVo9BmLbodj7GLV/av7KQRyaWfsSEyhHDt0joHHPIfbaMTL2pF4jb76M2gPzugtMbHb3ss/DfR7sV439nccE/IoWY0oZrfaO/BZF7j3xEeVfXL990eWEVtQSj4kXvYMa1milZl7qh/H0Tvj1g8zck774h7AvVouj46Zal7WpH8+t9lvcV0dcW+tz8XWe5VBsi9OlWpzaFpTYiirDvOHeiD0wD1+wZAW/BCnJebjPgP1KfK6LHbT42gjSJWG/n60V7g/Q4JNRMEnql1xOMP5ME4trSi3kmmgGGcfEQa/pN9j3k+sDPfgfiz0bM4x4edQ+mHCiUmqEV7jfG3pKU/u1NGp1oO/c/EsHbZb10Ngmclgcbewh9QCWZmGdiske+kAvweVAkw78yQAPv5hSb3Uu9uGotEqrRwpzv3dWm6j25rqpxAmG7/RApNI/g6T8S2LfHV9B2xEQs8Z+UEpr/WBlHx698/WaeGm5N9jbbxn0PgP24VQcJVLNU3Dh95aA/aEwYfgYRILRKnnoUty/I/chhakSBbG3MAP0AyShSVs6ziZr6XvbCwB9QkxuJoTvGcXnHh/74HyWpsdFb2k9KlntV1Ykqr3rb58Tn84IpfeF1VewD13DJpF6ahi3FmdgDnmj9qD3vYvWMxB90zWU+3GBvg0bNvZhNB85d7C8x2OvDmKf5np9RNmn+seRb7icUNdWRbKxB9JnZ780UHtAvZdydj3g/xlRg/1x//PYFyHze0PZSSxUo7jviiCofXCT0Z2xHJ99sPEa/jOh+1BWQuqcrx8M9x/YMzlZ6KVxPdbn2PxMYoOdZcF/Gvug2LdIG0eWKcEcBLWHrpfS8YIeJ+RyCn6+2OdIs4eCcfLE/pV6Jm32fT9jzxz4y3outr3Hx16FZnxI1fYBm9MV/Cy1DxzCPnPvGQznBE5/lz49dB9cdhHJFoe4WaoT+xl9x7u19o76Xr42hrtqha/2F/ySifcDrhKmDhhqX4QWjHfN93xhrtm++y/G6WmYoTNcp1scU0MIFAP2UEfLlm0AnbNxsZ1PuUeNYmJjn2lJe08kpY3F/rCKBSa1e8Yb39E/z43fIJ48qc2TeKktjikWtBw7s7Po/TKVfYHe/SKzqZiEYSaloWP/yBHv3WOtd4k2itqHwNjjwn0H/wxC+T/auS4nV+KlsLWCrriEzGK/gP9cu1rC+UD8QOw/CJHFz2IfkuIGtae20cm/SGrvN7+7sL+v8eS/GucmKIRU5Z4o9pOrkLU+hswOhzzF3THf9zP3IPPL3JeQHvP+SbjYB+KLFNWX0egyKyy1ryOnfL4u+0r1911OrsRLwRbs5aL3wL4cpyfm8A2KyOd1LPOL9p9EDSOiZcDF/p4xePl8ly42goij9iFF3C599T3xdbLvnzWcmKDA87hU2B9kmZ1ay04c+COUnSxRS8amgo9vk1q7lw7MggeKd5dWTOzDoT3cS1PFuhwctQ9Faavtjf49yZevWu4/gd2J2AcWG1MTL8dJiKV6FuI41t2btGLAfIaeQTmV4V4yF9E0xVbw12HAi2LiYk8zh3Fm7YjNGMFSez/2m6fNd+DvI+GXXU4wKyHV4oyCCzDqxtfbNDQj+L3ZpqSfc3OYKZ7VE4EX7mFPTDu7HciIFgZHxf6WKxlnUzT3dS80te+i1iZ861HvT/Kr7WkJCqE18DLR4oyj2QZtUETO2ZdmNttbyukct7TRebMr7DzRhaIr6UL9A0Fb9ETEPhTYQ6+MC6UHbJ4UNLWPwt4XAVLvSs6/mqAQWmJPTLwsxGi3xnHMm+xLE6CxZt3ZnJc1KS56V4MlofjEab1+3lT8IPY0e/Ry3eU8orBHU/stUfZJ+d/Zvj9IdE7oPk9Wgm6j/uizZFuxt9k5C+XG5rBngjHXlsjZHMBezwfMluAEa7EWF/vLCRPatSWV5jS1b6Owf2yf6m8mKGRKvCzc/Rpe1f6NenO7QjedfUap5Zy1ANPgyQR/pglpsTa4BybefKjLMELHzp3R1L6NCDT6nvX53v6XPmMHhWyJl+PYsxfqQbYN9cXLOh3tWf8an+TPMCYxK7VmEjwxgmJzMNU+cuiPav4426a5z+vtN3K1fH31E6mvuZxgyrhIjOL0dHylfmC2QPxt5yc9JPTvUXnOrfGxOyzY+xmaVLYRpW4DEfvqetYVCwXaHjHYo8Xty41bNl72POVrCQqZshLA4kzv2NvS8DfKtdzT4s/kHgw/sTnKxta7PAWJMfJhYn+5njU+h9ID7mepfRT27a4e5+/R2UP3ebIStGsfi9EWyI6jBd8u0H6KNv9wRxZ7i/5SmiIRbA6itw9Z+zybGNIoG4qk9oHtnOlhj+Obqn6n2CS461xq7ux8l2XAfrLYm7yyP370czPgBfsl9OOKsxA2zkE0OQG5yJNQEghhdiepvYjICfJZZx9T30lQ4Fm2gwJ2e7YknznqPVUjYHL+xrTEbHIc9IOtxGVyLPgPqT1V58lUZMo7VgYmPf7mvqC9/52/4XJyZSXwqlMuBW0Y9AkwWyFAxsEzVFlwtw3y+DmlBcxfsJ/vfiLSd57BU/vyeuLlCqS8b+ToYeXb348PNb7T4w/H+w8yb4JCKPGyTN0Yp7sSd0vCYdCvN7h8Yhu2MTcN0j4IlP2P3QeLQ2buHfW9gP8b2DQJ/jtqfzknM2GNvK0jz1pdtTqx8K6A+n2z/+WzJijk2Q7KfOjB7IoAcRgFWi/t3vU29ZJb7w/3aSNzOubSYVzl1RzC0d8KPpn/TN8WE1Ptm+uJnjQwttxPUXtx/L19Hid0bvxdusqHfZ7toMDiqGFON9bYK1cgaGtpR1EY4mGn47nqZHIDALfy7yrM3aZSrBB2ADB3OfkRtQ+culwB57j8H6SdE6rjex36umnIt/i7VcYEhTxZCZBqM7j5rLXocq6bMkjDHUz63tQQkrnoRPt298w5IZ+ZRV2TjGZS0+SfucGX4/bBQM6pkYf2BLWPKaX1ikJIXQLLAtkSFPJkJejXdbfhJFApYjc4tiaH2FLaZZ+EuejE3ZpZCDE56IldprWbjEBVoigga5+xxKVjPG8vAqUXuSQqJoKJpPYRb33A44RcTpntbpV5Ei8hxR4KY7uOuO3qZ6Gftd0yz+aQvN3jGO5j1T//54m9cTfa35uUnj5xro2m9tX1TEcatziGofah/QjXTIh3MSicwnOuywllJVzSxZ79j7srYG9UBYIehiRG2hBF/v9PfewuILaSKAL2e/Tu3muvTa7pOA7L7KyBvRpA1FtfGZA+UzPuPeZn4AeJIvZPgr2gyEDoVoGPt92fYPt1MMi2LkV9OjLKkoG5Pwtw9Wuubya4D/VqwYXmcGJrIBOaDQb20h2zAoKZa6WdpU1A9m4TO9M9Z4oHiQtUF2L62AyGbGz/716z7NYl1Uuz5Ntf9lc91gj13Y1p/Zu7dEXsTdE4qIOw71GFA+jlXdqMY0aONItv9mPxUNvM73AXuiDQds8J9233J9j+UbOQE0Pwh/OqLPn2Q4LGeezTEOt19DLF4L6E8ZLI3sB7sLC3Ah2Pa6UKMP4D9Uuhb104fjqzxlIow0tnPDSEIRvbP+tW3aJ7ia4o20fTSt5qnJVBb297A7pqBoVSoaVwympYHVEP363yE5Yt7F3ZcmXxpf6xsYCMhD1pHlBLU3c+26c1HOXfiF3Ksn3X9QkwWXva9/fBdbNAga7kMq4ESv+TA3G9gZgKAtHmlJxVvmd60nzOj3IFHwpV097TdqyYk4vtK5fto7D/Lsv20Xj9t8+7dif8+mDOl1V2SoVcCWguMLBHyEu04sywd8dVnK1qnXFq+mmcLwwS92wBe4U5Cu2BYO5sbB/J0Pj7sN81lzZS4n7bMLzdfBl8zatGObiQK4FmEhrUm0eCb13ZaSUO9hb36wpnct6EuaSJhjRSSVr4L1OPzLBPYfum8mlV5Jj2VpLt49M5b3uNCa+ElIXsKqcrEwdlyX4YgOkB+pBsZs00H2EPLrMeLxsPemaPtciWMG91VXs+2/fVYS/3n7EcYvsuPjjr7UOsUurnKKkKBoUycVCW7MFyiQoHDPeTcDKF0xQfFkE9xlwC7LsxrOi4uHv7tVQOTaf7fGzfV2wyefOEX8XYvotWuD8p+1amBLi9ir+exeKgYE4V19yiHksw2g2norOnebe6AL1ynnvH98t9LYXjM2vnZGrou7PZvpV13bIRVfUoxfZddJzER6f9LeU8Y/0KfWWdj1FkSJUlezGNpOyxiKO5S7e3o3zm0iSlwaJjQWEKTo/LujDpaghwb2GPn56ceJ+P7WvDvmmGTLDfQm4dNgrF1nvL8dpm//MrXN6gUMqVAJQEAQccpb0z1DjYk9bhdmYhTGEe3TZVQb+gWRO+9V3PF3Ydx/dYxWFkw++7s9m+Zkth5AjooyxNZHvofIhSfcpzbpqz9SxggV98U48yrgQ8qgKEww8IWJkM93PV3sJeaOgxgV/YaAKuej1RsxWtZgoNO25PC8ddOKXZSCKWnM2d65T2Whv265rjmZvtofet618yjvr3aYerO4JNUxXbst1qZeKgiJE00TugXmHntxvJY/OhAPbjFC5w5DPwHJv/xUWXAw+CQrgb74BtWlorZW4TfXcu21+rGjBzwj5GvZ1bb0H/0QaUpnGKq5xyo1QptpUNyMdcQV8hDqCyLjTqsgI9Y9/sMh/SmG/sFoA/lDlO5TCp4E6BveRiygj7FG1/qRaJ9rbUkbKlnQH+e/WXt5hP61rfdhq0bsN85BpscCsTB4XmWNAhEiMTyCyPrVX2PY5TmcepX7C9eXcUvtvKT6flbD7Ndbg3sDeAx0BYndhMno/tL9VFTq4t7cotqe/btr18PYcPkP8Mw9Ui4ba6eFII1cH6b46rCu6OkjE5zIUbFOMIf8Q8nMUG+oZkzTTypek+6LFdFDFhUwyop+GdffcH2f5ae0ubUrdHZ+yPX/eN6yOC1+C1jVZKqpxirgQ8+pXSKBw1oBBnYgl7hWB2WgYrOfgmQsvxwnEffNg2oMO4TmjQhf6VxODKotq+PuwTTmmPrGf36bR1hQ62nrKsq5xnlqDrQq4Eur8Zshd6JA3PffkGRhRKTH5Vjs2DxXyvoX8LzrJ4WMQ070g2aQGHVmnTC/OxfX3Yy1yenPT16hLGVW0WEpFvMcN+qZTxkja0A7jrDeyVP5PFco5N+mZMOYgvT2jpVGrGPP9hSKaPgKCHJhO0O0Aps/2DbF/dnPBdE/aP7qPFYO1fuXXX2JUyKEQlTp8D9t9SvhTT46BCuDMazemViwrgvrgUuJcz837WCXw72NOGjwDsmUrLMivL9v9r2H99Rv2akXL7VKN1KfI6fpxUJg7KFe3BaG9grwbAMx0wSZvvTcUZZ0Vga8wf6p6A7X2cjvmCuz2jRWNOisopfUpbzoEZ6QG9VIO9vHRpDoPtxZKIQ7I9DPtSrgScxolbzcHloHnYM5/qt2B7x/Rq6bZ0ETp89tzb1hQ4CsBbBzwDfKDPBft8npxb7TaTay3YP/vUk9brDti/Cuw7o8bLNstmeQLYg7xnAezt4HFlSVuFsPfM7yjexaX5oBzrTCDJgxpHazvohCfN7CztwKzdXZWSnFCK6iOpJnuOQYuonJgr4ZZl9GWjDQkPBvjMsT23lgTuUWzpXXncE+rFrOjJxjNz/LKiaXYO9rHgs8ZcsM/nt6/dS5uUk1OI6g9rnDIqp5wrgX4sID2Muvdsbwe1sZDCPcEHGgfPcZ28EcJ/tj20dSdZaFJW9q5An9ucx/ZNiv390Ot73W8LywT7V9tt/LaOaZwm5sD4PhQR86+cxIE9vFHefDBk70L8qGqprErhLNjMhjrHNZEIR/qhU8ELe/fpgvuqD0/IBewKJycUy8mJtLUmZWDuBP2121yAfB4l1cix8oGz1IgazURQeFalgOwx21s416UvTAZYD2T9nKKzBnxf2HH9hNbD6Vh/v7gvnZPzKgf7lBS2w7CXj81MHxF++wJVIyon/RSwsMTBs6rB/OY2lV5gYrFkQZqrxbua97WK8TBRZAX3ob5XysXDQhIJTwrMycf2r4LGqVyX2UHYD5eVQZL7NqRyp5bIHDZXLA7KPfxNgcShyEvEJHA9wNMfOqmwguPE/QL1HvhCzMifdQ7tE6CEKe94/MWb09g+8vMpZsFMaq46Anv5uvRNt0uXH9c40VyU5N7pvpgrgX4q49RrkDmAeuk4HZJfw4hL9euUSoSLz5TvtrlsLuLb3a/LX4C/yDRP+ztb9Gs5U05KTE4q7OXrcSVT/mGI7a0SRkRJoiv+jfEyk515miYyJdCINoJ9aDL7gfd5O/sD+BbaQojw+AotCcpfE/Yu0J7I9req7oSk06q9sJdyeBnE97YPZe9Le0nP5PlEJ6/E7oprSYkDZ1XQBUITSCjx1WoYa7pk/McMB1uPoZi/XysEvvfqMCm57VK0H9y/p83I9utW1lLnVZEpEn3KEJ9/l9vt+xb+/r5cr23bB42FmWbYPbodq8FfGUv3EWWYrd7WdV84hhA5GTNylE8wVuG4BlInvgq5inoeEv+8BHkTZpHDEtxoGev2bdFX9PcLnFKP2NdU2KQiPn4/+nIxMJtXs65y0oZJRuOgMsG+eTIKsoHtprSFFj4Hdi/8ZsI5cKhxVogY3/MF8PF2Ql+u7MTa8US272W5wliuemksOWEN88eLGquy6b7/LdfrWtJ46WCvHAdj5Ks7mXWdJYtJDXweU4JdhUJEkC8WhC+se4FbyzJIn+Y0to/svUpNIU8Jh8o1hfxQgTzXanOdKGY9W3lJayFQd4wBtG3gHuxqHk/Cg52s1oR8+O8K33PxA/p2a8vYSA++f8eUby7tq2IFM8ltn2sK+SFqzbVu+2/speKgQraXNowY7lLKZSAs2N5l+gUTqZDqtVsRkb8s6kBHoeLaJun052n7iHAsU8FMK+RUZPuojs5m92/2VkIjroR/+cgeRA4dKqHEQVXvAy+ZL0H+RDNkQekZ9lrHcO+3t7CvNZeV+cIJZjvvbizMp+0jDc9lGk0iKS8foVCP7WNFk3zrmuUAIOvmy9xQlBf2kgL7XDOhNxb/Vu/aJaH91jm/C/rc9RPKO9MuQao9ke0v9Uo5qQ6gimxfWOPsfWELxkEtngRLlrgTV4LGLzMbFMJmT/EC8yHNR/T9j+0tXk3qLkeK11FQuD+P7ddvokMRV06fZnOuxvbFNc7Oq7UrGAe1eH0HNGDeMd+bYI9hTlJaQ73+7UKAhDNOGVEz7ceg745muXlE+6nmGphOZPvIXbTEnjZpTGFNto+hLK/K6Y7eHnNbBbvme4BDVHmXZB9AJxoVG2nkWt9M82hlCqkfNcZZUtyrxfzq3lZbeQ/LSBxhP9vg/noi20cI7rsEl36l8V8tto+P+8m4dhQeo/+ea+5hWM1lkMyG2AsbZYO9r5q4WveTg/Bo/5LZOo6YoY6zrn7JoSkw5Ms7boUB+JNQl/PYPubKKSDuI/vFIW1EiCwB+1d52O+4XAsbLxc/mutTztNHsMdEKkz1Jl2uMQTciBqBdU4QP2wEop9lDYCeekkWjO+uHPzD3jwoRFN9n1a3jyqPApb7LtUIUY3t2wqo385OsRux7HPDvje/24ckrNvxPHbuZqPteAe0FfBpGi3uOV4FAdNrFEVcA6pDxGPSFLOjbYMi0MlsHxH3l/yjs78SYVCJ7aNlk7xra7WgtPFyCfy+6W8vRT40cpkhjvnUazHbyQD31DOCfM8XUh7tByNW5cnrMNKBFl4vP8pAkKv56M/T9lFOyd5GHjElbritVGL78kX7XdWC2D+nQMdnj067acK6OpxYIepHqNYIxL1wZ6yAe2EHioNpQYeMThoJhlrRHFoYhaWnXviJQNyZ+OE4+Ks/0YEZFffZVU6yxqmm7atonK0GhQquhJDsaUDJaMfSUsuJwTxMYEDcC+eo4RBaTJZk855HvU/CJIO+C8/h5iGc+15hJgks8+fz0p+XnPDup53ZnxDbL167P8L20UyOcwwKMVfCdxnU09C10eOekhEM11MXShhwqbVLwlE+8X7ZgWL9+HaWs9kg9K0RRxgkq/Buov61cIdpzmT7rsrNNEL2W5RuHbZfFxVykOkrMlZlC6FU+qnYipFZBpgXAP5rQJs1pUMpgfZuHdjJmI2MImyTyPHxrnPv7Yx62MH2PVw8ONMENgXjhCM9z2X7+N20wgHolmJcJbaPXFx9c+BNpuq62Pa6LdIJgWR/NWQ/6fEJFzr0GOC+FcZMIWR5YMyc/0sbXzanXvouFMqQ1Xbij4ZsWexaNDeI8ds8V9uey/bRul3WTW3snn3t/gjbr1+Xz+7YGtJUThe5YDLM4YyqnJZUjjZCBze2d0khmAa55n4QuubZnPC6RL3P/6NtgKJrhrp/Jix7SgVPAPeV/ajPWreHRxuOHqwkk/0mJ2EVtl8/GzpWLOz+Y+9KFBNXoagIkkcixCTT/v+nvrtAQlQ0iZA6HbHTxdoxy+Fw7uUuyQz9pxX2u+KBl1e4/wLYD/hA3PfE9347Fjj9cDhPVqqvAHJk0/U4b2Yytngg900T8jybL47w+XMchsEB7rVsfpjtkyrHZuyd/Uq93n3YXhV4k0TbnadZlDtFJczpHpQHsD3z/RFsT3S4MONz2ME5Zvuzl/DHuMD9eaps753/X5zP/8UbuKcT/v8wtdwmtjeZ2V7/V1jdJ8PGlzk1dmD7+/z6ahhAirWfHPs+gZfXuAe6d0j3iPthAJx60P8Z4qrGTOUURXw8HWddOH2Rhcijc+IwtmASE+grYvt8sN/O9qlYlC5bSQr3ynqyB9uX0DiHZDrDk+4tu0Ul3Kj7gfieYE8NlNHrOHyfbyu6hs6Fx9NYX2Fq6YAC58Slwo/n5ouytc7DKfzXG8k+N9sfUqjM5btPsddC6O7A9omKCYfXe3uvT2dIRiVoU7CDJMIe+Z6A/42w/6bUqqGZmbMUsTO67eNKIsfTXOCcveMGPfY0cwZP9goWFS2bXBdzOzUlbg7c90ylRfuXfEU7sP39Q2wztLRfn6JfsA/nM5kjgzMHB7en/TbmO/bgxFrnz+S4jFpV+ZKw6NAHHf/FeSinievhSb2F7POzfSJKLFcX4fq/lxbtPdheFqLXDSoncblKSpzRqmUnJvP9wPDG6OLTnT7Mx9NYxPV0jEt6h5h7xPsBrNmvBizagHgke7UN9dnZ/vUmWSMAACAASURBVEFakctAeCmLeXGD4+Jsfz8woc8y51cG4Jk9oxJma8zMrA18f4x688z53jcYHz2XE99TCJqvJ4Iz6fscUf3XsMmcLeC3f5hE+vK2YOo2LqevPdi+L+Q4We3L2TMq4b47Z3RjIu7P1F3wfI/tRyU/687mLQASNscT+3EA9Qx8O7hBb0d9brZPFWTnG/Tajo18eSEpzvaJBSlLYHtixyLlwyrbpGqZ0HEAWY/880C1nK63aMd6sKfIdzkSP9M9Z2OxwImdOHIr6rNr+wf6+1VNmUb9cglRnO3vU3Jf0p5PzdrU9ar2QD0F3pNZO/oxB0/bvkb3+ablctyacGpDSH+D21VI9ZOw/1JfeivoS7B92pnzUveAB1y/gr7Ks/1d0yZXO7RuhVG7Rzmohf77b0/3mE973YRw3Jk9ThFqEfED7AeMQzufh0jWC+/CyQz712yepO9+feem6DjVJUOdpPJsrwq6yRPugrtaPbmvJ/eEPUdjesI/M9+f4nZsMyV/jLrPjgLoezjRbBlY4TD2FTsuzRux/eOyAdW2WiQPqi2tkU6l2b6kxkmvo/eO/weiEq4PNs45Ibv2POmcuAXPcabsjzMvzwCmLPwfFI4QKZztxmw5tn9cN6A1G7qINv2jhNIVVZIKs31JjfOoEpFZSj3FOkc+3rca/ZgD8f3xCvenOPTyGMP+24v6YUS92BqQUJrtH1m1eOWVWVm90bgHJcZWFewtzPb3lcVF52ubsDBAIRmnqs2esJ8H6LAjc9Q55zjmbG7dThqHIzaH0+thOGX99s9lDhD+mkaXj6l+pRO6MNvfNyN7Uzr89DZAwZRtUrVW4AfCZ0fm9+nKjRmqIXu2n9w6AHsE/HmIPTiv2LIl2f6hN4f4zy5skwOvah7WUF3pEy3N9rKsnF6abJLazi7UWubh+hTSrdijw9g/z/32oafPqHIC1aOnczhPliwGGudAfRltv6AG5KWVT5GPL5BPiuqtXLTLsv39DaJLRt/JwgCFdKGuvWE/6pwp8QSo+/s8N12PvqvPiHrf7GTmqmd9o18XOOXY/om8Z3nimnRvNPpNUz2rsrRWqpZl+9IaZ2kYpklHrWUba8z8MVRh9GT64LRZyux59GKOPX68IRuQr3Ko+pJsv6zA+6VvVbI5pm6fVxZbPT0Ls70unz+vFrglk/mzbZdntCsb/4w1o0IsMuicUCrkFHcuHMPVqLwr4P08gj6Tqi/L9osbG1z6rq00Nz5mX6/UVdv1S8rDr5+dRdn+/hlfsu4PpVROY5ZbVjnGOk9CM3dlfvugzNPUxC3ommPUmHCIx1cmVV+Y7dc19IgKIS2/9Bvy0ouy/X33Yt5ggEUBCg+iAXeuQzjtXEUFdKagzNMsCO3s80oI9eypD9B3Q6B68+ZsX7zIu8jVkDgb25fXOEnZPmPf8n2zNszmZsq5mrJPqOjraYzHoZr2J86WjYxZ9N/kUvUl/fYb+H51+cdNGy8l2f7+LL/I3P1C7q+HEQ3u0kpldS0M5ns5Gbae8KdebkcqbcnaPtY37sW4s53ZvmSd941oKuvJueyQ05GikuiWmQexgPnG2v6goytTxdHIlB3uU6q4/o0vBxIJnJyivry2L0k8/cbI/YJsnwBb9pp7qcK3e8N+S0uyqz1bD/w/rHM8/meYt8FV3xx2gL3KuK9YomVfuzVuvyDbJ7aI5E49LSLRsQ/sxRaNGfZsoyxb6qccMmqv428mqjd/E9s/iRneSPXS5K3algf2cp+81edhmPvAvtp2Ys0YrBCll499mocQatky06sXEgd/ku0J9yor4VvzQoJ7MbZPbEsXKVLwxHX/zrA3UQn8idM96AHvxwErutblVP1ObM/Ar7Oq+hcSfYux/X2NU6IizQKVo99U5MxdmS6qF4jZsh7vdYiqD7kk5m9ke8a9zNPDrNfmtcSvcmy/k8ZJhztNG0h7bFdt77KNwVYe+IODRzXG6USgD0xfgupL++3nSqf7cdAXZPtEdY4iIY+papgT7A/v58C8ZXwpQ54tA9+D3sLD58pSyEoZ1O8De2b87odBXxT29W4pfKmw4kjc79AD/bWLFghfMd3XbMMK5Plq4GIgzaFcAuT9S6jL3C0j263G7aXNAPoE7PtDqZJlZZKZUiZrJO7Lq5wXQ42Ml/gagA/IB8jXqG2qwTmntC6nbh65w5pSSwvGE29AfsfxyYUWt65UUdpSJVYTKqeJPPfFu6C/Kt9MUDoAfOcqQL1ApY8+Sy0Lg57e/oamLuVKg5r1yL/4dJRMB3CbmNvlcdvfuhUvxUrS3E0vjveDjdFl+6DnCbALhA8UD0zvEPRKy6Y86kl6uHYMb7/0Vh+Kpp4RhBtd94ukjZKHfJjnd4e3nk63E9pkCjc9uG4Km8YMGlOSPVQbB2lfSARe3Vatij3yFGBgxkeF/+WwIQ9gXsuyov4ah34cjDHFEy45f6qRyqbSSQA1VunGFDgafm+82uF0cy2bxvBdpAtZ+DoaE9Tx9HZ3rnG5ke9UiPGR8JWv271bwm+hE1rylgc4ZzxpYeu2thXaM9iWpeTBFDtbcwhdJPfijsNub1dwAOwJ+FrK5vAvjJ345DPeH/mN3MGQfdcZ8AHAPzjCXW8+l+Iz/mH8f8ZnfMZnfMZnbFw1zPwjfPmMfw8aJsbIHAcm+mqmJ8y7CxLzGZ/xL4wr0B+kVrKRkjc0JH0jeWj4QP84/zB9y1sfDf8Bv1g5hR+fT7/ok9O2q5XWlagqIURFW0VK1LW1tqLvHTxJr3aVsBZfAS+0Nf26guGUXg2MRWPluWg5qxlvTKOdta2SHtJa484vDj4ZJ/jE8Fv8R+/JE0DTtKA/gR/rz/h9Q7Q9QEPVXUs/tl1rnavbtutaGIBufBbQjd/gL2FOYOXLFl/fthVCRVbtG5wIzMgolsYYWeEktROImd498B3NWZjXNM/xC6M+vHZaBHT1Gb9vAHcruMNVjXynXdd3FimQYQ5wFo4wQiARtpIYPti1An4WdWslBXco8Q5nImrrQpwroB5BXzHsEewMYzmCHk8A1ixYufBsedlSI81LHcFefFDyC4eFG1/Vlm66QhbnJ1qmUGER+MCDziL7AwSA9OEXwPMwCxAn8OI3AYaohY90RdTzyXl+96KFpA7iHHUarml0SiDoapJ0etT9frJ8YP9b2V60oGFsXaE5d5AOYQ1iH3ROjdoX0V6RoadrFDdd34PSsfA3svHMWbk3msK2YX+Ts9UIe8/1QbcguVuScT2cDBUrx3WNYK/D5JBBD31g/zthDxBG6qsoDqZRKOwn2ANIEPYYK6BbQv0FI2KB+F1zoKAxRZbw24zakfdVW39MtfbaRspR11ewjBHmL/6DoA9/oUZpw4YtQ/8D+185BFmtgpd4oEKQ7E4JVDR1hWRnHYVDSnyqJW4EcsRgcFILaBy809nUYH1MZB+0fSBvRRG+TPQEePgEE/mCaxhdgvCyMFs+bP9LQe80yhrySToaqHMri6gH2LMPTzcH0+iK3TooigH4VqDzBJn+vWCvAPZyXIBqb52Ouh6dmsz0gH0SbUz7qN0qtGEUOzontfOB/W80aNF7WQs0UC15ssnLIQRJF3RugOBXDnvMNFqJmh2bhH6AP3rx4Tnx0+o+si9ERRqnmth+8kaCvqmsRzrJ+ja0MuoZ97z/oNXMGBAf2P9O2IOqbRpyZfMGFe9ZadlIJ1RjGviMRq1UVYvannQwbVahKgDJYH8C9i6MipTWRPewMum6mthehs0qdMt6Q9absm2waDt6Buav87APuM+r7YX9K+cQuvN2O3Cxy1tZh3JXI6jJoU2gJ5HbGAA8mLoGwU/QUVV3waRjdF+yeQjIsF1f7wV7N6J9BP6NH6mdwZ63q/DgAfO44Ybztu887onocfnqGPic1EdTXuvgx8wGe7ErfDJ6x3jsc+R8kfbQ9rD0O8rmBGSwshld2KpyEkWOItQr1/bUWM+6sM+vdXbYk7UgWGYJD+9A8Fdg9/Cfi/sb2BN4cScChkc9ghxljUc7ET+rHsEr3cT4t7CH+0L7GTcgfkJUVh9is+NvcXgI9PHBYj+6CUq7JBqjbOpYcoocuF8cmYD3vwaIV7XQoH1q5+89Ch6NcSuAe4RJFXzh6Bep84kc4ZHDKktx1ICndzHXN35GjI8HbM/WrCBO96Lef0We72PB07e8Wx0CFe6ZtGIaQIHWLtYCtaQGy38X7P/n7gp0G8eVmAULNipDcpP//9gTyRlJduzkHrY94G3vsLttE1u2KYozw1GyfWQ0Rv5f4H7fuKPJ3TrwU8BP0PYhG+EBClXnhz1XTft4pAW5eXxV4s9pBWfCmVNmbdMwF6x96U9D2rB2Xm+WsFn5RoP/gdZL4/8ufv4N2yfCXjU3XipTseJ+4d7i2qXbd+ZzDTrX9Q+fvqX/ttieRF5Z7wt/FezDujV/639B92Wf72CfI3wwP4T7yvYFs0hsX4GAhHxgDrPCPkITS2ZgRUAFHyaF4gbFFf6FFP7grg6xqQWTJp6WVjhaotloOtpP9D8C/yWkFW2zSGXcrow9IvPgixwVjspWa2wlLp79hNMUfYMKI0EvjSVsszQkkf4K2HPMX5X8tl9j+5xHKN/C3ibgD829jIosHrWkxSJmDaLBxCmQNCuCeH4uVQhQ/a4s8qf8v8A+uCbvUambkRePPrXAyCHc3GPuHyuHQLZcrZIvIa0sCfUalMUxfQ9ThjRJ9mWA1bgQTd5ce3IA++PXHHLjqa/5no72/z/Yh7RJ3oDwfmXgDOC6NLxn+6z7HtMPhbTgwXWprK4oTpXXRMFbxX3MNKXBg1xR8yh1nYERGRNkhUlh3z8uO6Fn1x20DvoYbWu1hS0gG6MnjsFfGM0yKa2zHnHvs+djSKtCFdI439iGTFXZzKtnOj/vPcLNgv3sxd0z7Itvy+87qJkVQmw//1VsH3ixBcSXf4frE+P8flPu2b78pNIC7Osqg025gHvEqJh7WSntjH/IlAAh/HwEWDGzcXGhG/NDdt2RWdYhK+NWXyuGqqeptT9FdrRQdyXpmazB+XRokewwAa7ZPhnb00Kq7CU233uyvaBeafG5vkP4kO4RyJtJ/8qTk3j7F7FUlPJl5iFxU+K/S+RkTuWSfu8MJIuprST3bB/gch8nyA9kDEnbgBhlvswJDxXwn8pzP1XVgS15jUAnBUCGJnhnPFbOscfi65hzX4hyQ309oEmeFmggzqTCwppSEJeWnsB00B9m1SXbmwWtrmBEfYd9MhsO/KVr/aUu8ZHL0vurltPVFYM9+88SyhpN2Vjn2d8Ee61gvxnLGuzzR7Zf82tE92eJ2SrhHnKeryJZk7vf39pT9lu1e2u5spIt4DJX2FeMfFZ9zEryLxt6UWmAiSL7O+j4llbx/i4qLHCwvP2lh7TrQPTlvbYnfLMm8lP7/O4MWLiIcNpF0L2SWbvJPXM0XLL9HA6SR3cgH6Ozv0Dbk2ErKH+tHlkI++1fsP1KBfBjqLfeWLIXxE4JUBbwZT6ebSNlgB5uXUqaAtwjJcj6VkXtG9gbJpWMr38VK4qplWleEGjSCpM1zTTVmGXkTNyTwX7PLJktxdcMk0/ljPsrtmcqB2ZjTGDO44f1S0poge7zE3SPdW0X3Xsv7bXIsQcQlOqQtDk/lmDlzUu2568ushq5/bK9MeTLCRVyfvmFQ+P0i4tXrp8PV7mPoMz79XtDvjiufXu69qtxZvzJ3cC3kPwFDfZ2gBvYX5/lPK58eZP5EnSSZFrQamgb6DRmhR5hrW9C/f3MvAnS9lA5FfalopI57newNzw2dQO4BrO2bxBJvX6EOVajTZ1PHnjejCzLDGpk5PuQw3rI5hxdOa/aXlmZmMxtyU20pXGyNhgmxAMkEOmeRejefHspclrCRomdJXs6YoSaCR7P7I+wt5+Fi+CfVbDhjcfvhkcbWpUsH7MH/oN2/vbSW+CHPtp2uNDZ/mqsA9r6cfGgxx8Ek3/DcPo/8eKR7UNn+5CPl9JvzvFGXVxXOAP9SncygVnhrhQfYQ/6BUbT49n2/sfMJOxRt8rM2xP2eFssnzVO8CwOw9W1LFwwwkMot6/2T+UZlVlXIxTzjUyoF2poT+Sv/Y/7TI7mCyJa0D0ljjcKr62TkLBnEJP6XLjM5IxsXzrsc6lnnmJ73nV54laeLOqdYB/w4mlY3O098EGhRG5vxLpY19Phu/7Syj22X+gcQ2sviGyoTHxLjbs1/VYdDyO5AX7wswzDDQWdar4Pix2s4ybUo9ph4Un3NaywjznZKbeFJ8Swht4fy99sIaLw13d6QWZAsN9ZFMQBYgNxRieFRoGhVZ15vFH9zizbYReo61Zv1J8yEbWiOXZBKzbbTJzsSY6gx8q5bLySNMDLK4pDepu3L70qxWy8WlNM4ezP/mEUbPj4Vrl0V8tf1VTZUf9UJclaW1rxdgT/PduzTBt2GevpIdW2EKtHGCfY+x4K97BvbL832HMCTJbJCXhuLbO/8NkN2j6p5H826CS8ZQ2tMMpk8dy+K32NtxySnaI9do5h9tICB5n54SytxnBZc6qvQfN9O1zBIw2xbz+EXfgPY83rPOws/9Wqpzz1lspwCWQERkAhHLIykwLmvk394rCPO46u/9uIrYQQPIc/hdNZ7NC6FP0/edbtBZasTCXQ7xzXlfWpEE0RmOJITGMK9kXNt4VZP4AtPT56csxmI/9aNHtz5e1Esv82se2Q89Qo6T6l7okH42sNNf8Aca9kfmywv8rbz5bJMdjrbNwUQnkc5JNWg/1DY1jmu3LVge1bbTYcE5gpbseKVhjZPoet17lOxaFpGd65rYM5YOgQDsuxYuYzQrCPDkYgrk+bW2dNzq+HG2H/9TJFw3kAPjTenW2caPiNwbw5zJQImPdT5a+xfRyP7rsB6PaFBvttvrg14TDJNZ+WcM31lcixxNXVLZBNK4jSU2lL1vETU4h70m4iRR+5QR9afXl+77fv8ayYdZG9jHn53RpZn3S6B7YqWgqfmoTd6gpovd8bCc3AJt95NtfomBe91faAvbVVfXOS7dZGudFeWOdw4jLwlLSPsfv032p7AZgPVLDXozVcf2FrtcmfaIN9DvMV6o3QJnufHUCfdyJu3/SOYDCd2uEdzVpxJnvLDI3IU01cuC5XmNPhtna4AMXL0796NELY/HNYtC3Xl4amuzN9jZeAy9T6Mx+5ItLwOPsZSDDS9pNd9DYWZnH7Jof9pMvsN9hujdaVKq7saqebhgnCfucj21bGqPgKrN4Q7J5P5L9TlBWTMhu7jFSJj97bN4kiRB6WtqSSIlStS4upIeUysdZk5EbtY6zQxA5ZQ5v8wPmcpAoulkUKKidt1nav7ZXBLI57JnI4dTdHPQQXYf8tbd9hf1eusqWyP8+R7fVct0hD6Ww/dtg76l94V1YAEy2dT/kdDz6tafWnztINvkRvgpTLG54ZdgIbX6F9UcT/4uq1Ny3kDzstJgfiKgaca3rxwNezboub4wezjO4O4FYHrXGCE/K6DVksqzzx3coVMf7vmRxFufVLjiCdO81t0toN0Fl0a1RT0zsq9SO9s0h0XkYzJNk9cUOx1d02FSDIYtNY60b03V5XQx5kzFGr2tGyF/MHB6YyL7gwaIfG8w8VSkXv2rtPqVF90TsGVpdLyBp4bRSMbtk5wjoDfQbXbJ/VIiidsxrssYwE+yBEkzhN4yCLadn85V0C08pVkpdLh70KtpbNt0xUPLB9SvOdyhbsK064c48AMM3I7qXcxJQvJUuWZ0Dn1SovBE967pQ4m/gWa2RIeb6gewbS4FQN1iaBUKRiUp1s4cV9jWfCw9b4dWqHNdhvUQdbfAoZv5sUK04QYRXsi1u2zdn0tTBFmdI4o0aRM9lZOOjYVrEcJl1Ku9ot5JuAlr3iMMRQIBby+E6HIiyKlkZh5zjY3py4cVYEPJf8IaSVBlkxOyiw3eWeGIvi08l0DSgExLaXE2MAzyNGr36GBnMv52YzDN3l7QfY8+TWR0sHwqZlnWfDx2VW2GslyOU2gTmYE+rX4rR7NCeY4LcbU4HJHK+eW043CsfZfoppWK8tHLYHyne5zHKhb2dj+GB+rUN6tcLW+gP0kZmnoqtQs/gttEqElIU0+VUY3POXRdNQF6SxYX3g6TUhEPiUqaucwZBQTuYEY/vF9fzSx/LC9lNJlqraXObldWpros45XftGa1wJlVu5uzIvBDBmQF0BiK+KLsp6RpLYcqCFtMbDkQWnD7DnJeA2IWbwPZl27kEYS+PcmV1epdvOSt+mzH+lXVtD279Bjey0S4f7Kq0lZZB02r1bHGf3zY0xDqRS6/rG3D0Sm5/y9qMVzfqORrafD8GjtYnxic55uUO9sX2bLXqa9kJhC9+1hfxkjuuwbzNCsFm4KkCOaHE6qRwBrftuCB3PON3CfojcUh+oaXufdhoqImvpGiVsFRiMU+Bcpd3alC7TEfYj28c0lgw5yqAUT9aTWt/Cfge8otz1lfsr7DNEfoHrvqjtGfkSSpNd4GfBSV8fbBK2TzLBXxFrvawohMJrGdfG8Et0X3GzmxXfg1gpG3cMMPlkKU0VmFl4utH2w86Xa+sVx+R2+xviiExlX48K1If1TbmqqdeevGtZFGd7AWessA/idL5HvdjeASjxMTcEObZMJ/cj2A9ydnZvuLbftN1sFX6e3HJpO3kmtOZwWuW3sOfmGV07NbZvYzPY9wlpanBoTLhk+3brXmA/sv2aDhYKsn0Z2T6+gT22uync6ruirKrfR0GKO6lOpDoms+2ytAD29Odk7rQUl+VDsUpmyqw9wukG475qQD3yC6W1VCnY7c0k1oHixvso8cO5ErwVfA+2u1XudL9fwV4VAxrsdlW+qHA8jgi2IwQuLY8zbH4He5PePWfubG/PNV1Z0Sz+vPY0vsJ+ciVOtp8E++k4cQxc6wXsi394q/6zPHY6VoZPc9RUTskf2J48VniX+jw8wp7Bu/JPWmgU+48Ef8X20z3sR7bvN4oDJuwhBadFLSJ5vm+F/Ke9q+GNFueBRInIs0EJ3f7/H/visZ0PSID2tq+qavekU3tHKbs1xh7PjLfnORlCgWaTAs/mITMRuRHPRresHD45YAGoY24VMaWdL4e0Rmyltg6LxwFPqqcAoeRQL9bzMMuv+PZuroy3wZ5JSNq4GnBGubEzZ0gO31bOy6PBOxj/YBno9u8ZiP6TENrP1bERfs6P/bAXSSE8szIgoqn0LOy5afXB38325pjtp11jyr/PmUPYB9db6dJme46s+mJDYRuf1fYYhu7FNsNsL3dQMvJOGk3aRbaf+9k+HbO9FIAwffJzH6/NYU/kMztteWvlUF+z/E5Ho9tlrR9lqoSwd5H9Usl06aKnlfo7BkViTN2uJjVd5W85QnUeNcuEH+AOPxNwS/JAgUqxiNIxN7Ud3F44ZXKH8q3EyCXDl4zZr7ihg2hMRmGfmpbWVMP+y2zPtf1cAfDX2f4xzvbHsDf9sJ/wNss/LSOC64Jj2CPFDrO9ie08rqnt99m+wlZnxfD1Gs8ZmF/I9nyVXNY9ULye6t5JAS4m95H2NHieZYq4lEUmlKqfSplhDjJR2Dja0jUlJ/AaiIBuMTGhnksrkY7wwnlgktrHgrQz65IS9LwJ1oPhqZj/akSCUtOxQt85oTxNnMxmp0UytoXGRFjHMe/zWcTz+wTAbDDhm9leQPseMfDb2T5z1rthD56c/nMwb6wjq7rOx3ltH/MkmF4X2Z4ZdYL3GJkFGP9fa/tOtpf2vpSgI8k5TZuoTPfscrx1tauwBQSsf6pt3kdmzzy3qMXuHtglX0Q9ofyRneSB088AfzjrG0XCpIiHzjtxKp5oTkdID/lvWlH+0WhtVTw1cqctDFQzxu1tNu0u+nQxf8FTJBZDBeXaL3zb2VHY2+Onea+2XxiJnOYe/vWlbN/W9lJB92r7WZisfSLuobbXcuSstpfRwQIUOxp7VttL2DNCP20hvBzIHRfZfr6d7WVo3mExHR9XjEVinBMo22dpCTEBglqJfGTWGOtQZUbqL7M9ZWSgoDRbEO6PTAOeaqGMv8Z2HMRNKEGEWhgYVg3FqFLaBGmEj2Hfwe0r+25+q3k3Gwd3eGZ9S0h1hYP4P+fkVPmjIDlp2h1SqtslY+vh29m+j+T0wl6gwnN909IWA6b6D6NsrxMibquukJzICH1FxKkeSC/N9riuOQk27cZEawQ90hodxlK+z5zV0e+aZJ456P8JTdKTuNzUiqeRYjEJwYCncCouEdfwbNOEUooNDLLKwwdNw6p3EeZAyhBPhk8HuL2pp7Sa8LmEyfpdEqCAaIc3vFtddcW372V7E9tIkigQBqaMl5bRlPYq2w9we2uOLW2duM+1jhVuX2aow2wvl8BDqVTuyLPaXikJSPq1JfULa3t+7plV2PsnAs/tDFYGlgTlMNdRWPCf7JOzhdkx7I1z6xqpEXZXRQ7yPZtLlmDlPvf5qXFPmChwSXrIwHAsMPNZiPhKgU7KQcsy9p2UoMvALAW+iGQXqXLg/xTIDY2Idmsd9Rr6N7N9PaWVUSNHxVa4zUtNRYvRPrpj83vZXlMtg6Db6aOtZOy7sGdeivb7IBSYrl7Whjz0vZ7SChMtsgtk2E9pu9leL25uahwpfUZa2i8iOXxdLiMnYXi/B4T9zIiG+IRwtqcg86QP36L2+VHEIKyrNY5kJg6PCHNV5ZQNmCm7nLEIJ2TKD/w71K9GuZJyo5Wo9zKxkjGXyxzMsyltoRFX22eV6slEfPZ/ZXG8ladA39/+RraXOobY8tSDECdqbhmYiJpjW3sr2ytaMRseUtdj333Y86FbQU1ANiEJBgbXO2m2kCDq00nknmf7tFYy+svaXouxqc7uChutXLq+ItsT8zr7KoUwCntqHMnjku3rPzXske5XKcpZkrTCIps9ZmLy1JMSjLme8u2zpVMRhjj9Hht11CABENBCNwAACZ1JREFUT4PwFJpxifUPpUCrsJDGCMaUE7ZhP3BOaIucJW9mZt6d2EU5q/VPtbntG9neC913xu2uro6Fby8jr/1JbmZ7JQpbZA9nKxrOPuyVm6YSZDr4YGkS8ul8Pp2k3/PafgFVyi2Px61s77OsxNawr5yJ9qSZb9X2ZjelrYCcSve1fwNb7iRHYxrEtmH/T7Y6BTIK/vdpmKy58jLDrXLCHUFd6L2w53D32cJSkErHFFCWleMuWLmY14cL1E54PHvxG2dmWspR38gl+9k+i6ysqgyFjTMn6a851yt0uejen05tP11m+4yjTcrbafj2mTK2N6C5l+2Vr/+Ypp1D1THs86G40aeuXeH4dEMkh29CnHW5idtXtOiaFZTPtFTqqq8hOQ2AuR/QDVwzY2KUcMGiTYLygFV+5ES7stCDiADCfzFiCSN7kNdwQcpRHLPYc7OfDPvk8NBVIt8LtMnSP77pktroiK0OynmRKYqS3DSh0y9yxAPWlny/CLlTdItkSbKUwM83yteKnKyuaj5+wEGVqNB029qb2d4fJFNbwRN9N+yPh05HF+39MdOc43YU9rF+fxPNVrrZ3jfZXmqQ1jSlUhZ2wt4NipxHn5xgON/wauLh++UpLQ/9KfHSrIqyeymmKdeCqeLh7IE1VyQ8NE5p8LesgxrXPhYCmqyoDeq8qjvhdDwszOQpZ6sc9eyVkA7WxyN1Vd5fJd2tWA/K4NbwvcbLK6zUQIr59D0wOzPvhmG1ff5FSysZR1KnkGXtEf43sZ4cKdW4KYy9yKtMJT2cbNZZF5pClcsblaLtwTqspa1OZ5qASudT2sWVWOcL8DtyQoNWUlNjmuurLJVTa/RtfJmAVJQ51ju6sL9KuRutE3nc8hgx7uE2hpW0oN6AZh8+67AnT3ua3pKKimxtPFnfG5a8ssvNFRlNp1Z1h+tFEmvh2/TM0a4iKqD30n5OkzgFCnRzXGJirrN9iWON60Uc+pHv6aklGzrzhLab7SOePh01vmn+B5wT+DnlvHJsQeLRMLbVd/lpXa9PMDPOp9m+/mnPq7AZgq3gaVzczsAlVofOvi82wjGC6KbqEJhrdw34jP4E4cy0+YEvjS8g/wB+vki4KwlmcwdZeR/yIZUDjMFnyo+48gHwR10AYr1KUdVEbuBloNCnFMnSGpQ6M4U9PF4/ZGkrhX18inVeABhKjwfuJ6nOiTfTffHorsnFGM3CSjmoHw6zITy4OBLtNjMLmuYAviqMCPlhbe9sAXAyfm8L/UFHXuI46HIJNA+cE9A/D2w3mnUmhj/7av2NqQ/obatpDuh+V1vTMId+R5Ewx5UqsFXiqxnOb9RnKe4OMWa4ooXPyUtdCqhg/OGiywfIXcRR3oV9GPxju4+l/v2Hr+sz4PdEl8cJuI4x454Ul9QsOpaZgExf7F6h32OAZSUbWLJGVhfuxL+OqoN0me2zbWVO9plgibDjfha+4fS+VV2oy9Yk4k21wqR5dJgiKuzj9hLzubG1S73KjSRyQRjJSjrOg92O5HoU9XtXtF3QtAf0gtDsvcOagG5vk7xT5cbF9Y/tH3P+nvrvr7q0w1uI5lAHGn9yu0fTWqFViaJKIL3fwjWVjVELjNOwJ3oklS+GQB2WISKxw0fEwaHVk7W9i7zHxGFk5FgkS/rUOxaJqeprU+Y0MGNfSzGZQjnnKgtKp1axYgZXGxynTnW/DuyhdD9tw6/MShnBc1ZxEamIDO69l/ZVL5FY/dgHqsNjKh3AdjcnRY4U6OVPTWYK61YoPT/XGTs6ySSbNvgE+Ntbh9ZPXPko7MN1tm/cWesvBb7fVd+itpJULutA1QNxvMBnjNvb4t1t91EPEqhZtalIKmphptI77F/2GmK/r3rJqM2Jy7Bbxoz7RLMfk2YmtLP3MFX4pDhaZzhkORa4br3tc2vEZnVtxQCEJvu3NxVWfsW5OE+ZDFyNU51r+mSp4G9ttxzi9jp1rQocTuewdQh5Sa1PtZrxHfYvDHs7BBRfFPZipsXWANPJprnE3t7ArJ24PpHcJNLIfsv2xCxVzROKHEy3ZizvjLfCPtWhy+W51OOmLlU0/ue8os2MU/opobAb9tncry7bncMadbSzeXuFLClVUdY77F+c7H9yQ+lB/PKwfe5xCjyK9VmEkWCyS5X8E1Q2tqRJUnFTkcN+TqynI0PweCfsNerFGfAIP+YdP+kASn7lNcDtm/CXrzXNs8JWvgg6MFZZyjteXxX2VzvtXtE9pNoi8DEkJ7iVZSTGNRChg+qEkBymCnPXCRI8qCAO9GHgRlcr21L7hfENRf8wZf3PH+6ZuqrWmoDjAPP8VchwRfKoT5132L80FVvy1PvRh6cRO27hW/lRH0GGIQTsM6Fx1jIezqzsNpYQ4lSEyFRB1yUXIPJmYb/XpZivlS/fyfYxF/VFWVVNAXyW90rU62qfEvXvIud1QMsr95GMAx+/RUcK4+NSZpfn5hKdHlzKZ4+xLG9NE2+x6OHUl/fTpzuknILepx9928j2scn2Nkd87pyV/qwuO7qVF0IvIUnzI+4d9i8N/P/Tr7mcUkCtKgRzJygNWxRE8jaxHlpbaMdkaxpFPElwRZtn7cVKr12V87NRj7CvxTu2KXEUlpS4534eHlPCAy1W/Nphv8P+L96AyghzWgJYYPUwUvB2sh68X8SDWDgZGEmxkyuaxWR+U0Ih8l3hpJaN4lZdQ+psTxEf1cmEt6wnl2Gld0v7t589sWztI50gBTw5YRKjhTNe5I1pvKuZ3eURNfAL/FVwgSPj8+xLUAGYbWHPowH1EuQKJ5Y1KSXdp3e2/4shnxy7aOv+MoImw3MLFxcE3uENDjO4hGzvIZj3FjTQXv2mZB8shX3Z+3EocaqoF8eeoKbJZXggsl8c9o6Rv4gqJULyGL6BhMR4WAqTuTiWOJDscIJlDEhjYi9sAo8zyXt9Nb8n4RPZCS5q4jI5DvtZmA/c0wpmlSfGdbZ/v/5g2LsCZAcF8ER4EbeA30odbDqRqobdzSLNZp+GY+I3hT15D/GCOrv13EbD3h3By1l0vZkIKZleuXDuDWD+8Ww/cy3LYW8U2aDopmwf12ShbaInghczyxigPU3sQfFL4mIruWiJo+xlJEZSylPaXsZPsuhNBscl2HWCAY8dp2Tw9+tPvSJKdNpPi5VsEJJvMQ3RNi1iWLHdY8HIygvSx9tbOV3G8CviAkjso1pIOqVZlyO6kuqFdDC7NqVzjIvprMQ947ntQe/XX3mJsfbM+8Vn3fya/9yUEd1c/fnT7oBf8xJ35P8Bqtp8Fj2qVP8AAAAASUVORK5CYII=); display:inline-block; width:758px; height:227px;}
 	  
@@ -697,25 +833,6 @@
       -->
     <svg style="display:none;" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
       <defs>
-        <symbol id="via_logo">
-          <!-- Logo designed by Abhishek Dutta <adutta@robots.ox.ac.uk>, May 2018 -->
-          <title>VGG Image Annotator Logo</title>
-          <rect width="400" height="160" x="0" y="0" fill="#212121"></rect>
-
-          <text x="56" y="130" font-family="Serif" font-size="100" fill="white">V</text>
-          <text x="180" y="130" font-family="Serif" font-size="100" fill="white">I</text>
-          <text x="270" y="130" font-family="Serif" font-size="100" fill="white">A</text>
-
-          <rect width="80" height="100" x="52" y="40" stroke="yellow" fill="none" stroke-width="2"></rect>
-          <text x="72" y="30" font-family="'Comic Sans MS', cursive, sans-serif" font-size="18" fill="yellow">VGG</text>
-
-          <rect width="50" height="100" x="175" y="45" stroke="yellow" fill="none" stroke-width="2"></rect>
-          <text x="175" y="35" font-family="'Comic Sans MS', cursive, sans-serif" font-size="18" fill="yellow">Image</text>
-
-          <rect width="80" height="100" x="265" y="40" stroke="yellow" fill="none" stroke-width="2"></rect>
-          <text x="265" y="30" font-family="'Comic Sans MS', cursive, sans-serif" font-size="18" fill="yellow">Annotator</text>
-        </symbol>
-        
         <symbol id="shape_point">
           <title>Point region shape</title>
           <circle r="2" cx="16" cy="16" stroke-width="2"></circle>
@@ -796,7 +913,7 @@
 	  <button class="tablinks" onclick="openTab(event, 'Training')">Train</button>
 	  <!-- <button class="tablinks" onclick="openTab(event, 'Crossvalidating')">Cross-validate</button> -->
 	  <button class="tablinks" onclick="openTab(event, 'Extracting')">Extract</button>
-	  <!-- <button class="tablinks" onclick="openTab(event, 'MoreTools')">More Tools</button> -->
+	  <button class="tablinks" onclick="openTab(event, 'MoreTools')">More Tools</button>
 	</div>
 
 	<div id="Start" class="tabcontent">
@@ -808,7 +925,7 @@
         </div> <!-- end of menubar -->
       </div> <!-- endof #top_panel -->
 	  <table style="text-align:center; width:50%; margin: 0px auto; ">
-	  <tr><div style="display:block; margin: 0px auto;"><a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo" style="display:block; margin: 0px auto;"></span></a></div></tr>
+	  <tr><div style="display:block; margin: 0px auto;"><a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo" style="display:block; margin: 0px auto;"></span></a></div></tr><br>
 	  <tr><div style="text-align:center; margin: 0px auto;"><h2>Welcome!</h2></div></tr>
 	  <tr><p style="line-height:1.3; text-align:center; margin: 0px auto;">This GUI will allow you to pick training particles and make Topaz commands. Here is the general workflow:</p></tr>
 	  <br>
@@ -845,32 +962,38 @@
         </div> <!-- end of menubar -->
       </div> <!-- endof #top_panel -->
 	  <span class="tab1"><table><tr><td><span class="preprocessing_logo"></span></td><td><h2>&nbsp&nbsp&nbsp&nbsp&nbsp&nbspTopaz Image Pre-processing Command Generator</h2></td></tr></table></span>
-	  <span class="tab2"><p style=line-height:1.3>Create a command for pre-processing images (downsampling and normalization) for use in this Topaz GUI and in Topaz training.
+	  <span class="tab2"><p style=line-height:1.3>Create a command for pre-processing images (downsampling and normalization) for use in this Topaz GUI and in Topaz training,
+	  <br>and commands for denoising the preprocessed images for better visualization.
 	  <br><br><br><br><strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
 	  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
 	  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
 	  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7></p>
 	  <hr width="20%">
-	  <br><table style="height:7.3em">
-	  <tr title="Input micrographs for preprocessing (type: string; full path with wildcard for mrc files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input1" class="preprocessing_inputs" style="width:30em" value="/path/to/input/images/*.mrc"></td></tr>
+	  <br><table style="height:9.2em">
+	  <tr title="Input micrographs for preprocessing (type: string; full path 𝘸𝘪𝘵𝘩 𝘸𝘪𝘭𝘥𝘤𝘢𝘳𝘥 for *.mrc files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input1" class="preprocessing_inputs" style="width:30em" value="/path/to/input/images/*.mrc"></td></tr>
 	  <tr title="Output directory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output1" class="preprocessing_inputs" style="width:30em" value="/path/to/output/preprocessed/images/"></td></tr>
-	  <tr title="Number of CPU cores to use for parallel image downsampling. -1 means use all CPUs (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers1" class="preprocessing_inputs" style="width:3em" value="-1"></td></tr>
-	  <tr title="Rescaling factor for image downsampling. Recommended: Downsample such that the resulting pixelsize is about 8 angstroms; usually 4, 8, or 16 depending on pixelsize and particle size (e.g. a 4k x 4k image downsampled by 4 results in a 1k x 1k image)&#013;&#013;Note: Your particle must have a diameter (longest dimension) of 30 pixels or less after downsampling (type: even integer)"><td><hl4><span><font size="3" color="white">Scale factor</font></span></hl4></td><td><input id="scale1" class="preprocessing_inputs" style="width:3em" value="8"></td></tr>
+	  <tr title="Number of CPU cores to use for parallel image downsampling.&#013;-1 means use all CPUs (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers1" class="preprocessing_inputs" style="width:3em" value="-1"></td></tr>
+	  <tr title="Device to use for denoising. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU training (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: It is highly recommended that a GPU is used for speed."><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device1" class="preprocessing_inputs" style="width:3em" value="0"></td></tr>
+	  <tr title="Rescaling factor for image downsampling (e.g. a 4k x 4k image downsampled by 4 results in a 1k x 1k image) (type: even integer).&#013;&#013;Recommended: Downsample such that the resulting pixelsize is about 8 angstroms; usually downsample by 4, 8, or 16 depending on pixelsize and particle size.&#013;&#013;𝗡𝗼𝘁𝗲: Your particle 𝘮𝘶𝘴𝘵 have a diameter (longest dimension) after downsampling of:&#013;&#013;70 pixels or less for resnet8&#013;30 pixels or less for conv31&#013;62 pixels or less for conv63&#013;126 pixels or less for conv127"><td><hl4><span><font size="3" color="white">Scale factor</font></span></hl4></td><td><input id="scale1" class="preprocessing_inputs" style="width:3em" value="8"></td></tr>
 	  </table>
 	  <br><section><details><summary class="collapsibleoptions" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
 		<div class="content">
 		  <table style="height:7.3em">
-		  <tr title="Output formate for preprocessed images (any combination of options: mrc,tiff,png) (type: string)"><td><hl8><span><font size="3" color="white">Output format</font></span></hl8></td><td><input id="format1" class="preprocessing_inputs" style="width:6em" value="mrc,png"></td></tr>
+		  <tr title="Output format for preprocessed images (any comma-separated combination of options: mrc,tiff,png) (type: string)&#013;&#013;𝗡𝗼𝘁𝗲: Default is mrc,png because Topaz trains on mrc files, which have pixel values of floats, and because Topaz GUI is able to display png files, which have pixel values of integers."><td><hl8><span><font size="3" color="white">Output format</font></span></hl8></td><td><input id="format1" class="preprocessing_inputs" style="width:6em" value="mrc,png"></td></tr>
 		  <tr title="Pixel sampling factor for model fit (type: integer)"><td><hl8><span><font size="3" color="white">Pixel sampling</font></span></hl8></td><td><input id="pixelsampling1" class="preprocessing_inputs" style="width:3em" value="25"></td></tr>
 		  <tr title="Number of iterations to run for model fit (type: integer)"><td><hl8><span><font size="3" color="white">Number of iterations</font></span></hl8></td><td><input id="niters1" class="preprocessing_inputs" style="width:3em" value="200"></td></tr>
 		  <tr title="Random seed for model initialization (type: integer)"><td><hl8><span><font size="3" color="white">Random seed</font></span></hl8></td><td><input id="seed1" class="preprocessing_inputs" style="width:3em" value="1"></td></tr>
 		  </table>
 		</details></summary>
 		</span>
-	  <br/><br/><strong>Command:</strong><br/><hr width="20%"><br>
+	  <br/><br/><strong>Commands:</strong><br/><hr width="20%"><br>
 	  <code><span class="tab0"><div id="result1" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
-	  topaz preprocess /path/to/input/images/*.mrc --scale 8 --num-workers -1 --format mrc,png --pixel-sampling 25 --niters 200 --seed 1  --verbose --destdir /path/to/output/preprocessed/images/
-	  </div></span></code>
+	  topaz preprocess /path/to/input/images/*.mrc --scale 8 --num-workers -1 --format mrc,png --pixel-sampling 25 --niters 200 --seed 1  --verbose --destdir /path/to/output/preprocessed/images/<br><br>
+	  mkdir /path/to/output/preprocessed/images/{denoisedL0,denoisedL1,denoisedL2}<br><br>
+	  topaz denoise /path/to/output/preprocessed/images/*.mrc --format png -m L0 -d 0 --output /path/to/output/preprocessed/images/denoisedL0/<br>
+	  topaz denoise /path/to/output/preprocessed/images/*.mrc --format png -m L1 -d 0 --output /path/to/output/preprocessed/images/denoisedL1/<br>
+	  topaz denoise /path/to/output/preprocessed/images/*.mrc --format png -m L2 -d 0 --output /path/to/output/preprocessed/images/denoisedL2/
+	  </div></span></code><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;"	unselectable="on" onselectstart="return false;" onmousedown="return false;"></br></br></br></span>
 	  </div>
 	</div>
 
@@ -890,11 +1013,11 @@
         <span class="text_button" onclick="edit_region_metadata_in_annotation_editor()" id="button_edit_region_metadata" title="Manual annotations of picks">Pick Annotations</span>
         <span class="text_button" onclick="edit_file_metadata_in_annotation_editor()" id="button_edit_file_metadata" title="Manual annotations of a image">Image Annotations</span>
 
-        <span class="button" style="float:right;margin-right:0.2rem;" onclick="annotation_editor_toggle_all_regions_editor()" title="Close this window of annotation editor">&times;</span>
+        <span class="button" style="float:right;margin-right:0.2rem;" onclick="annotation_editor_toggle_all_regions_editor()" title="Close this annotation editor window">&times;</span>
         <span class="button" style="float:right;margin-right:0.2rem;" onclick="annotation_editor_increase_panel_height()" title="Increase the height of this panel">&uarr;</span>
         <span class="button" style="float:right;margin-right:0.2rem;" onclick="annotation_editor_decrease_panel_height()" title="Decrease the height of this panel">&darr;</span>
-        <span class="button" style="float:right;margin-right:0.2rem;" onclick="annotation_editor_increase_content_size()" title="Increase size of contents in annotation editor">&plus;</span>
-        <span class="button" style="float:right;margin-right:0.2rem;" onclick="annotation_editor_decrease_content_size()" title="Decrease size of contents in annotation editor">&minus;</span>
+        <span class="button" style="float:right;margin-right:0.2rem;" onclick="annotation_editor_increase_content_size()" title="Increase the size of contents in annotation editor">&plus;</span>
+        <span class="button" style="float:right;margin-right:0.2rem;" onclick="annotation_editor_decrease_content_size()" title="Decrease the size of contents in annotation editor">&minus;</span>
       </div>
       <!-- here, a child div with id="annotation_editor" is added by javascript -->
     </div>
@@ -904,7 +1027,7 @@
       <div class="menubar">
         <ul>
           <li><a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo_small"></span></a></li>
-		  <li onclick="show_home_panel()" style="cursor:pointer;">Home</li>
+		  <li onclick="show_home_panel()" title="Start Page or current Project (F1)" style="cursor:pointer;">Home</li>
           <li>Project
             <ul>
               <li onclick="project_open_select_project_file()" title="Load a Topaz project (from a JSON file)">Load</li>
@@ -912,7 +1035,7 @@
               <li onclick="settings_panel_toggle()" title="Show/edit project settings">Settings</li>
               <li class="submenu_divider"></li>
               <li onclick="sel_local_images()" title="Add images locally stored in this computer">Add local images</li>
-              <li onclick="project_file_add_abs_path_with_input()" title="Add images using absolute files (e.g. /home/user/image.jpg)">Add images from absolute paths</li>
+              <li onclick="project_file_add_abs_path_with_input()" title="Add images using absolute or local files (e.g. /home/user/image.jpg)">Add images from paths</li>
               <li onclick="project_file_add_url_with_input()" title="Add images from a URL (e.g. http://www.robots.ox.ac.uk/~vgg/software/via/images/swan.jpg)">Add images from URL</li>
               <li onclick="sel_local_data_file('files_url')" title="Add images from a list of absolute paths or URLs from a text file (one path or URL per line)">Add urls or paths from text file</li>
             </ul>
@@ -920,8 +1043,8 @@
 
           <li>Particle Picks
             <ul>
-              <li onclick="download_all_region_data('csv')" title="Export particle picks to a CSV file">Export Picks (as csv)</li>
-              <li onclick="sel_local_data_file('annotations')" title="Import particle picks from a CSV file">Import Picks (from csv)</li>
+              <li onclick="download_all_region_data('csv')" title="Export particle picks to a CSV file">Export Picks as csv (s)</li>
+              <li onclick="sel_local_data_file('annotations')" title="Import particle picks from a CSV file">Import Picks from csv</li>
               <li class="submenu_divider"></li>
               <li onclick="show_annotation_data()" title="Show a preview of the particle picks (opens in a new browser window)">Preview Picks</li>
               <li onclick="download_as_image()" title="Download an image containing the particle picks">Download as Image</li>
@@ -932,19 +1055,20 @@
             <ul>
               <li onclick="image_grid_toggle()" title="Toggle between single image view and image grid view">Toggle image grid view</li>
               <li onclick="leftsidebar_toggle()" title="Show or hide the sidebar shown in left hand side">Toggle left sidebar</li>
-              <li onclick="toggle_img_fn_list_visibility()" title="Show or hide a panel to update particle pick annotations corresponding to file and region">Toggle image filename list</li>
+              <li onclick="toggle_img_fn_list_visibility()" title="Show or hide a panel to update particle pick annotations corresponding to file and pick">Toggle image filename list</li>
               <li class="submenu_divider"></li>
-              <li onclick="toggle_attributes_editor()" title="Show or hide a panel to update file and region attributes">Toggle attributes editor</li>
-              <li onclick="annotation_editor_toggle_all_regions_editor()" title="Show or hide a panel to update particle pick annotations corresponding to file and region">Toggle annotation editor (Space)</li>
+              <li onclick="toggle_attributes_editor()" title="Show or hide a panel to update file and pick attributes">Toggle attributes editor</li>
+              <li onclick="annotation_editor_toggle_all_regions_editor()" title="Show or hide a panel to update particle pick annotations corresponding to file and pick">Toggle annotation editor (Space)</li>
               <li class="submenu_divider"></li>
-              <li onclick="toggle_region_boundary_visibility()" title="Show or hide the region boundaries">Show/hide pick boundaries (b)</li>
-              <li onclick="toggle_region_id_visibility()" title="Show or hide the region id labels">Show/hide pick labels (l)</li>
+              <li onclick="toggle_region_boundary_visibility()" title="Show or hide the pick boundaries">Show/hide pick boundaries (b)</li>
+              <li onclick="toggle_region_id_visibility()" title="Show or hide the pick labels">Show/hide pick labels (l)</li>
+              <li onclick="toggle_region_info_visibility()" title="Show or hide the cursor coordinates">Show/hide cursor coordinates (x)</li>
             </ul>
           </li>
 
           <li>Help
             <ul>
-              <li onclick="set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_GETTING_STARTED)" title="Show a guide to get started with this Topaz GUI">Getting Started</li>
+              <li onclick="set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_GETTING_STARTED)" title="Show a guide to get started with this Topaz GUI">Getting Started (F2)</li>
               <li title="Visit the Topaz GitHub page"><a href="https://github.com/tbepler/topaz/" target="_blank">Topaz GitHub Page</a></li>
               <li title="Cite Topaz if you use it!"><a href="https://arxiv.org/abs/1803.08207" target="_blank">Topaz Citation</a></li>
               <li title="Visit the project page for the base GUI"><a href="http://www.robots.ox.ac.uk/~vgg/software/via/" target="_blank">VIA Project Page</a></li>
@@ -952,7 +1076,7 @@
               <li title="If you have an issue with this GUI, please report it and include as much information as possible"><a href="https://github.com/tbepler/topaz/issues" target="_blank">Report an Issue</a></li>
               <li class="submenu_divider"></li>
               <li onclick="set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_LICENSE)" title="View license for VIA">VIA License</li>
-              <li onclick="set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_ABOUT)" title="Show more details about this GUI">About Topaz and VIA</li>
+              <li onclick="set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_ABOUT)" title="Show more details about this GUI">About Topaz and VIA (F3)</li>
             </ul>
           </li>
         </ul>
@@ -996,7 +1120,7 @@
       <div id="leftsidebar_collapse_panel">
         <span class="text_button" onclick="leftsidebar_toggle()" title="Show left sidebar">&rtrif;</span>
       </div>
-
+	  
       <div id="leftsidebar">
         <div class="leftsidebar_accordion_panel show" style="float:left; border:2px solid #f2f2f2;">
           <span class="text_button" onclick="leftsidebar_decrease_width()" title="Reduce width of this toolbar panel">&larr;</span>
@@ -1034,13 +1158,14 @@
               <span class="button2" onclick="project_file_remove_with_confirm()" title="Remove selected image (i.e. the image currently being shown) from project">Remove</span>
             </div>
           </p>
+		  <div id="region_info" class="display_none">&nbsp;</div>
         </div>
 
         <!-- Tips -->
         <button class="leftsidebar_accordion active">Tips</button>
         <div class="leftsidebar_accordion_panel show">
-          <div style="display:block; text-align:left; padding:4px;"><li>The radius of the displayed pick is 5 pixels</li></div>
-          <div style="display:block; text-align:left; padding:4px;"><li>If your particle's radius is greater than 15 pixels, then downsample further</li></div>
+          <div style="display:block; text-align:left; padding:4px;"><li>The radius of the displayed pick is 5 pixels in 1x zoom images</li></div>
+          <div style="display:block; text-align:left; padding:4px;"><li>Downsample further if particle radius in pixels is > 35 (resnet8), 15 (conv31), 31 (conv63), 63 (conv127)</li></div>
           <div style="display:block; text-align:left; padding:4px;"><li>Pick 100-1000 particles (more is better)</li></div>
           <div style="display:block; text-align:left; padding:4px;"><li>Pick all representative views</li></div>
           <div style="display:block; text-align:left; padding:4px;"><li>Pick from several micrographs</li></div>
@@ -1053,71 +1178,91 @@
           <div style="display:block; text-align:center; padding:1rem;">Available only on image focus</div>
           <table>
             <tr>
-              <td style="width: 8em;">Arrow Keys</td>
-              <td>Move selected pick by 1 pixel (Shift to jump)</td>
+              <td style="width:8em;"><span class="key">&larr;</span>&nbsp;<span class="key">&uarr;</span>&nbsp;<span class="key">&rarr;</span>&nbsp;<span class="key">&darr;</span></td>
+              <td>Move selected pick by 1 pixel (+ <span class="key">Shift</span> for 10 pixels)</td>
             </tr>
             <tr>
-              <td>a</td>
+              <td><span class="key">a</span></td>
               <td>Select all picks</td>
             </tr>
             <tr>
-              <td>c</td>
+              <td><span class="key">c</span></td>
               <td>Copy selected picks</td>
             </tr>
             <tr>
-              <td>v</td>
+              <td><span class="key">v</span></td>
               <td>Paste selected picks</td>
             </tr>
             <tr>
-              <td>d</td>
+              <td><span class="key">d</span></td>
               <td>Delete selected picks</td>
             </tr>
             <tr>
-              <td>Ctrl + Mouse Wheel</td>
-              <td>Zoom in/out</td>
+              <td><span class="key">+</span><span class="key">-</span><span class="key">=</span> / <span class="key">Ctrl</span> + Mouse Wheel</td>
+              <td>Zoom in/out (cursor over image)</td>
             </tr>
             <tr>
-              <td>l</td>
-              <td>Toggle pick number</td>
+              <td><span class="key">l</span></td>
+              <td>Toggle pick number/label</td>
             </tr>
             <tr>
-              <td>b</td>
+              <td><span class="key">b</span></td>
               <td>Toggle pick boundary</td>
+            </tr>
+            <tr>
+              <td><span class="key">x</span></td>
+              <td>Toggle cursor coordinates</td>
             </tr>
           </table>
 
           <div style="display:block; text-align:center; padding:1rem;">Always Available</div>
           <table>
             <tr>
-              <td style="width: 8em;">&larr; / &rarr; [ p / n ]</td>
+              <td><span class="key">s</span></td>
+              <td>Save picks</td>
+            </tr>
+            <tr>
+              <td><span class="key">i</span></td>
+              <td>Import picks</td>
+            </tr>
+            <tr>
+              <td><span class="key">u</span></td>
+              <td>Upload images from disk</td>
+            </tr>
+            <tr>
+              <td style="width:8em;"><span class="key">&larr;</span>&nbsp;<span class="key">&rarr;</span></td>
               <td>Move to next/previous image</td>
             </tr>
             <tr>
-              <td>+&nbsp;/&nbsp;-&nbsp;/&nbsp;=</td>
+              <td><span class="key">+</span>&nbsp;<span class="key">-</span>&nbsp;<span class="key">=</span></td>
               <td>Zoom in/out/reset</td>
             </tr>
-            <tr>
-              <td>Spacebar</td>
-              <td>Toggle particle pick annotation editor (Ctrl to toggle on image editor)</td>
+			<tr>
+              <td><span class="key">&uarr;</span><span class="key">&darr;</span></td>
+              <td>Toggle Topaz score (after training)</td>
             </tr>
             <tr>
-              <td>Home [h]</td>
+              <td><span class="key">Spacebar</span></td>
+              <td>Toggle pick annotation editor (<span class="key">Ctrl</span> to toggle on image editor)</td>
+            </tr>
+            <tr>
+              <td><span class="key">Home</span> / <span class="key">h</span></td>
               <td>Jump to first image</td>
             </tr>
             <tr>
-              <td>End [e]</td>
+              <td><span class="key">End</span> / <span class="key">e</span></td>
               <td>Jump to last image</td>
             </tr>
             <tr>
-              <td>PageUp [u]</td>
+              <td><span class="key">PageUp</span> / <span class="key">u</span></td>
               <td>Jump several images</td>
             </tr>
             <tr>
-              <td>PageDown [d]</td>
+              <td><span class="key">PageDown</span> / <span class="key">d</span></td>
               <td>Jump several images</td>
             </tr>
             <tr>
-              <td>Esc</td>
+              <td><span class="key">Esc</span></td>
               <td>Cancel ongoing task</td>
             </tr>
           </table>
@@ -1133,8 +1278,8 @@
           <div id="attributes_update_panel">
             <div class="button_panel">
               <input style="width:70%" type="text" placeholder="attribute name" id="user_input_attribute_id" value="">
-              <span id="button_add_new_attribute" class="button" onclick="add_new_attribute_from_user_input()" title="Add new attribute">&plus;</span>
-              <span id="button_del_attribute" class="button" onclick="delete_existing_attribute_with_confirm()" title="Delete existing attribute">&minus;</span>
+              <span id="button_add_new_attribute" class="button1" onclick="add_new_attribute_from_user_input()" title="Add new attribute">&plus;</span>
+              <span id="button_del_attribute" class="button2" onclick="delete_existing_attribute_with_confirm()" title="Delete existing attribute">&minus;</span>
             </div>
             <div class="button_panel" style="margin:0.1rem 0;" >
               <select style="width:100%" id="attributes_name_list" onchange="update_current_attribute_id(this)" title="List of existing attributes"></select>
@@ -1232,7 +1377,7 @@
           <div class="row">
             <div class="variable">
               <div class="name">Particle Pick Label</div>
-              <div class="desc">By default, each region in an image is labelled using the region-id. Here, you can select a more descriptive labelling of regions.</div>
+              <div class="desc">By default, each pick in an image is labelled using the region-id. Here, you can select a more descriptive labelling of regions.</div>
             </div>
 
             <div class="value">
@@ -1242,8 +1387,19 @@
 
           <div class="row">
             <div class="variable">
+              <div class="name">Pick Color</div>
+              <div class="desc">By default, each pick is drawn using a single color. Using this setting, you can assign a unique color to picks grouped according to an attribute such as Topaz score.</div>
+            </div>
+
+            <div class="value">
+              <select id="_via_settings.ui.image.region_color"></select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="variable">
               <div class="name">Particle Pick Label Font</div>
-              <div class="desc">Font size and font family for showing region labels.</div>
+              <div class="desc">Font size and font family for showing pick labels.</div>
             </div>
 
             <div class="value">
@@ -1264,12 +1420,12 @@
           <div class="row">
             <div class="variable">
               <div class="name">On-image Annotation Editor</div>
-              <div class="desc">When a single particle pick is selected, the on-image annotation editor is activated which the user may use to update annotations of this pick. By default, this on-image annotation editor is placed near the selected region.</div>
+              <div class="desc">When a single particle pick is selected, the on-image annotation editor is activated which the user may use to update annotations of this pick. By default, this on-image annotation editor is placed near the selected pick.</div>
             </div>
 
             <div class="value">
               <select id="_via_settings.ui.image.on_image_annotation_editor_placement">
-                <option value="NEAR_REGION">close to selected region</option>
+                <option value="NEAR_REGION">close to selected pick</option>
                 <option value="IMAGE_BOTTOM">at the bottom of image being annotated</option>
                 <option value="DISABLE">DISABLE on-image annotation editor</option>
               </select>
@@ -1295,7 +1451,7 @@
           <font size="+1"><ol>
             <li><strong>Preprocess MRCs</strong>: Use Topaz to downsample, normalize, and convert micrographs to PNG (for use in Topaz GUI) and MRC (for use with Topaz training).</li>
               <ul>
-			    <li>Your particle must have a diameter (longest dimension) of 30 pixels or less after downsampling
+			    <li>Your particle must have a diameter (longest dimension) after downsampling of: 70 pixels or less for resnet8; 30 pixels or less for conv31; 62 pixels or less for conv63; 126 pixels or less for conv127.
 				</li>
                 <li>Topaz normalization uses image statistics for all input micrographs. A Gaussian mixture model is used to effectively make the ice region of each micrograph visible, even if there is gold in the image.
                 </li>
@@ -1313,11 +1469,11 @@
                 <li>To pick particles:
                   <ul>
                     <li>Left-click on the center of particles for several micrographs.</li>
-                    <li>To zoom in/out, either press Ctrl and scroll your mouse wheel on an image or press + or - (equal '=' will reset the zoom).</li>
-                    <li>To delete a misplaced point, click the point again and press 'd'.</li>
+                    <li>To zoom in/out, either press Ctrl and scroll your mouse wheel on an image or press <span class="key">+</span> or <span class="key">-</span> (equal <span class="key">=</span> will reset the zoom).</li>
+                    <li>To delete a misplaced point, click the point again and press <span class="key">d</span>.</li>
                     <li>To adjust a point's location, click the point again and either use the arrow keys on your keyboard or click-and-drag to move it.</li>
                     <li><b>Note</b>: Topaz works best if you identify 500+ particles representing all orientations of the particle and if you pick across several images. More training particles and views means more accurate Topaz-trained picks.</li>
-                    <li><b>Note</b>: The radius of the displayed pick is 5 pixels.</li>
+                    <li><b>Note</b>: The radius of the displayed pick is 5 pixels in un-zoomed images.</li>
                   </ul>
                 </li>
               </ul>
@@ -1332,8 +1488,13 @@
 
             <li><strong>Export Particles</strong>: To export particles, click <span class="text_button" onclick="download_all_region_data('csv')"><code>Particle Picks &rarr; Export Picks</code></span> in the top menu. These picks may then be used in Topaz training.</li>
             <li><strong>Analyze Topaz Picks</strong>: Load Topaz picks by clicking <span class="text_button" onclick="sel_local_data_file('annotations')"><code>Particle Picks &rarr; Import Picks.</code></span></li>
-            <br><strong>Note</strong>: It is good practice to save your particles/project regularly. Do this by clicking <span class="text_button" onclick="download_all_region_data('csv')"><code>Particle Picks &rarr; Export Picks</code></span> or <span class="text_button" onclick="project_save_with_confirm()"><code>Project &rarr; Save</code></span> in the top menu.</li></br>
-            <br><strong>Note</strong>: Parameters are categorized by those that <hl1b><span><font size="3" color="white">need to be modified</font></span></hl1b>, <hl3b><span><font size="3" color="white">might need to be modified</font></span></hl3b>, <hl5b><span><font size="3" color="white">are optimizable</font></span></hl5b>, and <hl7b><span><font size="3" color="white">are rarely modified</font></span></hl7b>. Training parameters that are <hl5b><span><font size="3" color="white">optimizable</font></span></hl5b> may be optimized using cross-validation.</li>
+			  <ul>
+				<li>Press <span class="key">L</span> on your keyboard to show the particle number, then the Up <span class="key">&uarr;</span> key will toggle the Topaz particle scores. Zoom-in  on the image with <span class="key">+</span> to inspect.
+				</li>
+			  </ul>
+            <br><strong>Note</strong>: It is good practice to save your particles/project regularly. Do this by clicking <span class="text_button" onclick="download_all_region_data('csv')"><code>Particle Picks &rarr; Export Picks</code></span> or <span class="text_button" onclick="project_save_with_confirm()"><code>Project &rarr; Save</code></span> in the top menu.</br>
+            <br><strong>Note</strong>: Parameters are categorized by those that <hl1b><span><font size="3" color="white">need to be modified</font></span></hl1b>, <hl3b><span><font size="3" color="white">might need to be modified</font></span></hl3b>, <hl5b><span><font size="3" color="white">are optimizable</font></span></hl5b>, and <hl7b><span><font size="3" color="white">are rarely modified</font></span></hl7b>. Training parameters that are <hl5b><span><font size="3" color="white">optimizable</font></span></hl5b> may be optimized using cross-validation.</br>
+			<br>If you wish to work outside this GUI, <a href="https://github.com/tbepler/topaz/tree/master/tutorial" target="_blank">follow the GitHub tutorials.</a></br></br></br>
           </ol></font>
         </div>
 
@@ -1350,7 +1511,7 @@
           <div style="text-align:center">
              <table style="font-family:mono; font-size:0.8em;text-align:center;">
 			 <tr><td><a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo_medium"></span></a></td><td>&nbsp&nbsp&nbsp&nbsp<a href="http://www.robots.ox.ac.uk/~vgg/software/via/" target="_blank"><span class="via_logo"></span></a></td></tr>
-			 <tr><td><a href="https://github.com/tbepler/topaz#topaz" target="_blank">Topaz Version 0.1.0</a></td><td><a href="https://gitlab.com/vgg/via/blob/master/CHANGELOG" target="_blank">VIA Version 2.0.5</a></td></tr>
+			 <tr><td><a href="https://github.com/tbepler/topaz#topaz" target="_blank">Topaz Version 0.2.0</a></td><td><a href="https://gitlab.com/vgg/via/blob/master/CHANGELOG" target="_blank">VIA Version 2.0.7 (modified)</a></td></tr>
 			 </table>
           </div>
 
@@ -1359,19 +1520,19 @@
           <p>Here is a list of some salient features of the Topaz GUI version of VIA:
             <ul>
               <li>based solely on HTML, CSS and Javascript</li>
-              <li>can be used off-line (full application in a single html file that is &lt; 0.5MB)</li>
-              <li>only requires a modern web browser (tested on Chrome, Firefox, and Safari)</li>
+              <li>can be used off-line (full application in a single HTML file that is &lt; 0.5MB)</li>
+              <li>only requires a modern web browser (tested on Chrome, Firefox, Edge, and Safari; Note: Some features look/work differently in different browsers; Chrome is recommended)</li>
               <li>import/export particle picks in csv file format</li>
             </ul>
           </p>
           <p>For more Topaz details, visit <a href="https://github.com/tbepler/topaz/" target="_blank">https://github.com/tbepler/topaz/</a>.</p>
           <p>For more VIA details, visit <a href="http://www.robots.ox.ac.uk/~vgg/software/via/" target="_blank">http://www.robots.ox.ac.uk/~vgg/software/via/</a>.</p>
           <p>&nbsp;</p>
-          <p><i>VIA is Copyright &copy; 2016-2018, <a href="mailto:adutta-removeme@robots.ox.ac.uk">Abhishek Dutta</a>,Visual Geometry Group, Oxford University and <a target="_blank" href="https://gitlab.com/vgg/via/blob/master/Contributors.md">VIA Contributors</a>.</i></p>
+          <p><i>VIA is Copyright &copy; 2016-2019, <a href="mailto:adutta-removeme@robots.ox.ac.uk">Abhishek Dutta</a>,Visual Geometry Group, Oxford University and <a target="_blank" href="https://gitlab.com/vgg/via/blob/master/Contributors.md">VIA Contributors</a>.</i></p>
         </div> <!-- end of page_about -->
 
         <div id="page_license" class="display_area_content display_none narrow_page_content">
-Copyright (c) 2016-2018, Abhishek Dutta, Visual Geometry Group, Oxford University and VIA Contributors.
+Copyright (c) 2016-2019, Abhishek Dutta, Visual Geometry Group, Oxford University and VIA Contributors.
 All rights reserved.</br></br>
 
 Redistribution and use in source and binary forms, with or without
@@ -1402,7 +1563,7 @@ POSSIBILITY OF SUCH DAMAGE.
 			<section><details><summary class="collapsible"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Particle picking for training</summary>
 			<div class="content">
 			  <p style=line-height:1.4>
-			  <font size="+1"><b>1) </b>To start picking, <span class="text_button" title="Load or Add Images" onclick="sel_local_images()"><font size="+2">select images</font></span> or add images from <span class="text_button" title="Add images from absolute path (e.g. /my/beautiful/particles.jpg)" onclick="project_file_add_abs_path_with_input()">absolute path.</span></font></br>
+			  <font size="+1"><b>1) </b>To start picking, <span class="text_button" title="Load or Add Images" onclick="sel_local_images()"><font size="+2">select images</font></span> or add images from <span class="text_button" title="Add images from absolute or local paths (e.g. /my/beautiful/particles.jpg)" onclick="project_file_add_abs_path_with_input()">paths.</span></font></br>
               <font size="+1"><b>2) </b>Pick 100-1,000 particles (more is better) representing all orientations.</font></br>
               <font size="+1">&nbsp&nbsp&nbsp&nbsp• Pick across several representative images.</font></br>
               <font size="+1">&nbsp&nbsp&nbsp&nbsp• Not all particles need to be picked from each image.</font></br>
@@ -1416,6 +1577,7 @@ POSSIBILITY OF SUCH DAMAGE.
 			<div class="content" style=line-height:1.4>
 			  <p>
 			  <font size="+1">• </b><span class="text_button" onclick="sel_local_data_file('annotations')">Import</span> your Topaz particle picks as a CSV file and review the picks.</font></br></br>
+			  <font size="+1">&nbsp&nbsp◦ </b>Press <span class="key">L</span> on your keyboard to show the particle number, then the Up <span class="key">&uarr;</span> key will toggle the Topaz particle scores. Zoom-in  on the image with <span class="key">+</span> to inspect.</font></br></br>
 			  <font size="+1">Or</font></br></br>
 			  <font size="+1">• Load your micrographs and particles in .star format into Relion. Picks may be colored based on Topaz score by using the AutopickFigureOfMerit column in the .star file.</font>
 			  </p>
@@ -1446,23 +1608,23 @@ POSSIBILITY OF SUCH DAMAGE.
 	  <hr width="20%">
 	  <br><table style="height:21.7em">
 	  <tr title="Path to input micrographs for training (type: string; full path)"><td><hl2><span><font size="3" color="white">Training images folder</font></span></hl2></td><td><input id="trainimages2" class="training_inputs" style="width:30em" value="/path/to/preprocessed/images/"></td></tr>
-	  <tr title="Training particles in CSV, star, or tab-delimited format (type: string; full file path)"><td><hl2><span><font size="3" color="white">Training particles</font></span></hl2></td><td><input id="traintargets2" class="training_inputs" style="width:30em" value="/path/to/training_particles.csv"></td></tr>
-	  <tr title="Output folder to write the train/test curve and models for each epoch (type: string; full file path)"><td><hl2><span><font size="3" color="white">Output</font></span></hl2></td><td><input id="output2" class="training_inputs" style="width:30em" value="/output/path/"></td></tr>
+	  <tr title="Training particles in CSV, STAR, or tab-delimited format (type: string; full file path)"><td><hl2><span><font size="3" color="white">Training particles</font></span></hl2></td><td><input id="traintargets2" class="training_inputs" style="width:30em" value="/path/to/training_particles.csv"></td></tr>
+	  <tr title="Output folder to write the train/test curve and models for each epoch (type: string; full file path)&#013;&#013;𝗡𝗼𝘁𝗲: The output directory 𝘮𝘶𝘴𝘵 𝘦𝘹𝘪𝘴𝘵."><td><hl2><span><font size="3" color="white">Output</font></span></hl2></td><td><input id="output2" class="training_inputs" style="width:30em" value="/output/path/"></td></tr>
 	  <tr title="Pixel radius around particle centers to consider (type: integer)"><td><hl4><span><font size="3" color="white">Particle radius</font></span></hl4></td><td><input id="radius2" class="training_inputs" style="width:3em" value="3"></td></tr>
 	  <tr title="Augment the method with an autoencoder where the weight is on the reconstruction error (type: float)"><td><hl4><span><font size="3" color="white">Autoencoder</font></span></hl4></td><td><input id="autoencoder2" class="training_inputs" style="width:3em" value="0"></td></tr>
 	  <tr title="Number of training epochs (type: integer)"><td><hl4><span><font size="3" color="white">Number of epochs</font></span></hl4></td><td><input id="numepochs2" class="training_inputs" style="width:3em" value="10"></td></tr>
-	  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU extraction (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU Device</font></span></hl4></td><td><input id="device2" class="training_inputs" style="width:3em" value="0"></td></tr>
-	  <tr title="Number of CPU cores to use for parallel image downsampling. -1 means use all CPUs (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers2" class="training_inputs" style="width:3em" value="-1"></td></tr>
-	  <tr title="Model type to fit (options: resnet8, conv31, conv63, conv127) (type: string)"><td><hl6><span><font size="3" color="white">CNN model</font></span></hl6></td><td><input id="model2" class="training_inputs" style="width:6em" value="resnet8"></td></tr>
+	  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU training (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device2" class="training_inputs" style="width:3em" value="0"></td></tr>
+	  <tr title="Number of CPU cores to use for parallel image downsampling.&#013;-1 means use all CPUs (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers2" class="training_inputs" style="width:3em" value="-1"></td></tr>
+	  <tr title="Model type to fit (options: resnet8, conv31, conv63, conv127) (type: string)&#013;&#013;𝗡𝗼𝘁𝗲: Your particle 𝘮𝘶𝘴𝘵 have a diameter (longest dimension) after downsampling of:&#013;&#013;70 pixels or less for resnet8&#013;30 pixels or less for conv31&#013;62 pixels or less for conv63&#013;126 pixels or less for conv127"><td><hl6><span><font size="3" color="white">CNN model</font></span></hl6></td><td><input id="model2" class="training_inputs" style="width:6em" value="resnet8"></td></tr>
 	  <tr title="Objective function to use for learning the region classifier (options: PN, GE-KL, GE-binomial, PU) (type: string)"><td><hl6><span><font size="3" color="white">Method</font></span></hl6></td><td><input id="method2" class="training_inputs" style="width:6em" value="GE-binomial"></td></tr>
 	  <tr title="Expected number of particles per micrograph (type: integer)"><td><hl6><span><font size="3" color="white">Num particles/image</font></span></hl6></td><td><input id="numparticles2" class="training_inputs" style="width:3em" value="300"></td></tr>
-	  <tr title="Number of subsets to divide the training micrographs into. This will determine the train/test dataset sizes. E.g. '5' splits the picks into five micrograph subsets where one will be used as the test dataset. (type: integer)"><td><hl6><span><font size="3" color="white">K-fold</font></span></hl6></td><td><input id="kfold2" class="training_inputs" style="width:3em" value="5"></td></tr>
+	  <tr title="Number of subsets to divide the training micrographs into. This will determine the train/test dataset sizes. E.g. '5' splits the picks into five micrograph subsets where one will be used as the test dataset; 20% will be held-out for validation (type: integer)"><td><hl6><span><font size="3" color="white">K-fold</font></span></hl6></td><td><input id="kfold2" class="training_inputs" style="width:3em" value="5"></td></tr>
 	  </table>
 	  <br><section><details><summary class="collapsibleoptions" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
 		<div class="content">
 		  <table style="height:23.5em">
 		  <tr title="Which fold out the k-folds will be used as the test dataset (type: integer)"><td><hl8><span><font size="3" color="white">Fold</font></span></hl8></td><td><input id="fold2" class="training_inputs" style="width:3em" value="0"></td></tr>
-		  <tr title="Sets the image extension if loading images from (options: .mrc, .tiff, or .png; include the '.') (type: string)"><td><hl8><span><font size="3" color="white">Image extension</font></span></hl8></td><td><input id="imageext2" class="training_inputs" style="width:3em" value=".mrc"></td></tr>
+		  <tr title="Image extension for input images (options: .mrc, .tiff, or .png) (type: string)"><td><hl8><span><font size="3" color="white">Image extension</font></span></hl8></td><td><input id="imageext2" class="training_inputs" style="width:3em" value="mrc"></td></tr>
 		  <tr title="Number of units model parameter (type: integer)"><td><hl8><span><font size="3" color="white">Units</font></span></hl8></td><td><input id="units2" class="training_inputs" style="width:3em" value="32"></td></tr>
 		  <tr title="Dropout rate model parameter (type: float)"><td><hl8><span><font size="3" color="white">Dropout</font></span></hl8></td><td><input id="dropout2" class="training_inputs" style="width:3em" value="0.0"></td></tr>
 		  <tr title="Use batch norm in the model (type: on/off)"><td><hl8><span><font size="3" color="white">Batch norm</font></span></hl8></td><td><input id="bn2" class="training_inputs" style="width:3em" value="on"></td></tr>
@@ -1480,7 +1642,7 @@ POSSIBILITY OF SUCH DAMAGE.
 	  <br/><br/><strong>Command:</strong><br/><hr width="20%"><br>
 	  <code><span id="cmd_copy2" class="tab0"><div id="result2" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
 	  topaz train --train-images /path/to/preprocessed/images/ --train-targets /path/to/training_particles.csv --k-fold 5 --fold 0 --radius 3 --model resnet8 --image-ext .mrc --units 32 --dropout 0.0 --bn on --unit-scaling 2 --ngf 32 --method GE-binomial --autoencoder 0 --num-particles 300 --l2 0 --learning-rate 0.0002 --minibatch-size 256 --minibatch-balance 0.0625 --epoch-size 5000 --num-epochs 10 --num-workers -1 --test-batch-size 1 --device 0 --save-prefix /output/path/model --output /output/path/results.txt
-	  </div></span></code>
+	  </div></span></code><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;"	unselectable="on" onselectstart="return false;" onmousedown="return false;"></br></br></br></span>
 	  </div>
 	</div>
 <!--
@@ -1526,19 +1688,19 @@ POSSIBILITY OF SUCH DAMAGE.
 	  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
 	  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7></p>
 	  <hr width="20%">
-	  <br><table style="height:12.5em">
-	  <tr title="Input micrographs for extracting (type: string; full path with wildcard for mrc/tiff/png files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input4" class="extracting_inputs" style="width:30em" value="/path/to/preprocessed/images/*.mrc"></td></tr>
+	  <br><table style="height:12.7em">
+	  <tr title="Input micrographs for extracting (type: string; full path 𝘸𝘪𝘵𝘩 𝘸𝘪𝘭𝘥𝘤𝘢𝘳𝘥 for *.mrc/*.tiff/*.png files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input4" class="extracting_inputs" style="width:30em" value="/path/to/preprocessed/images/*.mrc"></td></tr>
 	  <tr title="Path to network model from training (type: string; full path)"><td><hl2><span><font size="3" color="white">Model</font></span></hl2></td><td><input id="model4" class="extracting_inputs" style="width:30em" value="/path/to/model_epoch##.sav"></td></tr>
-	  <tr title="Basename for output files. A .star and a Topaz .txt file will be written (type: string; full file path without extension)"><td><hl2><span><font size="3" color="white">Output filenames</font></span></hl2></td><td><input id="output4" class="extracting_inputs" style="width:30em" value="/path/to/extracted/particles"></td></tr>
-	  <tr title="Pixel radius of the region to extract (type: integer)"><td><hl4><span><font size="3" color="white">Particle radius</font></span></hl4></td><td><input id="radius4" class="extracting_inputs" style="width:3em" value="8"></td></tr>
+	  <tr title="Basename for output files. A .star, Topaz GUI .csv, and a Topaz .txt file will be written (type: string; full file path without extension)"><td><hl2><span><font size="3" color="white">Output filenames</font></span></hl2></td><td><input id="output4" class="extracting_inputs" style="width:30em" value="/path/to/extracted/particles"></td></tr>
+	  <tr title="Pixel radius of the region to extract (type: integer)&#013;&#013;This will prevent extracting particle coordinates closer than the value of two particle radii."><td><hl4><span><font size="3" color="white">Particle radius</font></span></hl4></td><td><input id="radius4" class="extracting_inputs" style="width:3em" value="8"></td></tr>
 	  <tr title="Upscale the pick coordinates by this factor. '1' means no scaling (type: integer)"><td><hl4><span><font size="3" color="white">Upscale picks</font></span></hl4></td><td><input id="upscale4" class="extracting_inputs" style="width:3em" value="1"></td></tr>
-	  <tr title="Number of CPU cores to use for extraction. -1 means use all CPUs (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers4" class="extracting_inputs" style="width:3em" value="-1"></td></tr>
-	  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU extraction (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU Device</font></span></hl4></td><td><input id="device4" class="extracting_inputs" style="width:3em" value="0"></td></tr>
+	  <tr title="Number of CPU cores to use for extraction.&#013;-1 means use all CPUs (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers4" class="extracting_inputs" style="width:3em" value="-1"></td></tr>
+	  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU extraction (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device4" class="extracting_inputs" style="width:3em" value="0"></td></tr>
 	  </table>
 	  <br><section><details><summary class="collapsibleoptions" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
 		<div class="content">
-		  <table style="height:7.2em">
-		  <tr title="Lower Topaz score threshold for extraction (type: float)"><td><hl8><span><font size="3" color="white">Threshold</font></span></hl8></td><td><input id="threshold4" class="extracting_inputs" style="width:3em" value="0.5"></td></tr>
+		  <table style="height:7.3em">
+		  <tr title="Topaz 𝘴𝘤𝘰𝘳𝘦 𝘲𝘶𝘢𝘯𝘵𝘪𝘭𝘦 giving threshold at which to terminate region extraction (type: float)"><td><hl8><span><font size="3" color="white">Threshold</font></span></hl8></td><td><input id="threshold4" class="extracting_inputs" style="width:3em" value="0.5"></td></tr>
 		  <tr title="Minimum radius for region extraction when tuning the radius parameter (type: integer)"><td><hl8><span><font size="3" color="white">Minimum radius</font></span></hl8></td><td><input id="minradius4" class="extracting_inputs" style="width:3em" value="5"></td></tr>
 		  <tr title="Maximum radius for region extraction when tuning the radius parameter (type: integer)"><td><hl8><span><font size="3" color="white">Maximum radius</font></span></hl8></td><td><input id="maxradius4" class="extracting_inputs" style="width:3em" value="100"></td></tr>
 		  <tr title="Grid size when searching for optimal radius parameter (type: integer)"><td><hl8><span><font size="3" color="white">Step radius</font></span></hl8></td><td><input id="stepradius4" class="extracting_inputs" style="width:3em" value="5"></td></tr>
@@ -1548,8 +1710,9 @@ POSSIBILITY OF SUCH DAMAGE.
 	  <br/><br/><strong>Commands:</strong><br/><hr width="20%"><br>
 	  <code><span class="tab0"><div id="result4" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
 	  topaz extract /path/to/preprocessed/images/*.mrc --model /path/to/model_epoch##.sav --radius 8 --threshold 0.5 --up-scale 1 --min-radius 5 --max-radius 100 --step-radius 5 --num-workers -1 --device 0 --output /path/to/extracted/particles.txt<br><br>
-	  topaz convert /path/to/extracted/particles.txt --verbose 1 --output /path/to/extracted/particles.star
-	  </div></span></code>
+	  topaz convert /path/to/extracted/particles.txt --verbose 1 --output /path/to/extracted/particles.star<br><br>
+	  topaz convert /path/to/extracted/particles.txt --verbose 1 --output /path/to/extracted/particles.csv
+	  </div></span></code><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;"	unselectable="on" onselectstart="return false;" onmousedown="return false;"></br></br></br></span>
 	  </div>
 	</div>
 
@@ -1562,40 +1725,216 @@ POSSIBILITY OF SUCH DAMAGE.
         </div> <!-- end of menubar -->
       </div> <!-- endof #top_panel -->
 	  <span class="tab1"><table><tr><td><span class="moretools_logo"></span></td><td><h2>&nbsp&nbsp&nbspMore Tools</h2></td></tr></table></span>
-	  <span class="tab2"><p style=line-height:1.3>Create commands for converting/scaling particle coordinates, converting images, and scaling images.</p>
-	  <br><section><details><summary class="collapsibletools"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Convert/Scale coordinates</summary>
+	  <span class="tab2"><br>
+	  <!-- <center>
+	  <button class="tablinks2" onclick="openTab2(event, 'ConvertPicks')">Convert | Threshold Picks</button>
+	  <button class="tablinks2" onclick="openTab2(event, 'ExtractParticles')" id="defaultOpen2">Extract Particle Stack</button>
+	  </center> -->
+	  
+	  <!-- <div id="ConvertPicks" class="tabcontent2">
+	    <h3>Convert and/or Threshold Pick Coordinates</h3>
+	    <span class="tab0"><p style=line-height:1.3>Create a command for converting between Topaz GUI CSV files, STAR files, or Topaz txt files.
+		<br><br><br><strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
+		<hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
+		<hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3></p>
+		<hr width="20%">
+		<br><table style="height:9.0em">
+		<tr title="Input coordinate file for converting (type: string; full path to .csv, .star, or Topaz .txt)"><td><hl2><span><font size="3" color="white">Input file</font></span></hl2></td><td><input id="input5" class="converting_inputs" style="width:30em" value="/path/to/input/coordinate/file.[csv|star|txt]"></td></tr>
+		<tr title="Output coordinate file for converting (type: string; full path to .csv, .star, or Topaz .txt)"><td><hl2><span><font size="3" color="white">Output file</font></span></hl2></td><td><input id="output5" class="converting_inputs" style="width:30em" value="/path/to/output/coordinate/file.[csv|star|txt]"></td></tr>
+		<tr title="Topaz 𝘴𝘤𝘰𝘳𝘦 𝘵𝘩𝘳𝘦𝘴𝘩𝘰𝘭𝘥 at which to cut off (type: float)"><td><hl4><span><font size="3" color="white">Threshold</font></span></hl4></td><td><input id="threshold5" class="converting_inputs" style="width:3em" value="-9999"></td></tr>
+		<tr title="Upscale the coordinates by this factor. '1' means no scaling (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: Coordinates will be scaled by (Upscale/Downscale)."><td><hl4><span><font size="3" color="white">Upscale picks</font></span></hl4></td><td><input id="upscale5" class="converting_inputs" style="width:3em" value="1"></td></tr>
+		<tr title="Downscale the coordinates by this factor. '1' means no scaling (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: Coordinates will be scaled by (Upscale/Downscale)."><td><hl4><span><font size="3" color="white">Downscale picks</font></span></hl4></td><td><input id="downscale5" class="converting_inputs" style="width:3em" value="1"></td></tr>
+		</table>
+		</span>
+		<br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
+		<code><div id="result5" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
+		topaz convert /path/to/input/coordinate/file.[csv|star|txt] --threshold -9999 --up-scale 1 --down-scale 1 --verbose 1 /path/to/output/coordinate/file.[csv|star|txt]
+		</div></span></code>
+		</div>
+
+	  <div id="ExtractParticles" class="tabcontent2">
+	    <h3>Extract Particles as an MRC Stack</h3>
+	    <span class="tab0"><p style=line-height:1.3>Create a command for extracting a particle stack from micrographs using a Topaz .txt coordinate file.
+		<br><br><br><strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
+		<hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
+		<hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
+	    <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7></p>
+		<hr width="20%">
+		<br><table style="height:12.6em">
+		<tr title="Input Topaz .txt coordinate file for defining extraction coordinates (type: string; full path to Topaz .txt file)"><td><hl2><span><font size="3" color="white">Input picks</font></span></hl2></td><td><input id="coordinateinput6" class="particle_extracting_inputs" style="width:30em" value="/path/to/Topaz/coordinate/file.txt"></td></tr>
+		<tr title="Directory containing micrographs (not pre-processed) to extract particles from (type: string; full path)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="imageroot6" class="particle_extracting_inputs" style="width:30em" value="/path/to/full/micrographs/"></td></tr>
+		<tr title="Output particle stack file (type: string; full path to .mrcs file).&#013;&#013;𝗡𝗼𝘁𝗲: A .star file will be written along with the .mrcs stack with the same base filename."><td><hl2><span><font size="3" color="white">Output stack</font></span></hl2></td><td><input id="output6" class="particle_extracting_inputs" style="width:30em" value="/path/to/output/particles.mrcs"></td></tr>
+		<tr title="Boxsize of the extracted particle stack (type: integer)."><td><hl4><span><font size="3" color="white">Boxsize</font></span></hl4></td><td><input id="boxsize6" class="particle_extracting_inputs" style="width:3em" value="192"></td></tr>
+		<tr title="Topaz 𝘴𝘤𝘰𝘳𝘦 𝘵𝘩𝘳𝘦𝘴𝘩𝘰𝘭𝘥 at which to cut off (type: float)"><td><hl4><span><font size="3" color="white">Threshold</font></span></hl4></td><td><input id="threshold6" class="particle_extracting_inputs" style="width:3em" value="-9999"></td></tr>
+		<tr title="Image extension for input micrographs (options: .mrc, .tiff, or .png; include the '.') (type: string)"><td><hl8><span><font size="3" color="white">Image extension</font></span></hl8></td><td><input id="imageext6" class="particle_extracting_inputs" style="width:3em" value=".mrc"></td></tr>
+		<tr title="Rescale the extracted particle stack to this boxsize using Fourier upscaling/downscaling (negative values turn this option off) (type: integer)."><td><hl8><span><font size="3" color="white">Resize particles</font></span></hl8></td><td><input id="resize6" class="particle_extracting_inputs" style="width:3em" value="-1"></td></tr> -->
+		<!--- <tr title="Path to .star file containing per-micrograph metadata, such as CTF parameters. This information will be transfered to the .star file that gets written alongside the stack .mrcs file (type: string; full path; optional)."><td><hl4><span><font size="3" color="white">Metadata</font></span></hl4></td><td><input id="metadata6" class="particle_extracting_inputs" style="width:3em" value=""></td></tr> -->
+		<!-- </table>
+		</span>
+		<br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
+		<code><div id="result6" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
+		topaz particle_stack /path/to/Topaz/coordinate/file.txt --image-root /path/to/full/micrographs/ --size 192 --threshold -9999 --resize -1 --image-ext .mrc --output /path/to/output/particles.mrcs
+		</div></span></code>
+		</div>
+		</div>
+	  </div> -->
+
+	  <br><section><details><summary class="collapsibletools"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Denoise Micrographs</summary>
 		<div class="content">
 		  <p style=line-height:1.3>
+	      <span class="tab0"><p style=line-height:1.3>Create a command for denoising micrographs using an implementation of Noise2Noise.<br><br>
 		  <strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
 		  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
 		  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
 		  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7>
 		  </p>
 		  <hr width="20%">
-		</div>
+		  <br><table style="height:11em">
+		  <tr title="Input micrographs for denoising (type: string; full path 𝘸𝘪𝘵𝘩 𝘸𝘪𝘭𝘥𝘤𝘢𝘳𝘥 for *.mrc files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input7" class="denoise_micrographs_inputs" style="width:30em" value="/path/to/input/images/*.mrc"></td></tr>
+		  <tr title="Output directory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output7" class="denoise_micrographs_inputs" style="width:30em" value="/path/to/output/folder"></td></tr>
+		  <tr title="Denoising model to use on micrographs (type: string; use either L0, L1, or L2 to use pretrained models or a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pretrained models were trained on hundreds of datasets of K2 micrograph frames of various particles."><td><hl4><span><font size="3" color="white">Model</font></span></hl4></td><td><input id="model7" class="denoise_micrographs_inputs" style="width:30em" value="L2"></td></tr>
+		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU denoising (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device7" class="denoise_micrographs_inputs" style="width:3em" value="0"></td></tr>
+		  <tr title="Output format of denoised images (type: string; options: mrc, png, tiff)"><td><hl4><span><font size="3" color="white">Format</font></span></hl4></td><td><input id="format7" class="denoise_micrographs_inputs" style="width:3em" value="mrc"></td></tr>
+		  <tr title="Bin micrographs before denoising. '1' means no binning (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: If micrographs are too big for the GPU ram, there will be an error. To get around this, the micrographs may be binned, denoised in patches, or the CPU may be used instead of GPU."><td><hl4><span><font size="3" color="white">Bin micrographs</font></span></hl4></td><td><input id="bin7" class="denoise_micrographs_inputs" style="width:3em" value="1"></td></tr>
+		  </table>
+		  <br><section><details><summary class="collapsibleoptions2" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
+			<div class="content">
+			  <table style="height:3.7em">
+			  <tr title="Patch size (type: integer)&#013;&#013;This will break the micrographs up in patches where each patch will be denoised seperately and then stitched back together with overlap defined by Patch Padding. A negative value means that this option is ignored."><td><hl8><span><font size="3" color="white">Patch size</font></span></hl8></td><td><input id="patchsize7" class="denoise_micrographs_inputs" style="width:3em" value="-1"></td></tr>
+			  <tr title="Padding around each patch to remove edge artifacts (type: integer)"><td><hl8><span><font size="3" color="white">Patch padding</font></span></hl8></td><td><input id="patchpadding7" class="denoise_micrographs_inputs" style="width:3em" value="128"></td></tr>
+			  </table>
+			</details></summary>
+			</span>
+		  <br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
+		  <code><div id="result7" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
+		  topaz denoise /path/to/input/images/*.mrc --model L2 --device 0 --format mrc --bin 1 --patch-size -1 --patch-padding 128 --normalize --output /path/to/output/folder
+		  </div></span></code>
+		</div></br>
 	  </details></summary>
-	  <section><details><summary class="collapsibletools"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Convert images</summary>
+
+	  <section><details><summary class="collapsibletools"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Denoise Particle Stack</summary>
 		<div class="content">
 		  <p style=line-height:1.3>
+	      <span class="tab0"><p style=line-height:1.3>Create a command for denoising a particle stack using an implementation of Noise2Noise.<br><br>
 		  <strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
 		  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
 		  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
 		  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7>
 		  </p>
 		  <hr width="20%">
-		</div>
+		  <br><table style="height:11em">
+		  <tr title="Input micrographs for denoising (type: string; full path to a single mrc/mrcs stack)"><td><hl2><span><font size="3" color="white">Input stack</font></span></hl2></td><td><input id="input8" class="denoise_stack_inputs" style="width:30em" value="/path/to/particle/stack.mrcs"></td></tr>
+		  <tr title="Output directory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output8" class="denoise_stack_inputs" style="width:30em" value="/path/to/output/folder"></td></tr>
+		  <tr title="Denoising model to use on the particle stack (type: string; use either L0, L1, or L2 to use pretrained models or a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pretrained models were trained on hundreds of datasets of K2 micrograph frames of various particles."><td><hl4><span><font size="3" color="white">Model</font></span></hl4></td><td><input id="model8" class="denoise_stack_inputs" style="width:30em" value="L2"></td></tr>
+		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU denoising (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device8" class="denoise_stack_inputs" style="width:3em" value="0"></td></tr>
+		  <tr title="Output format of denoised images (type: string; options: mrc, png, tiff)"><td><hl8><span><font size="3" color="white">Format</font></span></hl8></td><td><input id="format8" class="denoise_stack_inputs" style="width:3em" value="mrc"></td></tr>
+		  <tr title="Bin stack before denoising. '1' means no binning (type: integer)"><td><hl8><span><font size="3" color="white">Bin Stack</font></span></hl8></td><td><input id="bin8" class="denoise_stack_inputs" style="width:3em" value="1"></td></tr>
+		  </table></span>
+		  <br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
+		  <code><div id="result8" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
+		  topaz denoise /path/to/particle/stack.mrcs --model L2 --device 0 --format mrc --bin 1 --stack --normalize --output /path/to/output/folder
+		  </div></span></code>
+		</div></br>
 	  </details></summary>
-	  <section><details><summary class="collapsibletools"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Scale images</summary>
+	  
+	 <!-- <section><details><summary class="collapsibletools"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Train New Denoising Model</summary>
 		<div class="content">
 		  <p style=line-height:1.3>
+	      <span class="tab0"><p style=line-height:1.3>Create a command for converting between Topaz GUI CSV files, STAR files, or Topaz txt files.<br><br>
 		  <strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
 		  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
 		  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
 		  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7>
 		  </p>
 		  <hr width="20%">
-		</div>
+		  <br><table style="height:9.1em">
+		  <tr title="Input coordinate file for converting (type: string; full path to .csv, .star, or Topaz .txt)"><td><hl2><span><font size="3" color="white">Input file</font></span></hl2></td><td><input id="input5" class="converting_inputs" style="width:30em" value="/path/to/input/coordinate/file.[csv|star|txt]"></td></tr>
+		  <tr title="Output coordinate file for converting (type: string; full path to .csv, .star, or Topaz .txt)"><td><hl2><span><font size="3" color="white">Output file</font></span></hl2></td><td><input id="output5" class="converting_inputs" style="width:30em" value="/path/to/output/coordinate/file.[csv|star|txt]"></td></tr>
+		  <tr title="Topaz 𝘴𝘤𝘰𝘳𝘦 𝘵𝘩𝘳𝘦𝘴𝘩𝘰𝘭𝘥 at which to cut off (type: float)"><td><hl4><span><font size="3" color="white">Threshold</font></span></hl4></td><td><input id="threshold5" class="converting_inputs" style="width:3em" value="-9999"></td></tr>
+		  <tr title="Upscale the coordinates by this factor. '1' means no scaling (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: Coordinates will be scaled by (Upscale/Downscale)."><td><hl4><span><font size="3" color="white">Upscale picks</font></span></hl4></td><td><input id="upscale5" class="converting_inputs" style="width:3em" value="1"></td></tr>
+		  <tr title="Downscale the coordinates by this factor. '1' means no scaling (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: Coordinates will be scaled by (Upscale/Downscale)."><td><hl4><span><font size="3" color="white">Downscale picks</font></span></hl4></td><td><input id="downscale5" class="converting_inputs" style="width:3em" value="1"></td></tr>
+		  </table>
+		  <br><section><details><summary class="collapsibleoptions2" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Specific filetype options</summary></br>
+			<div class="content">
+			  <table style="height:10.9em">
+			  <tr title="Microscope voltage in keV (type: float)&#013;&#013;𝗡𝗼𝘁𝗲: Only used when converting 𝘁𝗼 𝗮 .𝘀𝘁𝗮𝗿 file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Voltage</font></span></hl4></td><td><input id="voltage5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
+			  <tr title="Pixel size of the detector in microns (type: float)&#013;&#013;𝗡𝗼𝘁𝗲: Only used when converting 𝘁𝗼 𝗮 .𝘀𝘁𝗮𝗿 file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Detector pixelsize</font></span></hl4></td><td><input id="detectorpixelsize5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
+			  <tr title="Magnification of the un-binned images at the image plane; e.g. 10000 (type: float)&#013;&#013;𝗡𝗼𝘁𝗲: Only used when converting 𝘁𝗼 𝗮 .𝘀𝘁𝗮𝗿 file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Magnification</font></span></hl4></td><td><input id="magnification5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
+			  <tr title="Amplitude contrast as a fraction of total protein contrast. Usually 0.07 for cryo and about 0.15 for negative stain (type: float)&#013;&#013;𝗡𝗼𝘁𝗲: Only used when converting 𝘁𝗼 𝗮 .𝘀𝘁𝗮𝗿 file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Amplitude contrast</font></span></hl4></td><td><input id="ampcontrast5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
+			  <tr title="Size of box particles (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: Only used when converting 𝘁𝗼 𝗮 .𝗯𝗼𝘅 file. A value of 0 means that this option is ignored."><td><hl4><span><font size="3" color="white">Box size</font></span></hl4></td><td><input id="boxsize5" class="converting_inputs" style="width:3em" value="0"></td></tr>
+			  <tr title="Image extension for micrographs (type: string)&#013;&#013;𝗡𝗼𝘁𝗲: Only used when converting 𝘁𝗼 𝗮 .𝘀𝘁𝗮𝗿 𝗼𝗿 .𝗯𝗼𝘅 file."><td><hl8><span><font size="3" color="white">Image extension</font></span></hl8></td><td><input id="imageext5" class="converting_inputs" style="width:3em" value="mrc"></td></tr>
+			  </table>
+			</details></summary>
+			</span>
+		  <br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
+		  <code><div id="result5" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
+		  topaz convert /path/to/input/coordinate/file.[csv|star|txt] --threshold -9999 --up-scale 1 --down-scale 1 --voltage -1 --detector-pixel-size -1 --magnification -1 --amplitude-contrast -1 --boxsize 0 --image-ext .mrc --verbose 1 --output /path/to/output/coordinate/file.[csv|star|txt]
+		  </div></span></code>
+		</div></br>
+	  </details></summary> -->
+	  
+	  <section><details><summary class="collapsibletools"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Convert | Threshold Picks</summary>
+		<div class="content">
+		  <p style=line-height:1.3>
+	      <span class="tab0"><p style=line-height:1.3>Create a command for converting between Topaz GUI CSV files, STAR files, or Topaz txt files.<br><br>
+		  <strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
+		  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
+		  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
+		  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7>
+		  </p>
+		  <hr width="20%">
+		  <br><table style="height:9.1em">
+		  <tr title="Input coordinate file for converting (type: string; full path to .csv, .star, or Topaz .txt)"><td><hl2><span><font size="3" color="white">Input file</font></span></hl2></td><td><input id="input5" class="converting_inputs" style="width:30em" value="/path/to/input/coordinate/file.[csv|star|txt]"></td></tr>
+		  <tr title="Output coordinate file for converting (type: string; full path to .csv, .star, or Topaz .txt)"><td><hl2><span><font size="3" color="white">Output file</font></span></hl2></td><td><input id="output5" class="converting_inputs" style="width:30em" value="/path/to/output/coordinate/file.[csv|star|txt]"></td></tr>
+		  <tr title="Topaz 𝘴𝘤𝘰𝘳𝘦 𝘵𝘩𝘳𝘦𝘴𝘩𝘰𝘭𝘥 at which to cut off (type: float)"><td><hl4><span><font size="3" color="white">Threshold</font></span></hl4></td><td><input id="threshold5" class="converting_inputs" style="width:3em" value="-9999"></td></tr>
+		  <tr title="Upscale the coordinates by this factor. '1' means no scaling (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: Coordinates will be scaled by (Upscale/Downscale)."><td><hl4><span><font size="3" color="white">Upscale picks</font></span></hl4></td><td><input id="upscale5" class="converting_inputs" style="width:3em" value="1"></td></tr>
+		  <tr title="Downscale the coordinates by this factor. '1' means no scaling (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: Coordinates will be scaled by (Upscale/Downscale)."><td><hl4><span><font size="3" color="white">Downscale picks</font></span></hl4></td><td><input id="downscale5" class="converting_inputs" style="width:3em" value="1"></td></tr>
+		  </table>
+		  <br><section><details><summary class="collapsibleoptions2" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Specific filetype options</summary></br>
+			<div class="content">
+			  <table style="height:10.9em">
+			  <tr title="Microscope voltage in keV (type: float)&#013;&#013;𝗡𝗼𝘁𝗲: Only used when converting 𝘁𝗼 𝗮 .𝘀𝘁𝗮𝗿 file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Voltage</font></span></hl4></td><td><input id="voltage5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
+			  <tr title="Pixel size of the detector in microns (type: float)&#013;&#013;𝗡𝗼𝘁𝗲: Only used when converting 𝘁𝗼 𝗮 .𝘀𝘁𝗮𝗿 file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Detector pixelsize</font></span></hl4></td><td><input id="detectorpixelsize5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
+			  <tr title="Magnification of the un-binned images at the image plane; e.g. 10000 (type: float)&#013;&#013;𝗡𝗼𝘁𝗲: Only used when converting 𝘁𝗼 𝗮 .𝘀𝘁𝗮𝗿 file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Magnification</font></span></hl4></td><td><input id="magnification5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
+			  <tr title="Amplitude contrast as a fraction of total protein contrast. Usually 0.07 for cryo and about 0.15 for negative stain (type: float)&#013;&#013;𝗡𝗼𝘁𝗲: Only used when converting 𝘁𝗼 𝗮 .𝘀𝘁𝗮𝗿 file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Amplitude contrast</font></span></hl4></td><td><input id="ampcontrast5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
+			  <tr title="Size of box particles (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: Only used when converting 𝘁𝗼 𝗮 .𝗯𝗼𝘅 file. A value of 0 means that this option is ignored."><td><hl4><span><font size="3" color="white">Box size</font></span></hl4></td><td><input id="boxsize5" class="converting_inputs" style="width:3em" value="0"></td></tr>
+			  <tr title="Image extension for micrographs (type: string)&#013;&#013;𝗡𝗼𝘁𝗲: Only used when converting 𝘁𝗼 𝗮 .𝘀𝘁𝗮𝗿 𝗼𝗿 .𝗯𝗼𝘅 file."><td><hl8><span><font size="3" color="white">Image extension</font></span></hl8></td><td><input id="imageext5" class="converting_inputs" style="width:3em" value="mrc"></td></tr>
+			  </table>
+			</details></summary>
+			</span>
+		  <br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
+		  <code><div id="result5" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
+		  topaz convert /path/to/input/coordinate/file.[csv|star|txt] --threshold -9999 --up-scale 1 --down-scale 1 --voltage -1 --detector-pixel-size -1 --magnification -1 --amplitude-contrast -1 --boxsize 0 --image-ext .mrc --verbose 1 --output /path/to/output/coordinate/file.[csv|star|txt]
+		  </div></span></code>
+		</div></br>
 	  </details></summary>
+
+	  <section><details><summary class="collapsibletools"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Extract Particle Stack</summary>
+		<div class="content">
+		  <p style=line-height:1.3>
+	      <span class="tab0"><p style=line-height:1.3>Create a command for extracting a particle stack from micrographs using a Topaz .txt coordinate file.<br><br>
+		  <strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
+		  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
+		  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3>
+		  </p>
+		  <hr width="20%">
+		  <br><table style="height:12.7em">
+		  <tr title="Input Topaz .txt coordinate file for defining extraction coordinates (type: string; full path to Topaz .txt file)"><td><hl2><span><font size="3" color="white">Input picks</font></span></hl2></td><td><input id="coordinateinput6" class="particle_extracting_inputs" style="width:30em" value="/path/to/Topaz/coordinate/file.txt"></td></tr>
+		  <tr title="Directory containing micrographs (not pre-processed) to extract particles from (type: string; full path)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="imageroot6" class="particle_extracting_inputs" style="width:30em" value="/path/to/full/micrographs/"></td></tr>
+		  <tr title="Output particle stack file (type: string; full path to .mrcs file).&#013;&#013;𝗡𝗼𝘁𝗲: A .star file will be written along with the .mrcs stack with the same base filename."><td><hl2><span><font size="3" color="white">Output stack</font></span></hl2></td><td><input id="output6" class="particle_extracting_inputs" style="width:30em" value="/path/to/output/particles.mrcs"></td></tr>
+		  <tr title="Boxsize of the extracted particle stack (type: integer)."><td><hl4><span><font size="3" color="white">Boxsize</font></span></hl4></td><td><input id="boxsize6" class="particle_extracting_inputs" style="width:3em" value="192"></td></tr>
+		  <tr title="Topaz 𝘴𝘤𝘰𝘳𝘦 𝘵𝘩𝘳𝘦𝘴𝘩𝘰𝘭𝘥 at which to cut off (type: float)"><td><hl4><span><font size="3" color="white">Threshold</font></span></hl4></td><td><input id="threshold6" class="particle_extracting_inputs" style="width:3em" value="-9999"></td></tr>
+		  <tr title="Image extension for input micrographs (options: .mrc, .tiff, or .png) (type: string)"><td><hl8><span><font size="3" color="white">Image extension</font></span></hl8></td><td><input id="imageext6" class="particle_extracting_inputs" style="width:3em" value="mrc"></td></tr>
+		  <tr title="Rescale the extracted particle stack to this boxsize using Fourier upscaling/downscaling (negative values turn this option off) (type: integer)."><td><hl8><span><font size="3" color="white">Resize particles</font></span></hl8></td><td><input id="resize6" class="particle_extracting_inputs" style="width:3em" value="-1"></td></tr>
+		  <!--- <tr title="Path to .star file containing per-micrograph metadata, such as CTF parameters. This information will be transfered to the .star file that gets written alongside the stack .mrcs file (type: string; full path; optional)."><td><hl4><span><font size="3" color="white">Metadata</font></span></hl4></td><td><input id="metadata6" class="particle_extracting_inputs" style="width:3em" value=""></td></tr> -->
+		  </table>
+		  </span>
+		  <br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
+		  <code><div id="result6" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
+		  topaz particle_stack /path/to/Topaz/coordinate/file.txt --image-root /path/to/full/micrographs/ --size 192 --threshold -9999 --resize -1 --image-ext .mrc --output /path/to/output/particles.mrcs
+		  </div></span></code>
+		</div>
+	  </details></summary><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;"	unselectable="on" onselectstart="return false;" onmousedown="return false;"></br></br></span>
 	</div>
 
     <!-- this vertical spacer is needed to allow scrollbar to show
@@ -1611,7 +1950,7 @@ POSSIBILITY OF SUCH DAMAGE.
   VGG Image Annotator (via)
   www.robots.ox.ac.uk/~vgg/software/via/
 
-  Copyright (c) 2016-2018, Abhishek Dutta, Visual Geometry Group, Oxford University.
+  Copyright (c) 2016-2019, Abhishek Dutta, Visual Geometry Group, Oxford University.
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -1664,7 +2003,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 "use strict";
 
-var VIA_VERSION      = '2.0.5';
+var VIA_VERSION      = '2.0.7';
 var VIA_NAME         = 'VGG Image Annotator';
 var VIA_SHORT_NAME   = 'VIA';
 var VIA_REGION_SHAPE = { RECT:'rect',
@@ -1686,7 +2025,6 @@ var VIA_DISPLAY_AREA_CONTENT_NAME = {IMAGE:'image_panel',
                                      IMAGE_GRID:'image_grid_panel',
                                      SETTINGS:'settings_panel',
                                      PAGE_404:'page_404',
-                                     PAGE_USER_GUIDE:'page_user_guide',
                                      PAGE_GETTING_STARTED:'page_getting_started',
                                      PAGE_ABOUT:'page_about',
                                      PAGE_START_INFO:'page_start_info',
@@ -1709,7 +2047,7 @@ var VIA_ELLIPSE_EDGE_TOL          = 0.2; // euclidean distance
 var VIA_THETA_TOL                 = Math.PI/18; // 10 degrees
 var VIA_POLYGON_RESIZE_VERTEX_OFFSET  = 100;
 var VIA_CANVAS_DEFAULT_ZOOM_LEVEL_INDEX = 3;
-var VIA_CANVAS_ZOOM_LEVELS = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4, 5];
+var VIA_CANVAS_ZOOM_LEVELS = [0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4, 5, 6, 7, 8, 9, 10];
 
 var VIA_THEME_REGION_BOUNDARY_WIDTH = 1.5;
 var VIA_THEME_BOUNDARY_LINE_COLOR   = "#07fb1a";
@@ -1770,6 +2108,7 @@ var _via_is_canvas_zoomed            = false;
 var _via_is_loading_current_image    = false;
 var _via_is_region_id_visible        = false;
 var _via_is_region_boundary_visible  = true;
+var _via_is_region_info_visible      = true;
 var _via_is_ctrl_pressed             = false;
 var _via_is_debug_mode               = false;
 
@@ -3414,7 +3753,7 @@ function _via_reg_canvas_mouseup_handler(e) {
       case VIA_REGION_SHAPE.POINT:    // handled by case VIA_REGION_SHAPE.POLYGON
       case VIA_REGION_SHAPE.POLYLINE: // handled by case VIA_REGION_SHAPE.POLYGON
       case VIA_REGION_SHAPE.POLYGON:
-        // handled by _via_is_user_drawing polygon
+        // handled by _via_is_user_drawing_polygon
         break;
       } // end of switch
 
@@ -3459,6 +3798,14 @@ function _via_reg_canvas_mousemove_handler(e) {
   }
 
   _via_current_x = e.offsetX; _via_current_y = e.offsetY;
+
+  // display the cursor coordinates
+  var rf = document.getElementById('region_info');
+  if ( rf != null && _via_is_region_info_visible ) {
+    var img_x = Math.round( _via_current_x * _via_canvas_scale );
+    var img_y = Math.round( _via_current_y * _via_canvas_scale );
+    rf.innerHTML = 'Coords: (x,y) = (' + img_x + ',' + img_y + ')';
+  }
 
   if ( _via_is_region_selected ) {
     if ( !_via_is_user_resizing_region ) {
@@ -3753,6 +4100,36 @@ function _via_move_selected_regions(move_x, move_y) {
   }
 }
 
+function _via_validate_move_region(x, y, canvas_attr) {
+  switch( canvas_attr['name'] ) {
+    case VIA_REGION_SHAPE.RECT:
+      // left and top boundary check
+      if (x < 0 || y < 0) {
+          show_message('Region moved beyond image boundary. Resetting.');
+          return false;
+      }
+      // right and bottom boundary check
+      if ((y + canvas_attr['height']) > _via_current_image_height ||
+          (x + canvas_attr['width']) > _via_current_image_width) {
+            show_message('Region moved beyond image boundary. Resetting.');
+            return false;
+      }
+
+    // same validation for all
+    case VIA_REGION_SHAPE.CIRCLE:
+    case VIA_REGION_SHAPE.ELLIPSE:
+    case VIA_REGION_SHAPE.POINT:
+    case VIA_REGION_SHAPE.POLYLINE:
+    case VIA_REGION_SHAPE.POLYGON:
+      if (x < 0 || y < 0 ||
+          x > _via_current_image_width || y > _via_current_image_height) {
+          show_message('Region moved beyond image boundary. Resetting.');
+          return false;
+      }
+  }
+  return true;
+}
+
 function _via_move_region(region_id, move_x, move_y) {
   var image_attr = _via_img_metadata[_via_image_id].regions[region_id].shape_attributes;
   var canvas_attr = _via_canvas_regions[region_id].shape_attributes;
@@ -3761,7 +4138,11 @@ function _via_move_region(region_id, move_x, move_y) {
   case VIA_REGION_SHAPE.RECT:
     var xnew = image_attr['x'] + Math.round(move_x * _via_canvas_scale);
     var ynew = image_attr['y'] + Math.round(move_y * _via_canvas_scale);
-    image_attr['x'] = xnew;
+    
+    var is_valid = _via_validate_move_region(xnew, ynew, image_attr);
+    if (! is_valid ) { break; }
+
+	image_attr['x'] = xnew;
     image_attr['y'] = ynew;
 
     canvas_attr['x'] = Math.round( image_attr['x'] / _via_canvas_scale);
@@ -3773,6 +4154,10 @@ function _via_move_region(region_id, move_x, move_y) {
   case VIA_REGION_SHAPE.POINT:
     var cxnew = image_attr['cx'] + Math.round(move_x * _via_canvas_scale);
     var cynew = image_attr['cy'] + Math.round(move_y * _via_canvas_scale);
+
+    var is_valid = _via_validate_move_region(cxnew, cynew, image_attr);
+    if (! is_valid ) { break; }
+
     image_attr['cx'] = cxnew;
     image_attr['cy'] = cynew;
 
@@ -3784,13 +4169,28 @@ function _via_move_region(region_id, move_x, move_y) {
   case VIA_REGION_SHAPE.POLYGON:
     var img_px = image_attr['all_points_x'];
     var img_py = image_attr['all_points_y'];
+    var canvas_px = canvas_attr['all_points_x'];
+    var canvas_py = canvas_attr['all_points_y'];
+    // clone for reverting if valiation fails
+    var img_px_old = Object.assign({}, img_px);
+    var img_py_old = Object.assign({}, img_py);
+
+    // validate move
+    for (var i=0; i<img_px.length; ++i) {
+      var pxnew = img_px[i] + Math.round(move_x * _via_canvas_scale);
+      var pynew = img_py[i] + Math.round(move_y * _via_canvas_scale);
+      if (! _via_validate_move_region(pxnew, pynew, image_attr) ) {
+        img_px = img_px_old;
+        img_py = img_py_old;
+        break;
+      }
+    }
+    // move points
     for (var i=0; i<img_px.length; ++i) {
       img_px[i] = img_px[i] + Math.round(move_x * _via_canvas_scale);
       img_py[i] = img_py[i] + Math.round(move_y * _via_canvas_scale);
     }
 
-    var canvas_px = canvas_attr['all_points_x'];
-    var canvas_py = canvas_attr['all_points_y'];
     for (var i=0; i<canvas_px.length; ++i) {
       canvas_px[i] = Math.round( img_px[i] / _via_canvas_scale );
       canvas_py[i] = Math.round( img_py[i] / _via_canvas_scale );
@@ -4171,11 +4571,11 @@ function draw_all_region_id() {
         // if text overflows, crop it
         var str_max     = Math.floor((w * annotation_str.length) / strw);
         if ( str_max > 1 ) {
-          annotation_str  = annotation_str.substr(0, str_max-1) + '.';
-          bgnd_rect_width = w;
+          annotation_str  = annotation_str.substr(0, 5);
+          bgnd_rect_width = 1.35 * _via_reg_ctx.measureText(annotation_str).width;
         } else {
-          annotation_str  = annotation_str.substr(0, 1) + '.';
-          bgnd_rect_width = 2 * char_width;
+          annotation_str  = annotation_str.substr(0, 5);
+          bgnd_rect_width = 1.35 * _via_reg_ctx.measureText(annotation_str).width;
         }
       }
     } else {
@@ -4198,7 +4598,7 @@ function draw_all_region_id() {
     }
 
     // first, draw a background rectangle first
-    _via_reg_ctx.fillStyle = '#faf5e0';
+    _via_reg_ctx.fillStyle = '#ffebd5';
     _via_reg_ctx.globalAlpha = 0.6;
     _via_reg_ctx.fillRect(Math.floor(x),
                           Math.floor(y - 1.1*char_height),
@@ -4207,7 +4607,7 @@ function draw_all_region_id() {
 
     // then, draw text over this background rectangle
     _via_reg_ctx.globalAlpha = 1.0;
-    _via_reg_ctx.fillStyle = '#07fb1a';
+    _via_reg_ctx.fillStyle = '#00d10e';
     _via_reg_ctx.fillText(annotation_str,
                           Math.floor(x + 0.4*char_width),
                           Math.floor(y - 0.35*char_height));
@@ -4809,6 +5209,12 @@ function _via_window_keydown_handler(e) {
 // global keys are active irrespective of element focus
 // arrow keys, n, p, s, o, space, d, Home, End, PageUp, PageDown
 function _via_handle_global_keydown_event(e) {
+    if ( e.key === 'u' ) {
+      sel_local_images();
+      e.preventDefault();
+      return;
+    }
+
   // zoom
   if (_via_current_image_loaded) {
     if ( e.key === "+") {
@@ -4941,12 +5347,17 @@ function _via_handle_global_keydown_event(e) {
     return;
   }
 
-  if ( e.key === 'F1' ) { // F1 for help
-    set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_USER_GUIDE);
+  if ( e.key === 'F1' ) { // F1 for start page
+    show_home_panel();
     e.preventDefault();
     return;
   }
-  if ( e.key === 'F2' ) { // F2 for about
+  if ( e.key === 'F2' ) { // F2 for help
+    set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_GETTING_STARTED);
+    e.preventDefault();
+    return;
+  }
+  if ( e.key === 'F3' ) { // F3 for about
     set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_ABOUT);
     e.preventDefault();
     return;
@@ -5011,12 +5422,34 @@ function _via_reg_canvas_keydown_handler(e) {
       return;
     }
 
-    if ( _via_is_region_selected ) {
-      if ( e.key === 'd' ) {
+    if ( e.key === 'd' ) {
+      if ( _via_is_region_selected ||
+           _via_is_all_region_selected ) {
         del_sel_regions();
-        e.preventDefault();
-        return;
       }
+      e.preventDefault();
+      return;
+    }
+
+    if ( e.key === 'x' ) {
+      toggle_region_info_visibility();
+      e.preventDefault();
+      return;
+    }
+	
+    if ( e.key === 's' ) {
+      download_all_region_data('csv');
+      e.preventDefault();
+      return;
+    }
+	
+    if ( e.key === 'i' ) {
+      sel_local_data_file('annotations');
+      e.preventDefault();
+      return;
+    }
+
+    if ( _via_is_region_selected ) {
       if ( e.key === 'ArrowRight' ||
            e.key === 'ArrowLeft'  ||
            e.key === 'ArrowDown'  ||
@@ -5567,8 +6000,10 @@ function set_zoom(zoom_level_index) {
 
   var zoom_scale = VIA_CANVAS_ZOOM_LEVELS[_via_canvas_zoom_level_index];
   set_all_canvas_scale(zoom_scale);
-  set_all_canvas_size(_via_canvas_width  * zoom_scale,
-                      _via_canvas_height * zoom_scale);
+  var canvas_w = ( _via_current_image.naturalWidth  * zoom_scale ) / _via_canvas_scale_without_zoom;
+  var canvas_h = ( _via_current_image.naturalHeight * zoom_scale ) / _via_canvas_scale_without_zoom;
+  set_all_canvas_size(canvas_w, canvas_h);
+  _via_canvas_scale = _via_canvas_scale_without_zoom / zoom_scale;
   _via_canvas_scale = _via_canvas_scale_without_zoom / zoom_scale;
 
   _via_load_canvas_regions(); // image to canvas space transform
@@ -5619,7 +6054,7 @@ function zoom_in() {
   } else {
     var new_zoom_level_index = _via_canvas_zoom_level_index + 1;
     set_zoom( new_zoom_level_index );
-    show_message('Zoomed in to level ' + VIA_CANVAS_ZOOM_LEVELS[_via_canvas_zoom_level_index] + 'X');
+    show_message('Zoomed in by ' + VIA_CANVAS_ZOOM_LEVELS[_via_canvas_zoom_level_index] + 'X');
   }
 }
 
@@ -5644,7 +6079,7 @@ function zoom_out() {
   } else {
     var new_zoom_level_index = _via_canvas_zoom_level_index - 1;
     set_zoom( new_zoom_level_index );
-    show_message('Zoomed out to level ' + VIA_CANVAS_ZOOM_LEVELS[_via_canvas_zoom_level_index] + 'X');
+    show_message('Zoomed out by ' + VIA_CANVAS_ZOOM_LEVELS[_via_canvas_zoom_level_index] + 'X');
   }
 }
 
@@ -5670,6 +6105,18 @@ function toggle_region_id_visibility() {
   _via_is_region_id_visible = !_via_is_region_id_visible;
   _via_redraw_reg_canvas();
   _via_reg_canvas.focus();
+}
+
+function toggle_region_info_visibility() {
+  var elem = document.getElementById('region_info');
+  // toggle between displaying and not displaying
+  if ( elem.classList.contains('display_none') ) {
+    elem.classList.remove('display_none');
+    _via_is_region_info_visible = true;
+  } else {
+    elem.classList.add('display_none');
+    _via_is_region_info_visible = false;
+  }
 }
 
 //
@@ -7366,7 +7813,6 @@ function annotation_editor_get_metadata_row_html(row_id) {
       case 'text':
         if ( attr_metadata_stat.hasOwnProperty(attr_id) ) {
           var attr_value_set = Object.keys(attr_metadata_stat[attr_id]);
-          console.log(attr_metadata_stat[attr_id])
           if ( attr_value_set.includes('undefined') ) {
             attr_value = '';
             attr_placeholder = 'includes ' + attr_metadata_stat[attr_id]['undefined'] + ' undefined values';
@@ -8363,27 +8809,17 @@ function project_file_add_local(event) {
 }
 
 function project_file_add_abs_path_with_input() {
-  var config = {'title':'Add Images using Absolute Path' };
-  var input = { 'absolute_path_list': { type:'textarea', name:'add multiple paths (one path per line)', placeholder:'/home/topazuser/image1.png\n/home/topazuser/image2.png\n/home/topazuser/image3.png', disabled:false, rows:5, cols:67 }
+  var config = {'title':'Add Images using Absolute or Local Paths' };
+  var input = { 'absolute_path_list': { type:'textarea', name:'One path per line', placeholder:'/home/topazuser/image1.png\n../../image2.png\nD:/image3.jpg', disabled:false, rows:5, cols:80 }
               };
 
   invoke_with_user_inputs(project_file_add_abs_path_input_done, input, config);
 }
 
 function project_file_add_abs_path_input_done(input) {
-  if ( input.absolute_path.value !== '' ) {
-    var abs_path  = input.absolute_path.value.trim();
-    var img_id    = project_file_add_url(abs_path);
-    var img_index = _via_image_id_list.indexOf(img_id);
-    _via_show_img(img_index);
-    show_message('Added images with absolute path [' + abs_path + ']');
-    update_img_fn_list();
-    user_input_default_cancel_handler();
-  } else {
-    if ( input.absolute_path_list.value !== '' ) {
+  if ( input.absolute_path_list.value !== '' ) {
       var absolute_path_list_str = input.absolute_path_list.value;
       import_files_url_from_csv(absolute_path_list_str);
-    }
   }
 }
 
@@ -8595,9 +9031,10 @@ function image_grid_toggle() {
 function image_grid_show_all_project_images() {
   var all_img_index_list = [];
   var i, n;
-  n = _via_image_id_list.length;
+  //n = _via_image_id_list.length;
+  n = _via_img_fn_list_img_index_list.length;
   for ( i = 0; i < n; ++i ) {
-    all_img_index_list.push(i);
+    all_img_index_list.push( _via_img_fn_list_img_index_list[i] );
   }
   image_grid_clear_all_groups();
 
@@ -8649,9 +9086,16 @@ function image_grid_set_content(img_index_list) {
     _via_image_grid_page_img_index_list = _via_image_grid_img_index_list.slice(0);
     break;
   case 'first_mid_last':
-    _via_image_grid_page_img_index_list.push( _via_image_grid_img_index_list[0] );
-    _via_image_grid_page_img_index_list.push( _via_image_grid_img_index_list[ Math.floor(n/2) ] );
-    _via_image_grid_page_img_index_list.push( _via_image_grid_img_index_list[n-1] );
+    if ( n < 3 ) {
+      var i;
+      for ( i = 0; i < n; ++i ) {
+        _via_image_grid_page_img_index_list.push( _via_image_grid_img_index_list[i] );
+      }
+    } else {
+      _via_image_grid_page_img_index_list.push( _via_image_grid_img_index_list[0] );
+      _via_image_grid_page_img_index_list.push( _via_image_grid_img_index_list[ Math.floor(n/2) ] );
+      _via_image_grid_page_img_index_list.push( _via_image_grid_img_index_list[n-1] );
+    }
     break;
   case 'even_indexed':
     var i;
@@ -9315,9 +9759,10 @@ function image_grid_group_by(type, name) {
   if ( Object.keys(_via_image_grid_group).length === 0 ) {
     // first group
     var img_index_array = [];
+    var n = _via_img_fn_list_img_index_list.length;
     var i;
-    for ( i = 0; i < _via_img_count; ++i ) {
-      img_index_array.push(i);
+    for ( i = 0; i < n; ++i ) {
+      img_index_array.push( _via_img_fn_list_img_index_list[i] );
     }
 
     _via_image_grid_group = image_grid_split_array_to_group(img_index_array, type, name);
@@ -9973,6 +10418,9 @@ function _via_show_img(img_index) {
         return;
       } else {
         var search_path_list = _via_file_get_search_path_list();
+        if ( search_path_list.length === 0 ) {
+          search_path_list.push(''); // search using just the filename
+        }
         _via_file_resolve(img_index, search_path_list).then( function(ok_file_index) {
           _via_show_img(img_index);
         }, function(err_file_index) {
@@ -10520,7 +10968,7 @@ function settings_region_label_update_options() {
   if ( _via_settings.ui.image.region_label === '__via_region_id__' ) {
     default_option.setAttribute('selected', 'selected');
   }
-  default_option.innerHTML = 'Region id (1, 2, ...)';
+  default_option.innerHTML = 'Pick id (1, 2, ...)';
   p.appendChild(default_option);
 
   // options: add region attributes
@@ -10825,6 +11273,23 @@ function openTab(evt, tabName) {
 
 // Get the element with id="defaultOpen" and click on it
 document.getElementById("defaultOpen").click();
+
+function openTab2(evt, tabName) {
+  var i, tabcontent2, tablinks2;
+  tabcontent2 = document.getElementsByClassName("tabcontent2");
+  for (i = 0; i < tabcontent2.length; i++) {
+    tabcontent2[i].style.display = "none";
+  }
+  tablinks2 = document.getElementsByClassName("tablinks2");
+  for (i = 0; i < tablinks2.length; i++) {
+    tablinks2[i].className = tablinks2[i].className.replace(" active", "");
+  }
+  document.getElementById(tabName).style.display = "block";
+  evt.currentTarget.className += " active";
+}
+
+// Get the element with id="defaultOpen2" and click on it
+document.getElementById("defaultOpen2").click();
 
 if ( ! _via_is_debug_mode ) {
   // warn user of possible loss of data
