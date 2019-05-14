@@ -166,7 +166,19 @@ class LabeledImageCropDataset:
         self.crop = crop
 
     def __getitem__(self, idx):
-        g, (i, coord) = idx
+        # decode the hash...
+        h = idx
+
+        g = h//2**56
+        h = h - g*2**56
+
+        i = h//2**32
+        h = h - i*2**32
+
+        coord = h
+
+        #g, (i, coord) = idx
+
         im = self.images[g][i]
         L = torch.from_numpy(self.labels[g][i].ravel()).unsqueeze(1)
         label = L[coord].float()

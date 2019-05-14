@@ -53,9 +53,26 @@ def read_via_csv(path):
         x_coord[i] = region['cx']
         y_coord[i] = region['cy']
 
+    # parse region_attributes for scores
+    scores = None
+    attributes = table['region_attributes']
+    if len(table) > 0:
+        # check that we have score attributes
+        att = json.loads(attributes.iloc[0])
+        if 'score' in att:
+            scores = np.zeros(len(table), dtype=np.float32) - np.inf
+            for i in range(len(attributes)):
+                att = json.loads(attributes.iloc[i])
+                if 'score' in att:
+                    scores[i] = att['score']
+
+
     table = table.drop(['file_size', 'file_attributes', 'region_count', 'region_id', 'region_shape_attributes', 'region_attributes'], 1)
     table['x_coord'] = x_coord
     table['y_coord'] = y_coord
+
+    if scores is not None:
+        table['score'] = scores
 
     return table
 
@@ -84,7 +101,15 @@ def write_via_csv(path, table):
 
     via_table['region_shape_attributes'] = regions
 
-    via_table['region_attributes'] = '{}'
+    if 'score' in table.columns:
+        scores = []
+        template = '{{"score":"{}"}}'
+        for i in range(len(table)):
+            score = template.format(table['score'].iloc[i])
+            scores.append(score)
+        via_table['region_attributes'] = scores
+    else:
+        via_table['region_attributes'] = '{}'
 
     via_table.to_csv(path, index=False)
 
@@ -119,6 +144,10 @@ def read_coordinates(path, format='auto'):
              'MicrographName': 'image_name',
              star.X_COLUMN_NAME: 'x_coord',
              star.Y_COLUMN_NAME: 'y_coord',
+             star.VOLTAGE: 'voltage',
+             star.DETECTOR_PIXEL_SIZE: 'detector_pixel_size',
+             star.MAGNIFICATION: 'magnification',
+             star.AMPLITUDE_CONTRAST: 'amplitude_contrast',
              }
 
         for k,v in d.items():
@@ -165,6 +194,10 @@ def write_coordinates(path, table, format='auto', boxsize=0, image_ext='.mrc', s
              'image_name': 'MicrographName',
              'x_coord': star.X_COLUMN_NAME,
              'y_coord': star.Y_COLUMN_NAME,
+             'voltage': star.VOLTAGE,
+             'detector_pixel_size': star.DETECTOR_PIXEL_SIZE,
+             'magnification': star.MAGNIFICATION,
+             'amplitude_contrast': star.AMPLITUDE_CONTRAST,
              }
         table = table.copy()
         for k,v in d.items():

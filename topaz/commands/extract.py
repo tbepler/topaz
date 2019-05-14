@@ -10,7 +10,6 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 
 from topaz.utils.data.loader import load_image
 from topaz.algorithms import non_maximum_suppression, match_coordinates
@@ -181,19 +180,19 @@ def main(args):
 
         ## load the images and process with the model
         scores = {}
-        for path in args.paths:
-            basename = os.path.basename(path)
-            image_name = os.path.splitext(basename)[0]
-            image = load_image(path)
+        with torch.no_grad():
+            for path in args.paths:
+                basename = os.path.basename(path)
+                image_name = os.path.splitext(basename)[0]
+                image = load_image(path)
 
-            ## process image with the model
-            X = torch.from_numpy(np.array(image, copy=False)).unsqueeze(0).unsqueeze(0)
-            if use_cuda:
-                X = X.cuda()
-            X = Variable(X, volatile=True)
-            score = model(X).data[0,0].cpu().numpy()
-            
-            scores[image_name] = score
+                ## process image with the model
+                X = torch.from_numpy(np.array(image, copy=False)).unsqueeze(0).unsqueeze(0)
+                if use_cuda:
+                    X = X.cuda()
+                score = model(X).data[0,0].cpu().numpy()
+                
+                scores[image_name] = score
 
     else: # images are already segmented
         scores = {}

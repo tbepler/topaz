@@ -85,6 +85,16 @@ docker build -t topaz .
 
 </p></details>
 
+**<details><summary> Click here to install *using Singularity*</summary><p>**
+
+A prebuilt Singularity image for Topaz is available [here](https://singularity-hub.org/collections/2517) and can be installed with:
+```
+singularity pull shub://dallakyan/topaz_singularity
+```
+
+</p></details>
+
+
 **<details><summary>Click here to install *from source*</summary><p>**
 
 _Recommended: install Topaz into a virtual Python environment_  
@@ -94,8 +104,8 @@ See https://conda.io/docs/user-guide/tasks/manage-environments.html or https://v
 
 Tested with python 3.6 and 2.7
 
-- pytorch (=0.2.0)
-- torchvision (=0.1.9)
+- pytorch (>= 0.4.0)
+- torchvision
 - pillow (>= 4.2.1)
 - numpy (>= 1.11)
 - pandas (>= 0.20.3) 
@@ -105,13 +115,9 @@ Tested with python 3.6 and 2.7
 Easy installation of dependencies with conda
 ```
 conda install numpy pandas scikit-learn
-conda install -c soumith pytorch=0.2.0 torchvision
+conda install -c pytorch pytorch torchvision
 ```
-To install PyTorch for CUDA 8
-```
-conda install -c soumith pytorch=0.2.0 torchvision cuda80
-```
-For more info on installing pytorch see http://pytorch.org
+For more info on installing pytorch for your CUDA version see http://pytorch.org
 
 #### Download the source code
 ```
@@ -129,6 +135,7 @@ By default, this will be the most recent version of the topaz source code. To in
 ```
 git checkout v0.1.0
 ```
+Note that older Topaz versions may have different dependencies. Refer to the README for the specific Topaz version.
 
 Install Topaz into your Python path including the topaz command line interface
 ```
@@ -142,15 +149,26 @@ pip install -e .
 
 </p></details>
 
+Topaz is also available through [SBGrid](https://sbgrid.org/software/titles/topaz).
+
 # Tutorial
 
-To run the tutorials, [Jupyter notebook](http://jupyter.org/install) also needs to be installed
+The tutorials are presented in Jupyter notebooks. Please install Jupyter following the instructions [here](http://jupyter.org/install).
 
 1. [Quick start guide](tutorial/01_quick_start_guide.ipynb)
 2. [Complete walkthrough](tutorial/02_walkthrough.ipynb)
 3. [Cross validation](tutorial/03_cross_validation.ipynb)
 
 The tutorial data can be downloaded [here](http://bergerlab-downloads.csail.mit.edu/topaz/topaz-tutorial-data.tar.gz).
+
+To run the tutorial steps on your own system, you will need to install [Jupyter](http://jupyter.org/install) and [matplotlib](https://matplotlib.org/) which is used for visualization.
+
+With Anaconda this can be done with:
+```
+conda install jupyter matplotlib
+```
+
+If you installed Topaz using anaconda, make sure these are installed into your Topaz evironment.
 
 # User guide
 
@@ -267,40 +285,6 @@ Models are trained using the `topaz train` command. For a complete list of train
 topaz train --help
 ```
 
-#### Model choices
-Currently, there are several model architectures available for use as the region classifier
-- resnet8 [receptive field = 75]
-- conv127 [receptive field = 127]
-- conv63 [receptive field = 63]
-- conv31 [receptive field = 31]
-
-ResNet8 gives a good balance of performance and receptive field size. Conv63 and Conv31 can be better choices when less complex models are needed.
-
-The number of units in the base layer can be set with the --units flag. ResNet8 always doubles the number of units when the image is strided during processing. Conv31, Conv63, and Conv127 do not by default, but the --unit-scaling flag can be used to set a multiplicative factor on the number of units when striding occurs. 
-
-The pooling scheme can be changed for the conv\* models. The default is not to perform any pooling, but max pooling and average pooling can be used by specifying "--pooling=max" or "--pooling=avg".
-
-For a detailed layout of the architectures, use the --describe flag.
-
-#### Training method, criteria, and parameters
-
-##### Methods
-
-The PN method option treats every coordinate not labeled as positive (y=1) as negative (y=0) and then optimizes the standard classification objective:
-$$ \piE_{y=1}[L(g(x),1)] + (1-\pi)E_{y=0}[L(g(x),0)] $$
-where $\pi$ is a parameter weighting the positives and negatives, $L$ is the misclassifiaction cost function, and $g(x)$ is the model output.
-
-The GE-binomial method option instead treats coordinates not labeled as positive (y=1) as unlabeled (y=?) and then optimizes an objective including a generalized expectation criteria designed to work well with minibatch SGD.
-
-The GE-KL method option instead treats coordinates not labeled as positive (y=1) as unlabeled (y=?) and then optimizes the objective:
-$$ E_{y=1}[L(g(x),1)] + \lambdaKL(\pi, E_{y=?}[g(x)]) $$ 
-where $\lambda$ is a slack parameter (--slack flag) that specifies how strongly to weight the KL divergence of the expecation of the classifier over the unlabeled data from $\pi$.
-
-The PU method uses an objective function proposed by Kiryo et al. (2017) 
-
-##### Radius
-This sets how many pixels around each particle coordinate are treated as positive, acting as a form of data augmentation. These coordinates follow a distribution that results from which pixel was selected as the particle center when the data was labeled. The radius should be chosen to be large enough that it covers a reasonable region of pixels likely to have been selected but not so large that pixels outside of the particles are labeled as positives.
-
 
 ### Segmentation and particle extraction
 
@@ -399,6 +383,39 @@ optional arguments:
 ```
 
 </p></details>
+
+#### Model architectures
+Currently, there are several model architectures available for use as the region classifier
+- resnet8 [receptive field = 71]
+- conv127 [receptive field = 127]
+- conv63 [receptive field = 63]
+- conv31 [receptive field = 31]
+
+ResNet8 gives a good balance of performance and receptive field size. Conv63 and Conv31 can be better choices when less complex models are needed.
+
+The number of units in the base layer can be set with the --units flag. ResNet8 always doubles the number of units when the image is strided during processing. Conv31, Conv63, and Conv127 do not by default, but the --unit-scaling flag can be used to set a multiplicative factor on the number of units when striding occurs. 
+
+The pooling scheme can be changed for the conv\* models. The default is not to perform any pooling, but max pooling and average pooling can be used by specifying "--pooling=max" or "--pooling=avg".
+
+For a detailed layout of the architectures, use the --describe flag.
+
+#### Training methods
+
+The PN method option treats every coordinate not labeled as positive (y=1) as negative (y=0) and then optimizes the standard classification objective:
+$$ \piE_{y=1}[L(g(x),1)] + (1-\pi)E_{y=0}[L(g(x),0)] $$
+where $\pi$ is a parameter weighting the positives and negatives, $L$ is the misclassifiaction cost function, and $g(x)$ is the model output.
+
+The GE-binomial method option instead treats coordinates not labeled as positive (y=1) as unlabeled (y=?) and then optimizes an objective including a generalized expectation criteria designed to work well with minibatch SGD.
+
+The GE-KL method option instead treats coordinates not labeled as positive (y=1) as unlabeled (y=?) and then optimizes the objective:
+$$ E_{y=1}[L(g(x),1)] + \lambdaKL(\pi, E_{y=?}[g(x)]) $$ 
+where $\lambda$ is a slack parameter (--slack flag) that specifies how strongly to weight the KL divergence of the expecation of the classifier over the unlabeled data from $\pi$.
+
+The PU method uses the objective function proposed by Kiryo et al. (2017) 
+
+#### Radius
+
+This sets how many pixels around each particle coordinate are treated as positive, acting as a form of data augmentation. These coordinates follow a distribution that results from which pixel was selected as the particle center when the data was labeled. The radius should be chosen to be large enough that it covers a reasonable region of pixels likely to have been selected but not so large that pixels outside of the particles are labeled as positives.
 
 # Reference
 

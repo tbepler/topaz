@@ -24,11 +24,16 @@ def downsample(x, factor):
 
     return f
 
-def quantize(x, mi=-4, ma=4, dtype=np.uint8):
-    buckets = np.linspace(mi, ma, 255)
-    return np.digitize(x, buckets).astype(dtype)
+def quantize(x, mi=-3, ma=3, dtype=np.uint8):
+    r = ma - mi
+    x = 255*(x - mi)/r
+    x = np.clip(x, 0, 255)
+    x = np.round(x).astype(dtype)
+    return x
+    #buckets = np.linspace(mi, ma, 255)
+    #return np.digitize(x, buckets).astype(dtype)
 
-def unquantize(x, mi=-4, ma=4, dtype=np.float32):
+def unquantize(x, mi=-3, ma=3, dtype=np.float32):
     """ convert quantized image array back to approximate unquantized values """
     x = x.astype(dtype)
     y = x*(ma-mi)/255 + mi

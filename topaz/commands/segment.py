@@ -9,7 +9,6 @@ import pandas as pd
 from PIL import Image
 
 import torch
-from torch.autograd import Variable
 
 from topaz.utils.data.loader import load_image
 
@@ -59,11 +58,11 @@ def main(args):
         image = load_image(path)
 
         ## process image with the model
-        X = torch.from_numpy(np.array(image, copy=False)).unsqueeze(0).unsqueeze(0)
-        if use_cuda:
-            X = X.cuda()
-        X = Variable(X, volatile=True)
-        score = model(X).data[0,0].cpu().numpy()
+        with torch.no_grad():
+            X = torch.from_numpy(np.array(image, copy=False)).unsqueeze(0).unsqueeze(0)
+            if use_cuda:
+                X = X.cuda()
+            score = model(X).data[0,0].cpu().numpy()
         
         im = Image.fromarray(score) 
         path = os.path.join(destdir, image_name) + '.tiff'
