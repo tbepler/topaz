@@ -6,6 +6,7 @@ import sys
 
 import numpy as np
 import pandas as pd
+import multiprocessing
 
 import torch
 import torch.nn as nn
@@ -14,6 +15,7 @@ import torch.nn.functional as F
 from topaz.utils.data.loader import load_image
 from topaz.algorithms import non_maximum_suppression, match_coordinates
 from topaz.metrics import average_precision
+import topaz.predict
 
 name = 'extract'
 help = 'extract particles from segmented images or segment and extract in one step with a trained classifier'
@@ -26,12 +28,15 @@ def add_arguments(parser):
 
     ## extraction parameter arguments
     parser.add_argument('-r', '--radius', type=int, help='radius of the regions to extract')
-    parser.add_argument('-t', '--threshold', default=0.5, type=float, help='score quantile giving threshold at which to terminate region extraction (default: 0.5)')
+    parser.add_argument('-t', '--threshold', default=-6, type=float, help='log-likelihood score threshold at which to terminate region extraction, -6 is p=0.0025 (default: -6)')
 
     
     ## coordinate scaling arguments
     parser.add_argument('-s', '--down-scale', type=float, default=1, help='DOWN-scale coordinates by this factor. output coordinates will be coord_out = (x/s)*coord. (default: 1)')
     parser.add_argument('-x', '--up-scale', type=float, default=1, help='UP-scale coordinates by this factor. output coordinates will be coord_out = (x/s)*coord. (default: 1)')
+
+    parser.add_argument('--num-workers', type=int, default=0, help='number of processes to use for extracting in parallel, 0 uses main process, -1 uses all CPUs (default: 0)')
+    parser.add_argument('--batch-size', type=int, default=1, help='batch size for scoring micrographs with model (default: 1)')
 
 
     ## radius selection arguments
@@ -39,7 +44,6 @@ def add_arguments(parser):
     parser.add_argument('--min-radius', type=int, default=5, help='minimum radius for region extraction when tuning radius parameter (default: 5)')
     parser.add_argument('--max-radius', type=int, default=100, help='maximum radius for region extraction when tuning radius parameters (default: 100)')
     parser.add_argument('--step-radius', type=int, default=5, help='grid size when searching for optimal radius parameter (default: 5)')
-    parser.add_argument('--num-workers', type=int, default=0, help='number of processes to use for extracting in parallel, 0 uses main process (default: 0)')
 
 
     parser.add_argument('--targets', help='path to file specifying particle coordinates. used to find extraction radius that maximizes the AUPRC') 
@@ -64,10 +68,10 @@ class NonMaximumSuppression:
 def nms_iterator(scores, radius, threshold, pool=None):
     process = NonMaximumSuppression(radius, threshold)
     if pool is not None:
-        for name,score,coords in pool.imap_unordered(process, scores.items()):
+        for name,score,coords in pool.imap_unordered(process, scores):
             yield name,score,coords
     else:
-        for name,score in scores.items():
+        for name,score in scores:
             score,coords = non_maximum_suppression(score, radius, threshold=threshold)
             yield name,score,coords
 
@@ -162,72 +166,81 @@ def find_opt_radius(targets, target_scores, threshold, lo=0, hi=200, step=10
     return r, auprc[r]
 
 
-def main(args):
-    if args.model is not None: ## load images and segment them with the model
+def stream_images(paths):
+    for path in paths:
+        image = load_image(path)
+        image = np.array(image, copy=False)
+        yield image
+
+
+def score_images(model, paths, device=-1, batch_size=1):
+    if model is not None: # score each image with the model
         ## set the device
         use_cuda = False
-        if args.device >= 0:
+        if device >= 0:
             use_cuda = torch.cuda.is_available()
-            torch.cuda.set_device(args.device)
-
+            torch.cuda.set_device(device)
         ## load the model
-        model = torch.load(args.model)
+        model = torch.load(model)
         model.eval()
         model.fill()
-
         if use_cuda:
             model.cuda()
+        scores = topaz.predict.score_stream(model, stream_images(paths), use_cuda=use_cuda
+                                           , batch_size=batch_size)
+    else: # load scores directly
+        scores = stream_images(paths)
+    for path,score in zip(paths, scores):
+        basename = os.path.basename(path)
+        image_name = os.path.splitext(basename)[0]
+        yield image_name, score
 
-        ## load the images and process with the model
-        scores = {}
-        with torch.no_grad():
-            for path in args.paths:
-                basename = os.path.basename(path)
-                image_name = os.path.splitext(basename)[0]
-                image = load_image(path)
 
-                ## process image with the model
-                X = torch.from_numpy(np.array(image, copy=False)).unsqueeze(0).unsqueeze(0)
-                if use_cuda:
-                    X = X.cuda()
-                score = model(X).data[0,0].cpu().numpy()
-                
-                scores[image_name] = score
+def main(args):
 
-    else: # images are already segmented
-        scores = {}
-        for path in args.paths:
-            basename = os.path.basename(path)
-            image_name = os.path.splitext(basename)[0]
-            image = load_image(path)
-            scores[image_name] = np.array(image, copy=False)
+    # score the images lazily with a generator
+    model = args.model
+    device = args.device
+    paths = args.paths
+    batch_size = args.batch_size
 
-    percentile = args.threshold*100
-    scores_concat = np.concatenate([array.ravel() for array in scores.values()], 0)
-    threshold = np.percentile(scores_concat, percentile)
+    stream = score_images(model, paths, device=device, batch_size=batch_size)
+
+    # extract coordinates from scored images
+    threshold = args.threshold
 
     radius = args.radius
     if radius is None:
         radius = -1
 
+    num_workers = args.num_workers
+    pool = None
+    if num_workers < 0:
+        num_workers = multiprocessing.cpu_count()
+    if num_workers > 0:
+        pool = multiprocessing.Pool(num_workers)
+
+    # if no radius is set, we choose the radius based on targets provided
     lo = args.min_radius
     hi = args.max_radius
     step = args.step_radius
     match_radius = args.assignment_radius
 
-    num_workers = args.num_workers
-    pool = None
-    if num_workers > 0:
-        from multiprocessing import Pool
-        pool = Pool(num_workers)
-
     if radius < 0 and args.targets is not None: # set the radius to optimize AUPRC of the targets
+        scores = {k:v for k,v in stream} # process all images for this part
+        stream = scores.items()
+
         targets = pd.read_csv(args.targets, sep='\t')
         target_scores = {name: scores[name] for name in targets.image_name.unique() if name in scores}
         ## find radius maximizing AUPRC
         radius, auprc = find_opt_radius(targets, target_scores, threshold, lo=lo, hi=hi, step=step
                                        , match_radius=match_radius, pool=pool)
+
+
     elif args.targets is not None:
+        scores = {k:v for k,v in stream} # process all images for this part
+        stream = scores.items()
+
         targets = pd.read_csv(args.targets, sep='\t')
         target_scores = {name: scores[name] for name in targets.image_name.unique() if name in scores}
         # calculate AUPRC for radius
@@ -238,21 +251,25 @@ def main(args):
         # must have targets if radius < 0
         raise Exception('Must specify targets for choosing the extraction radius if extraction radius is not provided')
 
-    f = sys.stdout
-    if args.output is not None:
-        f = open(args.output, 'w')
 
-    scale = args.up_scale/args.down_scale
-
+    # now, extract all particles from scored images
     if not args.only_validate:
+
+        f = sys.stdout
+        if args.output is not None:
+            f = open(args.output, 'w')
+
+        scale = args.up_scale/args.down_scale
+
         print('image_name\tx_coord\ty_coord\tscore', file=f)
         ## extract coordinates using radius 
-        for name,score,coords in nms_iterator(scores, radius, threshold, pool=pool):
+        for name,score,coords in nms_iterator(stream, radius, threshold, pool=pool):
             ## scale the coordinates
             if scale != 1:
                 coords = np.round(coords*scale).astype(int)
             for i in range(len(score)):
                 print(name + '\t' + str(coords[i,0]) + '\t' + str(coords[i,1]) + '\t' + str(score[i]), file=f)
+
 
 
 
