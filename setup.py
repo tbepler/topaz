@@ -29,5 +29,14 @@ setup(
     packages=find_packages(),
     #package_dir = {'': 'topaz'},
     entry_points = {'console_scripts': ['topaz = topaz.main:main']},
-    include_package_data = True
+    include_package_data = True,
+
+    install_requires=[
+        'torch>=0.4.0',
+        'torchvision',
+        'numpy>=1.11',
+        'pandas',
+        'scikit-learn',
+        'pillow>=4.2.1',
+    ],
 )
