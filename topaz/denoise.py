@@ -26,29 +26,48 @@ def load_model(name):
     return model
 
 
-def denoise(model, image, patch_size=-1, use_cuda=False):
+def denoise(model, image, patch_size=-1, padding=128, use_cuda=False):
+
+    if patch_size > 0:
+        return denoise_patches(model, image, patch_size, padding=padding, use_cuda=use_cuda)
+
     with torch.no_grad():
         x = torch.from_numpy(image).unsqueeze(0).unsqueeze(0)
-        
-        if patch_size > 0:
-
-            y = np.zeros_like(image)
-
-            for i in range(0, x.size(2), patch_size):
-                for j in range(0, x.size(3), patch_size):
-                    xij = x[:,:,i:i+patch_size,j:j+patch_size]
-                    if use_cuda:
-                        xij = xij.cuda()
-                    yij = model(xij).squeeze().cpu().numpy()
-                    y[i:i+patch_size,j:j+patch_size] = yij
-
-        else:
-            if use_cuda:
-                x = x.cuda()
-            y = model(x).squeeze().cpu().numpy()
+        if use_cuda:
+            x = x.cuda()
+        y = model(x).squeeze().cpu().numpy()
 
     return y
 
+
+def denoise_patches(model, image, patch_size, padding=128, use_cuda=False):
+    y = np.zeros_like(image)
+    x = torch.from_numpy(image).unsqueeze(0).unsqueeze(0)
+
+    with torch.no_grad():
+        for i in range(0, x.size(2), patch_size):
+            for j in range(0, x.size(3), patch_size):
+                # include padding extra pixels on either side
+                si = max(0, i - padding)
+                ei = min(x.size(2), i + patch_size + padding)
+
+                sj = max(0, j - padding)
+                ej = min(x.size(3), j + patch_size + padding)
+
+                xij = x[:,:,si:ei,sj:ej]
+
+                if use_cuda:
+                    xij = xij.cuda()
+
+                yij = model(xij).squeeze().cpu().numpy() # denoise the patch
+
+                # match back without the padding
+                si = i - si
+                sj = j - sj
+
+                y[i:i+patch_size,j:j+patch_size] = yij[si:si+patch_size,sj:sj+patch_size]
+
+    return y
 
 def denoise_stack(model, stack, batch_size=20, use_cuda=False):
     denoised = np.zeros_like(stack)
