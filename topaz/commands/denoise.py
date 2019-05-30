@@ -261,8 +261,8 @@ def main(args):
         # stream the micrographs and denoise as we go
 
         normalize = args.normalize
-        if args.format_ == 'png':
-            # always normalize png format
+        if args.format_ == 'png' or args.format_ == 'jpg':
+            # always normalize png and jpg format
             normalize = True
 
         format_ = args.format_

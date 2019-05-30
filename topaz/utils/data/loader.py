@@ -77,20 +77,32 @@ def load_png(path, standardize=False):
     image = Image.fromarray(x)
     return image
 
+def load_jpeg(path, standardize=False):
+    image = Image.open(path)
+    fp = image.fp
+    image.load()
+    fp.close()
+    x = np.array(image, copy=False)
+    x = unquantize(x)
+    if standardize:
+        x = (x - x.mean())/x.std()
+    image = Image.fromarray(x)
+    return image
 
 def load_pil(path, standardize=False):
     if path.endswith('.png'):
-        return load_png(path)
-    return load_tiff(path)
-
+        return load_png(path, standardize=standardize)
+    elif path.endswith('.jpeg') or path.endswith('.jpg'):
+        return load_jpeg(path, standardize=standardize)
+    return load_tiff(path, standardize=standardize)
 
 def load_image(path, standardize=False):
     ## this might be more stable as path.endswith('.mrc')
     ext = os.path.splitext(path)[1]
     if ext == '.mrc':
-        image = load_mrc(path)
+        image = load_mrc(path, standardize=standardize)
     else:
-        image = load_pil(path)
+        image = load_pil(path, standardize=standardize)
     return image
 
 
