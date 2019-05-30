@@ -19,7 +19,7 @@ requirements:
         - pandas
         - scikit-learn>=0.19.0
         - pillow
-        - pytorch>=0.4.0
+        - pytorch>=1.0.0
         - torchvision
 
 

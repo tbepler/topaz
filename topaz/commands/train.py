@@ -346,8 +346,13 @@ def make_model(args):
     from topaz.model.classifier import LinearClassifier
 
     report('Loading model:', args.model)
+    if args.model.endswith('.sav'): # loading pretrained model
+        model = torch.load(args.model)
+        model.train()
+        return model
+
     report('Model parameters: units={}, dropout={}, bn={}'.format(args.units, args.dropout, args.bn))
-   
+
     # initialize the model 
     units = args.units
     dropout = args.dropout

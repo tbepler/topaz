@@ -3,7 +3,7 @@ A pipeline for particle detection in cryo-electron microscopy images using convo
 
 ## New in v0.2.0
 
-- Topaz now supports the newest versions of pytorch (>= 0.4.0). If you have pytorch installed for an older version of topaz, it will need to be upgraded. See installation instructions for details.
+- Topaz now supports the newest versions of pytorch (>= 1.0.0). If you have pytorch installed for an older version of topaz, it will need to be upgraded. See installation instructions for details.
 - Added __topaz denoise__, a command for denoising micrographs using neural networks.
 - Usability improvements to the GUI.
 
@@ -133,7 +133,7 @@ See https://conda.io/docs/user-guide/tasks/manage-environments.html or https://v
 
 Tested with python 3.6 and 2.7
 
-- pytorch (>= 0.4.0)
+- pytorch (>= 1.0.0)
 - torchvision
 - pillow (>= 4.2.1)
 - numpy (>= 1.11)

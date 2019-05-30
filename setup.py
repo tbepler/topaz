@@ -32,7 +32,7 @@ setup(
     include_package_data = True,
 
     install_requires=[
-        'torch>=0.4.0',
+        'torch>=1.0.0',
         'torchvision',
         'numpy>=1.11',
         'pandas',

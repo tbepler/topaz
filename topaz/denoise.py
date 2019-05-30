@@ -14,7 +14,7 @@ from topaz.utils.data.loader import load_image
 
 def load_model(name):
     if name in ['L0', 'L1', 'L2']:
-        name = 'unet_' + name + '_v1.sav'
+        name = 'unet_' + name + '_v2.sav'
 
     import pkg_resources
     pkg = __name__
@@ -107,11 +107,11 @@ class DenoiseNet(nn.Module):
                                 , nn.Conv2d(2*nf, 2*nf, 3, padding=4, dilation=4)
                                 , nn.ReLU(inplace=True)
                                 , nn.MaxPool2d(3, stride=1, padding=1)
-                                , nn.Conv2d(2*nf, 4*nf, 3, padding=4, dilation=4)
+                                , nn.Conv2d(2*nf, 3*nf, 3, padding=4, dilation=4)
                                 , nn.ReLU(inplace=True)
-                                , nn.Conv2d(4*nf, 4*nf, 3, padding=4, dilation=4)
+                                , nn.Conv2d(3*nf, 3*nf, 3, padding=4, dilation=4)
                                 , nn.ReLU(inplace=True)
-                                , nn.Conv2d(4*nf, 1, 7, padding=12, dilation=4)
+                                , nn.Conv2d(3*nf, 1, 7, padding=12, dilation=4)
                                 )
 
     def forward(self, x):
@@ -187,7 +187,8 @@ class UDenoiseNet(nn.Module):
         n = p4.size(2)
         m = p4.size(3)
         #h = F.upsample(h, size=(n,m))
-        h = F.upsample(h, size=(n,m), mode='bilinear', align_corners=False)
+        #h = F.upsample(h, size=(n,m), mode='bilinear', align_corners=False)
+        h = F.interpolate(h, size=(n,m), mode='nearest')
         h = torch.cat([h, p4], 1)
 
         h = self.dec5(h)
@@ -195,7 +196,8 @@ class UDenoiseNet(nn.Module):
         n = p3.size(2)
         m = p3.size(3)
         #h = F.upsample(h, size=(n,m))
-        h = F.upsample(h, size=(n,m), mode='bilinear', align_corners=False)
+        #h = F.upsample(h, size=(n,m), mode='bilinear', align_corners=False)
+        h = F.interpolate(h, size=(n,m), mode='nearest')
         h = torch.cat([h, p3], 1)
 
         h = self.dec4(h)
@@ -203,7 +205,8 @@ class UDenoiseNet(nn.Module):
         n = p2.size(2)
         m = p2.size(3)
         #h = F.upsample(h, size=(n,m))
-        h = F.upsample(h, size=(n,m), mode='bilinear', align_corners=False)
+        #h = F.upsample(h, size=(n,m), mode='bilinear', align_corners=False)
+        h = F.interpolate(h, size=(n,m), mode='nearest')
         h = torch.cat([h, p2], 1)
 
         h = self.dec3(h)
@@ -211,7 +214,8 @@ class UDenoiseNet(nn.Module):
         n = p1.size(2)
         m = p1.size(3)
         #h = F.upsample(h, size=(n,m))
-        h = F.upsample(h, size=(n,m), mode='bilinear', align_corners=False)
+        #h = F.upsample(h, size=(n,m), mode='bilinear', align_corners=False)
+        h = F.interpolate(h, size=(n,m), mode='nearest')
         h = torch.cat([h, p1], 1)
 
         h = self.dec2(h)
@@ -219,7 +223,8 @@ class UDenoiseNet(nn.Module):
         n = x.size(2)
         m = x.size(3)
         #h = F.upsample(h, size=(n,m))
-        h = F.upsample(h, size=(n,m), mode='bilinear', align_corners=False)
+        #h = F.upsample(h, size=(n,m), mode='bilinear', align_corners=False)
+        h = F.interpolate(h, size=(n,m), mode='nearest')
         h = torch.cat([h, x], 1)
 
         y = self.dec1(h)
@@ -346,8 +351,38 @@ class L0Loss:
         return torch.mean((torch.abs(x - y) + self.eps)**self.gamma)
 
 
+def eval_noise2noise(model, dataset, criteria, batch_size=10
+                    , use_cuda=False, num_workers=0):
+    data_iterator = torch.utils.data.DataLoader(dataset, batch_size=batch_size
+                                               , num_workers=num_workers)
+
+    n = 0
+    loss = 0
+
+    model.eval()
+        
+    with torch.no_grad():
+        for x1,x2 in data_iterator:
+            if use_cuda:
+                x1 = x1.cuda()
+                x2 = x2.cuda()
+
+            x1 = x1.unsqueeze(1)
+            y = model(x1).squeeze(1)
+
+            loss_ = criteria(y, x2).item()
+
+            b = x1.size(0)
+            n += b
+            delta = b*(loss_ - loss)
+            loss += delta/n
+
+    return loss
+
+
 def train_noise2noise(model, dataset, lr=0.001, batch_size=10, num_epochs=100
-                     , criteria=nn.MSELoss(), use_cuda=False, num_workers=0):
+                     , criteria=nn.MSELoss(), dataset_val=None
+                     , use_cuda=False, num_workers=0, shuffle=True):
 
     gamma = None
     if criteria == 'L0':
@@ -361,7 +396,8 @@ def train_noise2noise(model, dataset, lr=0.001, batch_size=10, num_epochs=100
     
     #optim = torch.optim.Adam(model.parameters(), lr=lr)
     optim = torch.optim.Adagrad(model.parameters(), lr=lr)
-    data_iterator = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True
+    #optim = torch.optim.SGD(model.parameters(), lr=lr, nesterov=True, momentum=0.9)
+    data_iterator = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle
                                                , num_workers=num_workers)
 
     total = len(dataset)
@@ -375,7 +411,6 @@ def train_noise2noise(model, dataset, lr=0.001, batch_size=10, num_epochs=100
         if gamma is not None:
             # anneal gamma to 0
             criteria.gamma = 2 - (epoch-1)*2/num_epochs
-
 
         for x1,x2 in data_iterator:
             if use_cuda:
@@ -400,8 +435,19 @@ def train_noise2noise(model, dataset, lr=0.001, batch_size=10, num_epochs=100
 
             print('# [{}/{}] {:.2%} loss={:.5f}'.format(epoch, num_epochs, n/total, loss_accum)
                  , file=sys.stderr, end='\r')
-
         print(' '*80, file=sys.stderr, end='\r')
 
-        yield epoch, loss_accum
+        if dataset_val is not None:
+            loss_val = eval_noise2noise(model, dataset_val, criteria
+                                       , batch_size=batch_size
+                                       , num_workers=num_workers
+                                       , use_cuda=use_cuda
+                                       )
+            yield epoch, loss_accum, loss_val
+        else:
+            yield epoch, loss_accum
+
+
+
+
 
