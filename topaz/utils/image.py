@@ -51,10 +51,12 @@ def save_image(x, path, f=None, verbose=False):
 
     if f == 'mrc':
         save_mrc(x, path)
-    elif f == 'tiff':
+    elif f == 'tiff' or f == 'tif':
         save_tiff(x, path)
     elif f == 'png':
         save_png(x, path)
+    elif f == 'jpg' or f == 'jpeg':
+        save_jpeg(x, path)
 
 def save_mrc(x, path):
     with open(path, 'wb') as f:
@@ -69,6 +71,12 @@ def save_png(x, path):
     # byte encode the image
     im = Image.fromarray(quantize(x))
     im.save(path, 'png')
+
+def save_jpeg(x, path):
+    # byte encode the image
+    im = Image.fromarray(quantize(x))
+    im.save(path, 'jpeg')
+
 
 
 
