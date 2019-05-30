@@ -1,12 +1,10 @@
-{% set data = load_setup_py_data() %}
-
 package:
     name: "topaz"
-    version: {{ data.get('version') }}
+    version: {{ GIT_DESCRIBE_TAG }}
 
 source:
     git_url: https://github.com/tbepler/topaz.git
-    git_tag: master
+    git_tag: v0.1.0
 
 requirements:
     build:
@@ -19,13 +17,13 @@ requirements:
         - pandas
         - scikit-learn>=0.19.0
         - pillow
-        - pytorch>=1.0.0
+        - pytorch=0.2.0
         - torchvision
 
 
 build:
     noarch: python
-    number: 0
+    number: 0 
     script: "{{ PYTHON }} setup.py install --single-version-externally-managed --record=record.txt"
 
 
