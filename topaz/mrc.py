@@ -130,8 +130,12 @@ def parse(content):
         dtype = np.uint16
     elif header.mode == 16:
         dtype = '3B' # RGB values
+    else:
+        raise Exception('Unknown dtype mode:' + str(header.model))
 
     array = np.frombuffer(content, dtype=dtype) 
+    # clip array to first nz*ny*nx elements
+    array = array[:header.nz*header.ny*header.nx]
     ## reshape the array
     array = np.reshape(array, (header.nz, header.ny, header.nx)) # , order='F')
     if header.nz == 1:

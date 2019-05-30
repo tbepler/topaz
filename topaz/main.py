@@ -65,6 +65,7 @@ def main():
     import topaz.commands.downsample
     import topaz.commands.normalize
     import topaz.commands.preprocess
+    import topaz.commands.denoise
 
     import topaz.commands.gui
 
@@ -93,6 +94,7 @@ def main():
                       [topaz.commands.downsample,
                        topaz.commands.normalize,
                        topaz.commands.preprocess,
+                       topaz.commands.denoise,
                       ]
                      ),
                      ('File utilities',

@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
-name = 'topaz'
-version = '0.1.0'
+name = 'topaz-em'
+version = '0.2.0'
 
 description = 'Particle picking with positive-unlabeled CNNs'
 long_description = 'Particle picking software for single particle cryo-electron microscopy using convoluational neural networks and positive-unlabeled learning.'
@@ -29,5 +29,14 @@ setup(
     packages=find_packages(),
     #package_dir = {'': 'topaz'},
     entry_points = {'console_scripts': ['topaz = topaz.main:main']},
-    include_package_data = True
+    include_package_data = True,
+
+    install_requires=[
+        'torch>=1.0.0',
+        'torchvision',
+        'numpy>=1.11',
+        'pandas',
+        'scikit-learn',
+        'pillow>=4.2.1',
+    ],
 )
