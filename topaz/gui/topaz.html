@@ -70,9 +70,7 @@
 				var input1 = $('#input1').val() == '' ? '/path/to/input/images/*.mrc' : $('#input1').val();
 				var device1 = $('#device1').val() == '' ? '0' : $('#device1').val();
 				$('#result1').html("topaz preprocess " + input1 + " --scale " + scale1 + " --num-workers " + numworkers1 + " --format " + format1 + " --pixel-sampling " + pixelsampling1 + " --niters " + niters1 + " --seed " + seed1 + " --verbose --destdir " + output1
-				+ "<br><br>mkdir " + output1 + "/{denoisedL0,denoisedL1,denoisedL2}"
-				+ "<br><br>topaz denoise " + output1 + "/*.mrc --format png -m L0 -d " + device1 + " --output "  + output1 + "/denoisedL0/"
-				+ "<br>topaz denoise " + output1 + "/*.mrc --format png -m L1 -d " + device1 + " --output "  + output1 + "/denoisedL1/"
+				+ "<br><br>mkdir " + output1 + "/denoisedL2"
 				+ "<br>topaz denoise " + output1 + "/*.mrc --format png -m L2 -d " + device1 + " --output "  + output1 + "/denoisedL2/");
 			});
 		});
@@ -979,7 +977,7 @@
 	  <br><section><details><summary class="collapsibleoptions" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
 		<div class="content">
 		  <table style="height:7.3em">
-		  <tr title="Output format for preprocessed images (any comma-separated combination of options: mrc,tiff,png) (type: string)&#013;&#013;𝗡𝗼𝘁𝗲: Default is mrc,png because Topaz trains on mrc files, which have pixel values of floats, and because Topaz GUI is able to display png files, which have pixel values of integers."><td><hl8><span><font size="3" color="white">Output format</font></span></hl8></td><td><input id="format1" class="preprocessing_inputs" style="width:6em" value="mrc,png"></td></tr>
+		  <tr title="Output format for preprocessed images (any comma-separated combination of options: mrc,tiff,png,jpg) (type: string)&#013;&#013;𝗡𝗼𝘁𝗲: Default is mrc,png because Topaz trains on mrc files, which have pixel values of floats, and because Topaz GUI is able to display png or jpg files, which have pixel values of integers."><td><hl8><span><font size="3" color="white">Output format</font></span></hl8></td><td><input id="format1" class="preprocessing_inputs" style="width:6em" value="mrc,png"></td></tr>
 		  <tr title="Pixel sampling factor for model fit (type: integer)"><td><hl8><span><font size="3" color="white">Pixel sampling</font></span></hl8></td><td><input id="pixelsampling1" class="preprocessing_inputs" style="width:3em" value="25"></td></tr>
 		  <tr title="Number of iterations to run for model fit (type: integer)"><td><hl8><span><font size="3" color="white">Number of iterations</font></span></hl8></td><td><input id="niters1" class="preprocessing_inputs" style="width:3em" value="200"></td></tr>
 		  <tr title="Random seed for model initialization (type: integer)"><td><hl8><span><font size="3" color="white">Random seed</font></span></hl8></td><td><input id="seed1" class="preprocessing_inputs" style="width:3em" value="1"></td></tr>
@@ -989,11 +987,11 @@
 	  <br/><br/><strong>Commands:</strong><br/><hr width="20%"><br>
 	  <code><span class="tab0"><div id="result1" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
 	  topaz preprocess /path/to/input/images/*.mrc --scale 4 --num-workers -1 --format mrc,png --pixel-sampling 25 --niters 200 --seed 1  --verbose --destdir /path/to/output/preprocessed/images/<br><br>
-	  mkdir /path/to/output/preprocessed/images/{denoisedL0,denoisedL1,denoisedL2}<br><br>
-	  topaz denoise /path/to/output/preprocessed/images/*.mrc --format png -m L0 -d 0 --output /path/to/output/preprocessed/images/denoisedL0/<br>
-	  topaz denoise /path/to/output/preprocessed/images/*.mrc --format png -m L1 -d 0 --output /path/to/output/preprocessed/images/denoisedL1/<br>
+	  mkdir /path/to/output/preprocessed/images/denoisedL2<br><br>
 	  topaz denoise /path/to/output/preprocessed/images/*.mrc --format png -m L2 -d 0 --output /path/to/output/preprocessed/images/denoisedL2/
-	  </div></span></code><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;"	unselectable="on" onselectstart="return false;" onmousedown="return false;"></br></br></br></span>
+	  </div></span></code>
+	  <br><br><br><b><i>Note:</i></b> Denoising usually works best on non-frame aligned images with a binning between 1 and 4. If you wish to bin more, first denoise the unbinned micrographs, then run preprocessing.
+	  <span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;"	unselectable="on" onselectstart="return false;" onmousedown="return false;"></br></br></br></span>
 	  </div>
 	</div>
 
@@ -1610,7 +1608,7 @@ POSSIBILITY OF SUCH DAMAGE.
 	  <tr title="Path to input micrographs for training (type: string; full path)"><td><hl2><span><font size="3" color="white">Training images folder</font></span></hl2></td><td><input id="trainimages2" class="training_inputs" style="width:30em" value="/path/to/preprocessed/images/"></td></tr>
 	  <tr title="Training particles in CSV, STAR, or tab-delimited format (type: string; full file path)"><td><hl2><span><font size="3" color="white">Training particles</font></span></hl2></td><td><input id="traintargets2" class="training_inputs" style="width:30em" value="/path/to/training_particles.csv"></td></tr>
 	  <tr title="Output folder to write the train/test curve and models for each epoch (type: string; full file path)&#013;&#013;𝗡𝗼𝘁𝗲: The output directory 𝘮𝘶𝘴𝘵 𝘦𝘹𝘪𝘴𝘵."><td><hl2><span><font size="3" color="white">Output</font></span></hl2></td><td><input id="output2" class="training_inputs" style="width:30em" value="/output/path/"></td></tr>
-	  <tr title="Pixel radius around particle centers to consider (type: integer)"><td><hl4><span><font size="3" color="white">Particle radius</font></span></hl4></td><td><input id="radius2" class="training_inputs" style="width:3em" value="3"></td></tr>
+	  <tr title="Pixel radius around particle centers to consider (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: Try a value that is roughly equal to the minor axis radius of your particle. The goal is to train a model that knows what a single particle looks like, so the training radius should be set such that it does not include neighboring potential particles."><td><hl4><span><font size="3" color="white">Particle radius</font></span></hl4></td><td><input id="radius2" class="training_inputs" style="width:3em" value="3"></td></tr>
 	  <tr title="Augment the method with an autoencoder where the weight is on the reconstruction error (type: float)"><td><hl4><span><font size="3" color="white">Autoencoder</font></span></hl4></td><td><input id="autoencoder2" class="training_inputs" style="width:3em" value="0"></td></tr>
 	  <tr title="Number of training epochs (type: integer)"><td><hl4><span><font size="3" color="white">Number of epochs</font></span></hl4></td><td><input id="numepochs2" class="training_inputs" style="width:3em" value="10"></td></tr>
 	  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU training (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device2" class="training_inputs" style="width:3em" value="0"></td></tr>
@@ -1792,9 +1790,9 @@ POSSIBILITY OF SUCH DAMAGE.
 		  <br><table style="height:11em">
 		  <tr title="Input micrographs for denoising (type: string; full path 𝘸𝘪𝘵𝘩 𝘸𝘪𝘭𝘥𝘤𝘢𝘳𝘥 for *.mrc files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input7" class="denoise_micrographs_inputs" style="width:30em" value="/path/to/input/images/*.mrc"></td></tr>
 		  <tr title="Output directory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output7" class="denoise_micrographs_inputs" style="width:30em" value="/path/to/output/folder"></td></tr>
-		  <tr title="Denoising model to use on micrographs (type: string; use either L0, L1, or L2 to use pretrained models or a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pretrained models were trained on hundreds of datasets of K2 micrograph frames of various particles."><td><hl4><span><font size="3" color="white">Model</font></span></hl4></td><td><input id="model7" class="denoise_micrographs_inputs" style="width:30em" value="L2"></td></tr>
+		  <tr title="Denoising model to use on micrographs (type: string; use either L2 to use the pretrained model or a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pretrained models were trained on hundreds of datasets of K2 micrograph frames of various particles."><td><hl4><span><font size="3" color="white">Model</font></span></hl4></td><td><input id="model7" class="denoise_micrographs_inputs" style="width:30em" value="L2"></td></tr>
 		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU denoising (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device7" class="denoise_micrographs_inputs" style="width:3em" value="0"></td></tr>
-		  <tr title="Output format of denoised images (type: string; options: mrc, png, tiff)"><td><hl4><span><font size="3" color="white">Format</font></span></hl4></td><td><input id="format7" class="denoise_micrographs_inputs" style="width:3em" value="mrc"></td></tr>
+		  <tr title="Output format of denoised images (type: string; options: mrc, png, tiff, jpg)"><td><hl4><span><font size="3" color="white">Format</font></span></hl4></td><td><input id="format7" class="denoise_micrographs_inputs" style="width:3em" value="mrc"></td></tr>
 		  <tr title="Bin micrographs before denoising. '1' means no binning (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: If micrographs are too big for the GPU ram, there will be an error. To get around this, the micrographs may be binned, denoised in patches, or the CPU may be used instead of GPU."><td><hl4><span><font size="3" color="white">Bin micrographs</font></span></hl4></td><td><input id="bin7" class="denoise_micrographs_inputs" style="width:3em" value="1"></td></tr>
 		  </table>
 		  <br><section><details><summary class="collapsibleoptions2" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
@@ -1825,9 +1823,9 @@ POSSIBILITY OF SUCH DAMAGE.
 		  <br><table style="height:11em">
 		  <tr title="Input micrographs for denoising (type: string; full path to a single mrc/mrcs stack)"><td><hl2><span><font size="3" color="white">Input stack</font></span></hl2></td><td><input id="input8" class="denoise_stack_inputs" style="width:30em" value="/path/to/particle/stack.mrcs"></td></tr>
 		  <tr title="Output stack (type: string; full path)"><td><hl2><span><font size="3" color="white">Output stack</font></span></hl2></td><td><input id="output8" class="denoise_stack_inputs" style="width:30em" value="/path/to/denoised/stack.mrcs"></td></tr>
-		  <tr title="Denoising model to use on the particle stack (type: string; use either L0, L1, or L2 to use pretrained models or a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pretrained models were trained on hundreds of datasets of K2 micrograph frames of various particles."><td><hl4><span><font size="3" color="white">Model</font></span></hl4></td><td><input id="model8" class="denoise_stack_inputs" style="width:30em" value="L2"></td></tr>
+		  <tr title="Denoising model to use on the particle stack (type: string; use either L2 to use the pretrained model or a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pretrained models were trained on hundreds of datasets of K2 micrograph frames of various particles."><td><hl4><span><font size="3" color="white">Model</font></span></hl4></td><td><input id="model8" class="denoise_stack_inputs" style="width:30em" value="L2"></td></tr>
 		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU denoising (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device8" class="denoise_stack_inputs" style="width:3em" value="0"></td></tr>
-		  <tr title="Output format of denoised images (type: string; options: mrc, png, tiff)"><td><hl8><span><font size="3" color="white">Format</font></span></hl8></td><td><input id="format8" class="denoise_stack_inputs" style="width:3em" value="mrc"></td></tr>
+		  <tr title="Output format of denoised images in stack (type: string; options: mrc, png, tiff, jpg. mrc is highly recommended)"><td><hl8><span><font size="3" color="white">Format</font></span></hl8></td><td><input id="format8" class="denoise_stack_inputs" style="width:3em" value="mrc"></td></tr>
 		  <tr title="Bin stack before denoising. '1' means no binning (type: integer)"><td><hl8><span><font size="3" color="white">Bin Stack</font></span></hl8></td><td><input id="bin8" class="denoise_stack_inputs" style="width:3em" value="1"></td></tr>
 		  </table></span>
 		  <br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>

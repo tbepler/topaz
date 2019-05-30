@@ -15,7 +15,7 @@ A pipeline for particle detection in cryo-electron microscopy images using convo
 
 # Installation
 
-**<details><summary> (Recommended) Click here to install *using Anaconda*</summary><p>**
+**<details><summary>(Recommended) Click here to install *using Anaconda*</summary><p>**
 
 If you do not have the Anaconda python distribution, [please install it following the instructions on their website](https://www.anaconda.com/download).
 
@@ -47,7 +47,7 @@ That's it! Topaz is now installed in your anaconda environment.
 
 </p></details>
 
-**<details><summary> Click here to install *using Pip*</summary><p>**
+**<details><summary>Click here to install *using Pip*</summary><p>**
 
 We strongly recommend installing Topaz into a _virtual environment_. See [installation instructions](https://virtualenv.pypa.io/en/latest/installation/) and [user guide](https://virtualenv.pypa.io/en/latest/userguide/) for virtualenv.
 
@@ -114,11 +114,11 @@ docker build -t topaz .
 
 </p></details>
 
-**<details><summary> Click here to install *using Singularity*</summary><p>**
+**<details><summary>Click here to install *using Singularity*</summary><p>**
 
-A prebuilt Singularity image for Topaz is available [here](https://singularity-hub.org/collections/2517) and can be installed with:
+A prebuilt Singularity image for Topaz is available [here](https://singularity-hub.org/collections/2413) and can be installed with:
 ```
-singularity pull shub://dallakyan/topaz_singularity
+singularity pull shub://nysbc/topaz
 ```
 
 </p></details>
@@ -413,6 +413,8 @@ optional arguments:
 
 </p></details>
 
+**<details><summary>Click here for a description of the model architectures, training methods, and training radius</summary><p>**
+
 #### Model architectures
 Currently, there are several model architectures available for use as the region classifier
 - resnet8 [receptive field = 71]
@@ -445,6 +447,10 @@ The PU method uses the objective function proposed by Kiryo et al. (2017)
 #### Radius
 
 This sets how many pixels around each particle coordinate are treated as positive, acting as a form of data augmentation. These coordinates follow a distribution that results from which pixel was selected as the particle center when the data was labeled. The radius should be chosen to be large enough that it covers a reasonable region of pixels likely to have been selected but not so large that pixels outside of the particles are labeled as positives.
+
+</p></details>
+
+A user guide is also built into the Topaz GUI.
 
 # Reference
 
