@@ -55,12 +55,12 @@ We strongly recommend installing Topaz into a _virtual environment_. See [instal
 
 To install Topaz for Python 3.X
 ```
-pip3 install topaz
+pip3 install topaz-em
 ```
 
 for Python 2.7
 ```
-pip install topaz
+pip install topaz-em
 ```
 See [here](https://pytorch.org/get-started/locally/) for additional pytorch installation instructions, including how to install pytorch for specific CUDA versions.
 

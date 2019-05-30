@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-name = 'topaz'
+name = 'topaz-em'
 version = '0.2.0'
 
 description = 'Particle picking with positive-unlabeled CNNs'
