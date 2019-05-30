@@ -60,7 +60,7 @@
 	$( document ).ready(function() {
 		$('.preprocessing_inputs').each(function() {
 			$(this).on('keyup', function() {
-				var scale1 = $('#scale1').val() == '' ? '8' : $('#scale1').val();
+				var scale1 = $('#scale1').val() == '' ? '4' : $('#scale1').val();
 				var numworkers1 = $('#numworkers1').val() == '' ? '-1' : $('#numworkers1').val();
 				var pixelsampling1 = $('#pixelsampling1').val() == '' ? '25' : $('#pixelsampling1').val();
 				var format1 = $('#format1').val() == '' ? 'mrc,png' : $('#format1').val();
@@ -223,7 +223,7 @@
 				var device8 = $('#device8').val() == '' ? '0' : $('#device8').val();
 				var format8 = $('#format8').val() == '' ? 'mrc' : $('#format8').val();
 				var bin8 = $('#bin8').val() == '' ? '1' : $('#bin8').val();
-				var output8 = $('#output8').val() == '' ? '/path/to/output/folder' : $('#output8').val();
+				var output8 = $('#output8').val() == '' ? '/path/to/denoised/stack.mrcs' : $('#output8').val();
 				$('#result8').html("topaz denoise " + input8 + " --model " + model8 + " --device " + device8 + " --format " + format8 + " --bin " + bin8 + " --stack --normalize --output " + output8);
 			});
 		});
@@ -974,7 +974,7 @@
 	  <tr title="Output directory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output1" class="preprocessing_inputs" style="width:30em" value="/path/to/output/preprocessed/images/"></td></tr>
 	  <tr title="Number of CPU cores to use for parallel image downsampling.&#013;-1 means use all CPUs (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers1" class="preprocessing_inputs" style="width:3em" value="-1"></td></tr>
 	  <tr title="Device to use for denoising. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU training (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: It is highly recommended that a GPU is used for speed."><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device1" class="preprocessing_inputs" style="width:3em" value="0"></td></tr>
-	  <tr title="Rescaling factor for image downsampling (e.g. a 4k x 4k image downsampled by 4 results in a 1k x 1k image) (type: even integer).&#013;&#013;Recommended: Downsample such that the resulting pixelsize is about 8 angstroms; usually downsample by 4, 8, or 16 depending on pixelsize and particle size.&#013;&#013;𝗡𝗼𝘁𝗲: Your particle 𝘮𝘶𝘴𝘵 have a diameter (longest dimension) after downsampling of:&#013;&#013;70 pixels or less for resnet8&#013;30 pixels or less for conv31&#013;62 pixels or less for conv63&#013;126 pixels or less for conv127"><td><hl4><span><font size="3" color="white">Scale factor</font></span></hl4></td><td><input id="scale1" class="preprocessing_inputs" style="width:3em" value="8"></td></tr>
+	  <tr title="Rescaling factor for image downsampling (e.g. a 4k x 4k image downsampled by 4 results in a 1k x 1k image) (type: even integer).&#013;&#013;Recommended: Downsample such that the resulting pixelsize is about 8 angstroms; usually downsample by 4, 8, or 16 depending on pixelsize and particle size.&#013;&#013;𝗡𝗼𝘁𝗲: Your particle 𝘮𝘶𝘴𝘵 have a diameter (longest dimension) after downsampling of:&#013;&#013;70 pixels or less for resnet8&#013;30 pixels or less for conv31&#013;62 pixels or less for conv63&#013;126 pixels or less for conv127"><td><hl4><span><font size="3" color="white">Scale factor</font></span></hl4></td><td><input id="scale1" class="preprocessing_inputs" style="width:3em" value="4"></td></tr>
 	  </table>
 	  <br><section><details><summary class="collapsibleoptions" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
 		<div class="content">
@@ -988,7 +988,7 @@
 		</span>
 	  <br/><br/><strong>Commands:</strong><br/><hr width="20%"><br>
 	  <code><span class="tab0"><div id="result1" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
-	  topaz preprocess /path/to/input/images/*.mrc --scale 8 --num-workers -1 --format mrc,png --pixel-sampling 25 --niters 200 --seed 1  --verbose --destdir /path/to/output/preprocessed/images/<br><br>
+	  topaz preprocess /path/to/input/images/*.mrc --scale 4 --num-workers -1 --format mrc,png --pixel-sampling 25 --niters 200 --seed 1  --verbose --destdir /path/to/output/preprocessed/images/<br><br>
 	  mkdir /path/to/output/preprocessed/images/{denoisedL0,denoisedL1,denoisedL2}<br><br>
 	  topaz denoise /path/to/output/preprocessed/images/*.mrc --format png -m L0 -d 0 --output /path/to/output/preprocessed/images/denoisedL0/<br>
 	  topaz denoise /path/to/output/preprocessed/images/*.mrc --format png -m L1 -d 0 --output /path/to/output/preprocessed/images/denoisedL1/<br>
@@ -1511,7 +1511,7 @@
           <div style="text-align:center">
              <table style="font-family:mono; font-size:0.8em;text-align:center;">
 			 <tr><td><a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo_medium"></span></a></td><td>&nbsp&nbsp&nbsp&nbsp<a href="http://www.robots.ox.ac.uk/~vgg/software/via/" target="_blank"><span class="via_logo"></span></a></td></tr>
-			 <tr><td><a href="https://github.com/tbepler/topaz#topaz" target="_blank">Topaz Version 0.2.0</a></td><td><a href="https://gitlab.com/vgg/via/blob/master/CHANGELOG" target="_blank">VIA Version 2.0.7 (modified)</a></td></tr>
+			 <tr><td><a href="https://github.com/tbepler/topaz#topaz" target="_blank">Topaz Version 0.2.0a</a></td><td><a href="https://gitlab.com/vgg/via/blob/master/CHANGELOG" target="_blank">VIA Version 2.0.7 (modified)</a></td></tr>
 			 </table>
           </div>
 
@@ -1824,7 +1824,7 @@ POSSIBILITY OF SUCH DAMAGE.
 		  <hr width="20%">
 		  <br><table style="height:11em">
 		  <tr title="Input micrographs for denoising (type: string; full path to a single mrc/mrcs stack)"><td><hl2><span><font size="3" color="white">Input stack</font></span></hl2></td><td><input id="input8" class="denoise_stack_inputs" style="width:30em" value="/path/to/particle/stack.mrcs"></td></tr>
-		  <tr title="Output directory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output8" class="denoise_stack_inputs" style="width:30em" value="/path/to/output/folder"></td></tr>
+		  <tr title="Output stack (type: string; full path)"><td><hl2><span><font size="3" color="white">Output stack</font></span></hl2></td><td><input id="output8" class="denoise_stack_inputs" style="width:30em" value="/path/to/denoised/stack.mrcs"></td></tr>
 		  <tr title="Denoising model to use on the particle stack (type: string; use either L0, L1, or L2 to use pretrained models or a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pretrained models were trained on hundreds of datasets of K2 micrograph frames of various particles."><td><hl4><span><font size="3" color="white">Model</font></span></hl4></td><td><input id="model8" class="denoise_stack_inputs" style="width:30em" value="L2"></td></tr>
 		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU denoising (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device8" class="denoise_stack_inputs" style="width:3em" value="0"></td></tr>
 		  <tr title="Output format of denoised images (type: string; options: mrc, png, tiff)"><td><hl8><span><font size="3" color="white">Format</font></span></hl8></td><td><input id="format8" class="denoise_stack_inputs" style="width:3em" value="mrc"></td></tr>
@@ -1832,7 +1832,7 @@ POSSIBILITY OF SUCH DAMAGE.
 		  </table></span>
 		  <br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
 		  <code><div id="result8" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
-		  topaz denoise /path/to/particle/stack.mrcs --model L2 --device 0 --format mrc --bin 1 --stack --normalize --output /path/to/output/folder
+		  topaz denoise /path/to/particle/stack.mrcs --model L2 --device 0 --format mrc --bin 1 --stack --normalize --output /path/to/denoised/stack.mrcs
 		  </div></span></code>
 		</div></br>
 	  </details></summary>
