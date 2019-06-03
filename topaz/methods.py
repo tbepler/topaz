@@ -9,6 +9,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 def autoencoder_loss(model, X):
+    X = X.unsqueeze(1)
     z = model.features(X)
     score = model.classifier(z).view(-1)
 
@@ -16,7 +17,7 @@ def autoencoder_loss(model, X):
     pad = (model.width - model.generative.width)//2
     if pad > 0:
         X = X[:,:,pad:-pad,pad:-pad]
-    recon_loss = (X.unsqueeze(1) - X_)**2
+    recon_loss = (X - X_)**2
     recon_loss = torch.mean(torch.sum(recon_loss.view(X.size(0),-1), 1))
 
     return recon_loss, score
@@ -107,7 +108,7 @@ class GE_binomial:
         ## calculate Normal approximation to the distribution over positive count given
         ## by the classifier
         select = (Y.data == 0)
-        N = select.sum()
+        N = select.sum().item()
         p_hat = torch.sigmoid(score[select])
         q_mu = p_hat.sum()
         q_var = torch.sum(p_hat*(1-p_hat))
