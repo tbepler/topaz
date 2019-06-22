@@ -6,21 +6,28 @@ import os
 
 import topaz.mrc as mrc
 
-def downsample(x, factor):
+def downsample(x, factor=1, shape=None):
     """ Downsample 2d array using fourier transform """
 
-    m,n = x.shape[-2:]
+    if shape is None:
+        m,n = x.shape[-2:]
+        m = int(m/factor)
+        n = int(n/factor)
+        shape = (m,n)
 
     F = np.fft.rfft2(x)
-    #F = np.fft.fftshift(F)
 
-    S = 2*factor
-    A = F[...,0:m//S+1,0:n//S+1]
-    B = F[...,-m//S:,0:n//S+1]
+    m,n = shape
+    A = F[...,0:m//2,0:n//2+1]
+    B = F[...,-m//2:,0:n//2+1]
+    F = np.concatenate([A,B], axis=0)
 
-    F = np.concatenate([A,B], axis=-2)
-    
-    f = np.fft.irfft2(F)
+    ## scale the signal from downsampling
+    a = n*m
+    b = x.shape[-2]*x.shape[-1]
+    F *= (a/b)
+
+    f = np.fft.irfft2(F, s=shape)
 
     return f
 

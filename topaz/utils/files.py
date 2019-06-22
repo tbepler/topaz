@@ -64,7 +64,7 @@ def read_via_csv(path):
             for i in range(len(attributes)):
                 att = json.loads(attributes.iloc[i])
                 if 'score' in att:
-                    scores[i] = att['score']
+                    scores[i] = float(att['score'])
 
 
     table = table.drop(['file_size', 'file_attributes', 'region_count', 'region_id', 'region_shape_attributes', 'region_attributes'], 1)
