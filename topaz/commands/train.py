@@ -581,6 +581,8 @@ def main(args):
         use_cuda = torch.cuda.is_available()
         if use_cuda:
             torch.cuda.set_device(args.device)
+        else:
+            print('WARNING: you specified GPU (device={}) but no GPUs were detected. This may mean there is a mismatch between your system CUDA version and your pytorch CUDA version.'.format(args.device), file=sys.stderr)
     report('Using device={} with cuda={}'.format(args.device, use_cuda))
 
     if use_cuda:
