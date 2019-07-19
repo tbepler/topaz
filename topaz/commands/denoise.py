@@ -277,7 +277,7 @@ def main(args):
         # now, stream the micrographs and denoise them
         for path in args.micrographs:
             name,_ = os.path.splitext(os.path.basename(path))
-            mic = np.array(load_image(path), copy=False)
+            mic = np.array(load_image(path), copy=False).astype(np.float32)
             if bin_ > 1:
                 mic = downsample(mic, bin_)
             mu = mic.mean()
