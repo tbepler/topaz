@@ -28,28 +28,40 @@ def add_arguments(parser):
     parser.add_argument('micrographs', nargs='*', help='micrographs to denoise')
 
     parser.add_argument('-o', '--output', help='directory to save denoised micrographs')
+    parser.add_argument('--suffix', default='', help='add this suffix to each output file name (default: none)')
     parser.add_argument('--format', dest='format_', default='mrc', help='output format for the images (default: mrc)')
     parser.add_argument('--normalize', action='store_true', help='normalize the micrographs')
 
     parser.add_argument('--stack', action='store_true', help='denoise a MRC stack rather than list of micorgraphs')
 
     parser.add_argument('--save-prefix', help='path prefix to save denoising model')
-    parser.add_argument('-m', '--model', default='L2', help='use pretrained denoising model, use L2 for pretrained model (default: L2)')
+    parser.add_argument('-m', '--model', nargs='+', default='L2', help='use pretrained denoising model, use L2 for pretrained model. can accept arguments for multiple models the outputs of which will be averaged (default: L2)')
 
-    parser.add_argument('-a', '--dir-a', help='directory of training images part A')
-    parser.add_argument('-b', '--dir-b', help='directory of training images part B')
+    parser.add_argument('-a', '--dir-a', nargs='+', help='directory of training images part A')
+    parser.add_argument('-b', '--dir-b', nargs='+', help='directory of training images part B')
     parser.add_argument('--hdf', help='path to HDF5 file containing training image stack as an alternative to dirA/dirB')
+    parser.add_argument('--preload', action='store_true', help='preload micrographs into RAM')
 
-    parser.add_argument('--bin', type=int, default=1)
+    parser.add_argument('--lowpass', type=float, default=1, help='lowpass filter micrographs by this amount (in pixels) before applying the denoising filter. uses a hard lowpass filter (i.e. sinc) (default: no lowpass filtering)')
+    parser.add_argument('--gaussian', type=float, default=0, help='Gaussian filter micrographs with this standard deviation (in pixels) before applying the denoising filter (default: 0)')
+    parser.add_argument('--inv-gaussian', type=float, default=0, help='Inverse Gaussian filter micrographs with this standard deviation (in pixels) before applying the denoising filter (default: 0)')
+
+    parser.add_argument('--deconvolve', action='store_true', help='apply optimal Gaussian deconvolution filter to each micrograph before denoising')
+    parser.add_argument('--deconv-patch', type=int, default=1, help='apply spatial covariance correction to micrograph to this many patches (default: 1)')
+
     parser.add_argument('-s', '--patch-size', type=int, default=-1, help='denoises micrographs in patches of this size. not used if <1 (default: -1)')
-    parser.add_argument('-p', '--patch-padding', type=int, default=128, help='padding around each patch to remove edge artifacts (default: 128)')
+    parser.add_argument('-p', '--patch-padding', type=int, default=500, help='padding around each patch to remove edge artifacts (default: 500)')
 
-    parser.add_argument('-n', '--noise', default=1.0, type=float, help='standard deviation of the noise (default: 1.0)')
+    parser.add_argument('--method', choices=['noise2noise', 'masked'], default='noise2noise', help='denoising training method (default: noise2noise)')
+    parser.add_argument('--arch', choices=['unet', 'unet-small', 'unet2', 'unet3', 'fcnet', 'fcnet2', 'affine'], default='unet', help='denoising model architecture (default: unet)')
+
+
+    parser.add_argument('--optim', choices=['adam', 'adagrad', 'sgd'], default='adagrad', help='optimizer (default: adagrad)')
     parser.add_argument('--lr', default=0.001, type=float, help='learning rate for the optimizer (default: 0.001)')
     parser.add_argument('--criteria', default='L2', choices=['L0', 'L1', 'L2'], help='training criteria (default: L2)')
 
     parser.add_argument('-c', '--crop', type=int, default=800, help='training crop size (default: 800)')
-    parser.add_argument('--batch-size', type=int, default=10, help='training batch size (default: 10)')
+    parser.add_argument('--batch-size', type=int, default=4, help='training batch size (default: 4)')
 
     parser.add_argument('--num-epochs', default=100, type=int, help='number of training epochs (default: 100)') 
 
@@ -62,7 +74,7 @@ import topaz.denoise as dn
 from topaz.utils.image import save_image
 
 
-def make_paired_images_datasets(dir_a, dir_b, crop, random=np.random):
+def make_paired_images_datasets(dir_a, dir_b, crop, random=np.random, preload=False):
     # train denoising model
     # make the dataset
     A = []
@@ -90,13 +102,44 @@ def make_paired_images_datasets(dir_a, dir_b, crop, random=np.random):
     print('# training with', len(A_train), 'image pairs', file=sys.stderr)
     print('# validating on', len(A_val), 'image pairs', file=sys.stderr)
 
-    dataset_train = dn.PairedImages(A_train, B_train, crop=crop, xform=True)
-    dataset_val = dn.PairedImages(A_val, B_val, crop=crop)
+    dataset_train = dn.PairedImages(A_train, B_train, crop=crop, xform=True, preload=preload)
+    dataset_val = dn.PairedImages(A_val, B_val, crop=crop, preload=preload)
 
     return dataset_train, dataset_val
 
 
-class HDFDataset:
+def make_images_datasets(dir_a, dir_b, crop, random=np.random):
+    # train denoising model
+    # make the dataset
+    paths = []
+    for path in glob.glob(dir_a + os.sep + '*.mrc'):
+        paths.append(path)
+
+    if dir_b is not None:
+        for path in glob.glob(dir_b + os.sep + '*.mrc'):
+            paths.append(path)
+
+    # randomly hold out some image pairs for validation
+    n = int(0.1*len(paths))
+    order = random.permutation(len(paths))
+
+    path_train = []
+    path_val = []
+    for i in range(n):
+        path_val.append(paths[order[i]])
+    for i in range(n, len(paths)):
+        path_train.append(paths[order[i]])
+
+    print('# training with', len(path_train), 'image pairs', file=sys.stderr)
+    print('# validating on', len(path_val), 'image pairs', file=sys.stderr)
+
+    dataset_train = dn.NoiseImages(path_train, crop=crop, xform=True)
+    dataset_val = dn.NoiseImages(path_val, crop=crop)
+
+    return dataset_train, dataset_val
+
+
+class HDFPairedDataset:
     def __init__(self, dataset, start=0, end=None, xform=False):
         self.dataset = dataset
         self.start = start
@@ -139,29 +182,74 @@ class HDFDataset:
             x = np.ascontiguousarray(x)
             y = np.ascontiguousarray(y)
 
+        x = np.clip(x, -4, 4)
+        y = np.clip(y, -4, 4)
+
         return x,y
 
 
-def make_hdf5_datasets(path):
+class HDFDataset:
+    def __init__(self, dataset, start=0, end=None, xform=False):
+        self.dataset = dataset
+        self.start = start
+        self.end = end
+        if end is None:
+            self.end = len(dataset)
+        self.n = self.end - self.start
+        self.xform = xform
+
+    def __len__(self):
+        return self.n
+
+    def __getitem__(self, i): # retrieve the i'th image pair
+        i = self.start + i
+        x = self.dataset[i]
+
+        # randomly flip
+        if self.xform:
+            if np.random.rand() > 0.5:
+                x = np.flip(x, 0)
+            if np.random.rand() > 0.5:
+                x = np.flip(x, 1)
+
+
+            k = np.random.randint(4)
+            x = np.rot90(x, k=k)
+
+            x = np.ascontiguousarray(x)
+
+        x = np.clip(x, -4, 4)
+
+        return x
+
+
+def make_hdf5_datasets(path, paired=True, preload=False):
 
     # open the hdf5 dataset
     import h5py
     f = h5py.File(path, 'r')
     dataset = f['images']
+    if preload:
+        dataset = dataset[:]
 
     # split into train/validate
-    N = len(dataset)//2 # number of image pairs
+    N = len(dataset) # number of image pairs
+    if paired:
+        N = N//2
     n = int(0.1*N)
     split = 2*(N-n)
 
-    dataset_train = HDFDataset(dataset, end=split, xform=True)
-    dataset_val = HDFDataset(dataset, start=split)
+    if paired:
+        dataset_train = HDFPairedDataset(dataset, end=split, xform=True)
+        dataset_val = HDFPairedDataset(dataset, start=split)
+    else:
+        dataset_train = HDFDataset(dataset, end=split, xform=True)
+        dataset_val = HDFDataset(dataset, start=split)
 
     print('# training with', len(dataset_train), 'image pairs', file=sys.stderr)
     print('# validating on', len(dataset_val), 'image pairs', file=sys.stderr)
 
     return dataset_train, dataset_val
-
 
 
 def main(args):
@@ -176,25 +264,72 @@ def main(args):
 
     do_train = (args.dir_a is not None and args.dir_b is not None) or (args.hdf is not None)
     if do_train:
+
+        method = args.method
+        paired = (method == 'noise2noise')
+        preload = args.preload
+
         if args.hdf is None: #use dirA/dirB
             crop = args.crop
-            dir_a = args.dir_a
-            dir_b = args.dir_b
-            random = np.random.RandomState(44444)
-            
-            dataset_train, dataset_val = make_paired_images_datasets(dir_a, dir_b, crop, random=random)
+            dir_as = args.dir_a
+            dir_bs = args.dir_b
+
+            dset_train = []
+            dset_val = []
+
+            for dir_a, dir_b in zip(dir_as, dir_bs): 
+                random = np.random.RandomState(44444)
+                if paired:
+                    dataset_train, dataset_val = make_paired_images_datasets(dir_a, dir_b, crop
+                                                                            , random=random
+                                                                            , preload=preload 
+                                                                            )
+                else:
+                    dataset_train, dataset_val = make_images_datasets(dir_a, dir_b, crop, random=random)
+                dset_train.append(dataset_train)
+                dset_val.append(dataset_val)
+
+            dataset_train = dset_train[0]
+            for i in range(1, len(dset_train)):
+                dataset_train.x += dset_train[i].x
+                if paired:
+                    dataset_train.y += dset_train[i].y
+
+            dataset_val = dset_val[0]
+            for i in range(1, len(dset_val)):
+                dataset_val.x += dset_val[i].x
+                if paired:
+                    dataset_val.y += dset_val[i].y
+
             shuffle = True
         else: # make HDF datasets
-            dataset_train, dataset_val = make_hdf5_datasets(args.hdf)
-            shuffle = False
+            dataset_train, dataset_val = make_hdf5_datasets(args.hdf, paired=paired, preload=preload)
+            shuffle = preload
 
         # initialize the model
-        #model = dn.DenoiseNet(32)
-        model = dn.UDenoiseNet()
+        arch = args.arch
+        if arch == 'unet':
+            model = dn.UDenoiseNet()
+        elif arch == 'unet-small':
+            model = dn.UDenoiseNetSmall()
+        elif arch == 'unet2':
+            model = dn.UDenoiseNet2()
+        elif arch == 'unet3':
+            model = dn.UDenoiseNet3()
+        elif arch == 'fcnet':
+            model = dn.DenoiseNet(32)
+        elif arch == 'fcnet2':
+            model = dn.DenoiseNet2(64)
+        elif arch == 'affine':
+            model = dn.AffineDenoise()
+        else:
+            raise Exception('Unknown architecture: ' + arch)
+
         if use_cuda:
             model = model.cuda()
 
         # train
+        optim = args.optim
         lr = args.lr
         batch_size = args.batch_size
         num_epochs = args.num_epochs
@@ -205,16 +340,32 @@ def main(args):
         #criteria = nn.L1Loss()
         criteria = args.criteria
 
-        for epoch,loss_train,loss_val in dn.train_noise2noise(model, dataset_train
-                                                             , lr=lr
-                                                             , batch_size=batch_size
-                                                             , criteria=criteria
-                                                             , num_epochs=num_epochs
-                                                             , dataset_val=dataset_val
-                                                             , use_cuda=use_cuda
-                                                             , num_workers=num_workers
-                                                             , shuffle=shuffle
-                                                             ):
+        if method == 'noise2noise':
+            iterator = dn.train_noise2noise(model, dataset_train, lr=lr
+                                           , optim=optim
+                                           , batch_size=batch_size
+                                           , criteria=criteria
+                                           , num_epochs=num_epochs
+                                           , dataset_val=dataset_val
+                                           , use_cuda=use_cuda
+                                           , num_workers=num_workers
+                                           , shuffle=shuffle
+                                           )
+        elif method == 'masked':
+            iterator = dn.train_mask_denoise(model, dataset_train, lr=lr
+                                            , optim=optim
+                                            , batch_size=batch_size
+                                            , criteria=criteria
+                                            , num_epochs=num_epochs
+                                            , dataset_val=dataset_val
+                                            , use_cuda=use_cuda
+                                            , num_workers=num_workers
+                                            , shuffle=shuffle
+                                            )
+
+
+
+        for epoch,loss_train,loss_val in iterator:
             print(epoch, loss_train, loss_val)
             sys.stdout.flush()
 
@@ -227,19 +378,28 @@ def main(args):
                 if use_cuda:
                     model.cuda()
 
-    else: # load the saved model
-        if args.model in ['L0', 'L1', 'L2']:
-            if args.model in ['L0', 'L1']:
-                print('ERROR: L0 and L1 models are not implemented in the current version'
-                     , file=sys.stderr)
-                sys.exit(1)
-            model = dn.load_model(args.model)
-        else:
-            model = torch.load(args.model)
-        print('# using model:', args.model, file=sys.stderr)
-        model.eval()
-        if use_cuda:
-            model.cuda()
+    else: # load the saved model(s)
+        models = []
+        for arg in args.model:
+            if arg in ['L0', 'L1', 'L2']:
+                if arg in ['L0', 'L1']:
+                    print('ERROR: L0 and L1 models are not implemented in the current version'
+                         , file=sys.stderr)
+                    sys.exit(1)
+                model = dn.load_model(arg)
+            elif arg == 'none':
+                print('# Warnining: no denoising model will be used', file=sys.stderr)
+                model = dn.Identity()
+            else:
+                model = torch.load(arg)
+                
+            print('# using model:', arg, file=sys.stderr)
+            model.eval()
+            if use_cuda:
+                model.cuda()
+
+            models.append(model)
+
 
     if args.stack:
         # we are denoising a single MRC stack
@@ -248,7 +408,10 @@ def main(args):
         stack,_,_ = mrc.parse(content)
         print('# denoising stack with shape:', stack.shape, file=sys.stderr)
 
-        denoised = dn.denoise_stack(model, stack, use_cuda=use_cuda)
+        denoised = 0
+        for model in models:
+            denoised += dn.denoise_stack(model, stack, use_cuda=use_cuda)
+        denoised /= len(models)
 
         # write the denoised stack
         path = args.output
@@ -266,36 +429,79 @@ def main(args):
             normalize = True
 
         format_ = args.format_
+        suffix = args.suffix
 
         count = 0
         total = len(args.micrographs)
 
-        bin_ = args.bin
+        lowpass = args.lowpass
+        gaus = args.gaussian
+        if gaus > 0:
+            gaus = dn.GaussianDenoise(gaus)
+            if use_cuda:
+                gaus.cuda()
+        else:
+            gaus = None
+        inv_gaus = args.inv_gaussian
+        if inv_gaus > 0:
+            inv_gaus = dn.InvGaussianFilter(inv_gaus)
+            if use_cuda:
+                inv_gaus.cuda()
+        else:
+            inv_gaus = None
+        deconvolve = args.deconvolve
+        deconv_patch = args.deconv_patch
+
         ps = args.patch_size
         padding = args.patch_padding
 
         # now, stream the micrographs and denoise them
         for path in args.micrographs:
             name,_ = os.path.splitext(os.path.basename(path))
-            mic = np.array(load_image(path), copy=False)
-            if bin_ > 1:
-                mic = downsample(mic, bin_)
+            mic = np.array(load_image(path), copy=False).astype(np.float32)
+            if lowpass > 1:
+                mic = dn.lowpass(mic, lowpass)
+
+            mic = torch.from_numpy(mic)
+            if use_cuda:
+                mic = mic.cuda()
+
+            # normalize and remove outliers
             mu = mic.mean()
             std = mic.std()
+            x = (mic - mu)/std
+            x[(x < -4) | (x > 4)] = 0
+
+            # apply guassian/inverse gaussian filter
+            if gaus is not None:
+                x = dn.denoise(gaus, x)
+                x = (x - x.mean())/x.std()
+            elif inv_gaus is not None:
+                x = dn.denoise(inv_gaus, x)
+                x = (x - x.mean())/x.std()
+            elif deconvolve:
+                # estimate optimal filter and correct spatial correlation
+                x = dn.correct_spatial_covariance(x, patch=deconv_patch)
 
             # denoise
-            mic = (mic - mu)/std
-            mic = dn.denoise(model, mic, patch_size=ps, padding=padding, use_cuda=use_cuda)
+            mic = 0
+            for model in models:
+                mic += dn.denoise(model, x, patch_size=ps, padding=padding)
+            mic /= len(models)
 
+            # restore pixel scaling
             if normalize:
                 mic = (mic - mic.mean())/mic.std()
             else:
                 # add back std. dev. and mean
                 mic = std*mic + mu
 
+            # back to numpy/cpu
+            mic = mic.cpu().numpy()
+
             # write the micrograph
-            outpath = args.output + os.sep + name + '.' + format_
-            save_image(mic, outpath)
+            outpath = args.output + os.sep + name + suffix + '.' + format_
+            save_image(mic, outpath) #, mi=None, ma=None)
 
             count += 1
             print('# {} of {} completed.'.format(count, total), file=sys.stderr, end='\r')
