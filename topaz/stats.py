@@ -93,7 +93,7 @@ def norm_fit(x, alpha=900, beta=1, scale=1
 
 
 def gmm_fit(x, pi=0.5, split=None, alpha=0.5, beta=0.5, scale=1
-           , tol=1e-3, num_iters=100, verbose=False): 
+           , tol=1e-3, num_iters=100, share_var=True, verbose=False): 
     # fit 2-component GMM
     # put a beta distribution prior on pi
 
@@ -119,11 +119,17 @@ def gmm_fit(x, pi=0.5, split=None, alpha=0.5, beta=0.5, scale=1
     if s > 0:
         mu1 = torch.sum(x*p1)/s
 
-    var = torch.mean(p0*(x - mu0)**2 + p1*(x - mu1)**2)
+    if share_var:
+        var = torch.mean(p0*(x - mu0)**2 + p1*(x - mu1)**2)
+        var0 = var
+        var1 = var
+    else:
+        var0 = torch.sum(p0*(x - mu0)**2)/torch.sum(p0)
+        var1 = torch.sum(p1*(x - mu1)**2)/torch.sum(p1)
 
     # first, calculate p(k | x, mu, var, pi)
-    log_p0 = -(x - mu0)**2/2/var - 0.5*torch.log(2*np.pi*var) + torch.log1p(-pi)
-    log_p1 = -(x - mu1)**2/2/var - 0.5*torch.log(2*np.pi*var) + torch.log(pi)
+    log_p0 = -(x - mu0)**2/2/var0 - 0.5*torch.log(2*np.pi*var0) + torch.log1p(-pi)
+    log_p1 = -(x - mu1)**2/2/var1 - 0.5*torch.log(2*np.pi*var1) + torch.log(pi)
     
     ma = torch.max(log_p0, log_p1)
     Z = ma + torch.log(torch.exp(log_p0 - ma) + torch.exp(log_p1 - ma))
@@ -153,11 +159,17 @@ def gmm_fit(x, pi=0.5, split=None, alpha=0.5, beta=0.5, scale=1
         if s > 0:
             mu1 = torch.sum(x*p1)/s
 
-        var = torch.mean(p0*(x - mu0)**2 + p1*(x - mu1)**2)
+        if share_var:
+            var = torch.mean(p0*(x - mu0)**2 + p1*(x - mu1)**2)
+            var0 = var
+            var1 = var
+        else:
+            var0 = torch.sum(p0*(x - mu0)**2)/torch.sum(p0)
+            var1 = torch.sum(p1*(x - mu1)**2)/torch.sum(p1)
 
         # recalculate likelihood p(k | x, mu, var, pi)
-        log_p0 = -(x - mu0)**2/2/var - 0.5*torch.log(2*np.pi*var) + torch.log1p(-pi)
-        log_p1 = -(x - mu1)**2/2/var - 0.5*torch.log(2*np.pi*var) + torch.log(pi)
+        log_p0 = -(x - mu0)**2/2/var0 - 0.5*torch.log(2*np.pi*var0) + torch.log1p(-pi)
+        log_p1 = -(x - mu1)**2/2/var1 - 0.5*torch.log(2*np.pi*var1) + torch.log(pi)
         
         ma = torch.max(log_p0, log_p1)
         Z = ma + torch.log(torch.exp(log_p0 - ma) + torch.exp(log_p1 - ma))
@@ -172,7 +184,7 @@ def gmm_fit(x, pi=0.5, split=None, alpha=0.5, beta=0.5, scale=1
             break # done
         logp_cur = logp
         
-    return logp, mu0, var, mu1, var, pi
+    return logp, mu0, var0, mu1, var1, pi
 
 
 def gmm_fit_numpy(x, pi=0.5, alpha=0.5, beta=0.5, tol=1e-3, num_iters=50, verbose=False): 

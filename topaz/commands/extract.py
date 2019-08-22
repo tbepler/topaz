@@ -24,7 +24,7 @@ def add_arguments(parser):
 
     parser.add_argument('paths', nargs='+', help='paths to image files for processing')
 
-    parser.add_argument('-m', '--model', help='path to trained subimage classifier, if no model is supplied input images must already be segmented')
+    parser.add_argument('-m', '--model', default='resnet16', help='path to trained subimage classifier. uses the pretrained resnet16 model by default. if micrographs have already been segmented (transformed to log-likelihood ratio maps), then this should be set to "none" (default: resnet16)')
 
     ## extraction parameter arguments
     parser.add_argument('-r', '--radius', type=int, help='radius of the regions to extract')
@@ -174,14 +174,15 @@ def stream_images(paths):
 
 
 def score_images(model, paths, device=-1, batch_size=1):
-    if model is not None: # score each image with the model
+    if model is not None and model != 'none': # score each image with the model
         ## set the device
         use_cuda = False
         if device >= 0:
             use_cuda = torch.cuda.is_available()
             torch.cuda.set_device(device)
         ## load the model
-        model = torch.load(model)
+        from topaz.model.factory import load_model
+        model = load_model(model)
         model.eval()
         model.fill()
         if use_cuda:

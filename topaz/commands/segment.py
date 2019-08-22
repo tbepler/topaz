@@ -19,7 +19,7 @@ def add_arguments(parser):
 
     parser.add_argument('paths', nargs='+', help='paths to image files for processing')
 
-    parser.add_argument('-m', '--model', help='path to trained classifier')
+    parser.add_argument('-m', '--model', default='resnet16', help='path to trained classifier. uses the pretrained resnet16 model by default.')
     parser.add_argument('-o', '--destdir', help='output directory')
 
     parser.add_argument('-d', '--device', default=0, type=int, help='which device to use, <0 corresponds to CPU (default: GPU if available)')
@@ -39,7 +39,8 @@ def main(args):
         torch.cuda.set_device(args.device)
 
     ## load the model
-    model = torch.load(args.model)
+    from topaz.model.factory import load_model
+    model = load_model(args.model)
     model.eval()
     model.fill()
 

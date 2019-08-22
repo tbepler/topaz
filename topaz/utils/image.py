@@ -32,6 +32,10 @@ def downsample(x, factor=1, shape=None):
     return f
 
 def quantize(x, mi=-3, ma=3, dtype=np.uint8):
+    if mi is None:
+        mi = x.min()
+    if ma is None:
+        ma = x.max()
     r = ma - mi
     x = 255*(x - mi)/r
     x = np.clip(x, 0, 255)
@@ -46,7 +50,7 @@ def unquantize(x, mi=-3, ma=3, dtype=np.float32):
     y = x*(ma-mi)/255 + mi
     return y
 
-def save_image(x, path, f=None, verbose=False):
+def save_image(x, path, mi=-3, ma=3, f=None, verbose=False):
     if f is None:
         f = os.path.splitext(path)[1]
         f = f[1:] # remove the period
@@ -61,9 +65,9 @@ def save_image(x, path, f=None, verbose=False):
     elif f == 'tiff' or f == 'tif':
         save_tiff(x, path)
     elif f == 'png':
-        save_png(x, path)
+        save_png(x, path, mi=mi, ma=ma)
     elif f == 'jpg' or f == 'jpeg':
-        save_jpeg(x, path)
+        save_jpeg(x, path, mi=mi, ma=ma)
 
 def save_mrc(x, path):
     with open(path, 'wb') as f:
@@ -74,14 +78,14 @@ def save_tiff(x, path):
     im = Image.fromarray(x) 
     im.save(path, 'tiff')
 
-def save_png(x, path):
+def save_png(x, path, mi=-3, ma=3):
     # byte encode the image
-    im = Image.fromarray(quantize(x))
+    im = Image.fromarray(quantize(x, mi=mi, ma=ma))
     im.save(path, 'png')
 
-def save_jpeg(x, path):
+def save_jpeg(x, path, mi=-3, ma=3):
     # byte encode the image
-    im = Image.fromarray(quantize(x))
+    im = Image.fromarray(quantize(x, mi=mi, ma=ma))
     im.save(path, 'jpeg')
 
 

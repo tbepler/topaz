@@ -88,6 +88,7 @@ def add_arguments(parser):
 
     model = parser.add_argument_group('model arguments (optional)')
 
+    model.add_argument('--pretrained', help='load the specified pretrained model as initialization (default: none)')
     model.add_argument('-m', '--model', default='resnet8', help='model type to fit (default: resnet8)')
     model.add_argument('--units', default=32, type=int, help='number of units model parameter (default: 32)')
     model.add_argument('--dropout', default=0.0, type=float, help='dropout rate model parameter(default: 0.0)')
@@ -344,6 +345,13 @@ def make_model(args):
     from topaz.model.factory import get_feature_extractor
     import topaz.model.classifier as C
     from topaz.model.classifier import LinearClassifier
+
+    if args.pretrained is not None and args.pretrained != 'none':
+        from topaz.model.factory import load_model
+        report('Loading pretrained model:', args.pretrained)
+        model = load_model(args.pretrained)
+        model.train()
+        return model
 
     report('Loading model:', args.model)
     if args.model.endswith('.sav'): # loading pretrained model

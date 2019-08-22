@@ -135,6 +135,56 @@ class ResNet8(ResNet):
         self.latent_dim = units[-1]
 
         return modules
+
+
+class ResNet16(ResNet):
+    def make_modules(self, units=[32, 64, 128], bn=True, dropout=0.0
+                    , activation=nn.ReLU, pooling=None, **kwargs):
+        if units is None:
+            units = [32, 64, 128]
+        elif type(units) is not list:
+            units = int(units)
+            units = [units, 2*units, 4*units]
+
+        self.num_features = units[-1]
+        self.stride = 1
+        if pooling is None:
+            self.stride = 2
+        stride = self.stride
+
+        modules = [
+                BasicConv2d(1, units[0], 7, bn=bn, activation=activation),
+                ResidA(units[0], units[0], units[0]
+                      , stride=stride, bn=bn, activation=activation),
+                ]
+        if pooling is not None:
+            modules.append(pooling(3, stride=2))
+        if dropout > 0:
+            modules.append(nn.Dropout(p=dropout)) #, inplace=True))
+
+        modules += [
+                ResidA(units[0], units[0], units[0], bn=bn, activation=activation),
+                ResidA(units[0], units[0], units[0], bn=bn, activation=activation),
+                ResidA(units[0], units[0], units[0], bn=bn, activation=activation),
+                ResidA(units[0], units[0], units[1]
+                      , stride=stride, bn=bn, activation=activation),
+                ]
+        if pooling is not None:
+            modules.append(pooling(3, stride=2))
+        if dropout > 0:
+            modules.append(nn.Dropout(p=dropout)) #, inplace=True))
+
+        modules += [
+                ResidA(units[1], units[1], units[1], bn=bn, activation=activation),
+                ResidA(units[1], units[1], units[1], bn=bn, activation=activation),
+                BasicConv2d(units[1], units[2], 5, bn=bn, activation=activation)
+                ]
+        if dropout > 0:
+            modules.append(nn.Dropout(p=dropout)) #, inplace=True))
+
+        self.latent_dim = units[-1]
+
+        return modules
                                       
 
 class MaxPool(nn.Module):
@@ -281,6 +331,7 @@ class ResidA(nn.Module):
         self.dilation = 1
 
     def forward(self, x):
+
         h = self.conv0(x)
         if self.bn:
             h = self.bn0(h)
@@ -302,7 +353,7 @@ class ResidA(nn.Module):
 
         if hasattr(self, 'proj'):
             x = self.proj(x)
-        elif self.stride > 1:
+        elif self.conv1.stride[0] > 1:
             x = x[:,:,::self.stride,::self.stride]
         
 
