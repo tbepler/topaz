@@ -28,7 +28,7 @@ def add_arguments(parser):
 
     ## extraction parameter arguments
     parser.add_argument('-r', '--radius', type=int, help='radius of the regions to extract')
-    parser.add_argument('-t', '--threshold', default=-6, type=float, help='log-likelihood score threshold at which to terminate region extraction, -6 is p=0.0025 (default: -6)')
+    parser.add_argument('-t', '--threshold', default=-6, type=float, help='log-likelihood score threshold at which to terminate region extraction, -6 is p>=0.0025 (default: -6)')
 
     
     ## coordinate scaling arguments

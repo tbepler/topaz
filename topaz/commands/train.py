@@ -88,7 +88,10 @@ def add_arguments(parser):
 
     model = parser.add_argument_group('model arguments (optional)')
 
-    model.add_argument('--pretrained', help='load the specified pretrained model as initialization (default: none)')
+    model.add_argument('--pretrained', dest='pretrained', action='store_true', help='by default, topaz train will initialize model parameters from the pretrained parameters if a pretrained model with the same configuration is available (e.g. resnet8 with 64 units). disable this behaviour by setting the --no-pretrained flag')
+    model.add_argument('--no-pretrained', dest='pretrained', action='store_false')
+    model.set_defaults(pretrained=True)
+
     model.add_argument('-m', '--model', default='resnet8', help='model type to fit (default: resnet8)')
     model.add_argument('--units', default=32, type=int, help='number of units model parameter (default: 32)')
     model.add_argument('--dropout', default=0.0, type=float, help='dropout rate model parameter(default: 0.0)')
@@ -346,13 +349,6 @@ def make_model(args):
     import topaz.model.classifier as C
     from topaz.model.classifier import LinearClassifier
 
-    if args.pretrained is not None and args.pretrained != 'none':
-        from topaz.model.factory import load_model
-        report('Loading pretrained model:', args.pretrained)
-        model = load_model(args.pretrained)
-        model.train()
-        return model
-
     report('Loading model:', args.model)
     if args.model.endswith('.sav'): # loading pretrained model
         model = torch.load(args.model)
@@ -368,9 +364,26 @@ def make_model(args):
     pooling = args.pooling
     unit_scaling = args.unit_scaling
 
-    feature_extractor = get_feature_extractor(args.model, units, dropout=dropout, bn=bn
-                                             , unit_scaling=unit_scaling, pooling=pooling)
-    classifier = C.LinearClassifier(feature_extractor)
+    arch = args.model
+    flag = None
+    if args.pretrained:
+        # check if model parameters match an available pretrained model
+        if arch == 'resnet8' and units == 64:
+            flag = 'resnet8_u64'
+        elif arch == 'resnet16' and units == 32:
+            flag = 'resnet16_u32'
+        elif arch == 'resnet16' and units == 64:
+            flag = 'resnet16_u64'
+
+    if flag is not None:
+        from topaz.model.factory import load_model
+        report('Loading pretrained model:', flag)
+        classifier = load_model(flag)
+        classifier.train()
+    else:
+        feature_extractor = get_feature_extractor(args.model, units, dropout=dropout, bn=bn
+                                                 , unit_scaling=unit_scaling, pooling=pooling)
+        classifier = C.LinearClassifier(feature_extractor)
 
     ## if the method is generative, create the generative model as well
     generative = None

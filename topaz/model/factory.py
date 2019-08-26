@@ -36,6 +36,18 @@ def load_model(path):
     elif path == 'resnet16_u64':
         name = 'resnet16_u64.sav'
         model = LinearClassifier(ResNet16(units=64, bn=False))
+    elif path == 'resnet16_u32':
+        name = 'resnet16_u32.sav'
+        model = LinearClassifier(ResNet16(units=32, bn=False))
+    elif path == 'resnet8':
+        name = 'resnet8_u64.sav'
+        model = LinearClassifier(ResNet8(units=64, bn=False))
+    elif path == 'resnet8_u64':
+        name = 'resnet8_u64.sav'
+        model = LinearClassifier(ResNet8(units=64, bn=False))
+    elif path == 'resnet8_u32':
+        name = 'resnet8_u32.sav'
+        model = LinearClassifier(ResNet8(units=32, bn=False))
 
 
     else: # load model using torch load
