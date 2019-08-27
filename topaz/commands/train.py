@@ -368,7 +368,9 @@ def make_model(args):
     flag = None
     if args.pretrained:
         # check if model parameters match an available pretrained model
-        if arch == 'resnet8' and units == 64:
+        if arch == 'resnet8' and units == 32:
+            flag = 'resnet8_u32'
+        elif arch == 'resnet8' and units == 64:
             flag = 'resnet8_u64'
         elif arch == 'resnet16' and units == 32:
             flag = 'resnet16_u32'
