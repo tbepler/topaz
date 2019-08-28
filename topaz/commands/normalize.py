@@ -11,6 +11,7 @@ import torch
 from topaz.stats import normalize
 from topaz.utils.data.loader import load_image
 from topaz.utils.image import downsample, save_image
+import topaz.cuda
 
 name = 'normalize'
 help = 'normalize a set of images using the 2-component Gaussian mixture model'
@@ -105,13 +106,10 @@ def main(args):
     metadata = args.metadata
     formats = args.format_.split(',')
 
-    use_cuda = False
-    if args.device >= 0:
-        use_cuda = torch.cuda.is_available()
-        if use_cuda:
-            torch.cuda.set_device(args.device)
-            # when using GPU, turn off multiple processes
-            num_workers = 0
+    use_cuda = topaz.cuda.set_device(args.device)
+    if use_cuda:
+        # when using GPU, turn off multiple processes
+        num_workers = 0
 
     if not os.path.exists(dest):
         os.makedirs(dest)

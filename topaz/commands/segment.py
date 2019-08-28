@@ -11,6 +11,7 @@ from PIL import Image
 import torch
 
 from topaz.utils.data.loader import load_image
+import topaz.cuda
 
 name = 'segment'
 help = 'segment images using a trained region classifier'
@@ -33,10 +34,7 @@ def main(args):
     verbose = args.verbose
 
     ## set the device
-    use_cuda = False
-    if args.device >= 0:
-        use_cuda = torch.cuda.is_available()
-        torch.cuda.set_device(args.device)
+    use_cuda = topaz.cuda.set_device(args.device)
 
     ## load the model
     from topaz.model.factory import load_model

@@ -15,6 +15,7 @@ import torch.nn.functional as F
 from topaz.utils.data.loader import load_image
 from topaz.utils.image import downsample
 import topaz.mrc as mrc
+import topaz.cuda
 
 name = 'denoise'
 help = 'denoise micrographs with various denoising algorithms'
@@ -255,11 +256,7 @@ def make_hdf5_datasets(path, paired=True, preload=False):
 def main(args):
 
     ## set the device
-    use_cuda = False
-    if args.device >= 0:
-        use_cuda = torch.cuda.is_available()
-        if use_cuda:
-            torch.cuda.set_device(args.device)
+    use_cuda = topaz.cuda.set_device(args.device)
     print('# using device={} with cuda={}'.format(args.device, use_cuda), file=sys.stderr)
 
     do_train = (args.dir_a is not None and args.dir_b is not None) or (args.hdf is not None)

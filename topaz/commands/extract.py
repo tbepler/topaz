@@ -16,6 +16,7 @@ from topaz.utils.data.loader import load_image
 from topaz.algorithms import non_maximum_suppression, match_coordinates
 from topaz.metrics import average_precision
 import topaz.predict
+import topaz.cuda
 
 name = 'extract'
 help = 'extract particles from segmented images or segment and extract in one step with a trained classifier'
@@ -176,10 +177,7 @@ def stream_images(paths):
 def score_images(model, paths, device=-1, batch_size=1):
     if model is not None and model != 'none': # score each image with the model
         ## set the device
-        use_cuda = False
-        if device >= 0:
-            use_cuda = torch.cuda.is_available()
-            torch.cuda.set_device(device)
+        use_cuda = topaz.cuda.set_device(device)
         ## load the model
         from topaz.model.factory import load_model
         model = load_model(model)

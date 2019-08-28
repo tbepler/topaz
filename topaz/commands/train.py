@@ -18,6 +18,7 @@ import topaz.utils.files as file_utils
 from topaz.utils.printing import report
 from topaz.utils.data.loader import load_images_from_list
 from topaz.utils.data.coordinates import match_coordinates_to_images
+import topaz.cuda
 
 name = 'train'
 help = 'train region classifier from images with labeled coordinates'
@@ -599,6 +600,7 @@ def main(args):
         sys.exit()
 
     ## set the device
+    """
     use_cuda = False
     if args.device >= 0:
         use_cuda = torch.cuda.is_available()
@@ -606,6 +608,9 @@ def main(args):
             torch.cuda.set_device(args.device)
         else:
             print('WARNING: you specified GPU (device={}) but no GPUs were detected. This may mean there is a mismatch between your system CUDA version and your pytorch CUDA version.'.format(args.device), file=sys.stderr)
+    """
+
+    use_cuda = topaz.cuda.set_device(args.device)
     report('Using device={} with cuda={}'.format(args.device, use_cuda))
 
     if use_cuda:
