@@ -789,6 +789,7 @@ class PairedImages:
 
     def load_image(self, path):
         x = np.array(load_image(path), copy=False)
+        x = x.astype(np.float32) # make sure dtype is single precision
         mu = x.mean()
         std = x.std()
         x = (x - mu)/std
