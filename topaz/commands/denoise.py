@@ -50,6 +50,7 @@ def add_arguments(parser):
     parser.add_argument('--deconvolve', action='store_true', help='apply optimal Gaussian deconvolution filter to each micrograph before denoising')
     parser.add_argument('--deconv-patch', type=int, default=1, help='apply spatial covariance correction to micrograph to this many patches (default: 1)')
 
+    parser.add_argument('--pixel-cutoff', type=float, default=0, help='set pixels >= this number of standard deviations away from the mean to the mean. only used when set > 0 (default: 0)')
     parser.add_argument('-s', '--patch-size', type=int, default=-1, help='denoises micrographs in patches of this size. not used if <1 (default: -1)')
     parser.add_argument('-p', '--patch-padding', type=int, default=500, help='padding around each patch to remove edge artifacts (default: 500)')
 
@@ -75,7 +76,7 @@ import topaz.denoise as dn
 from topaz.utils.image import save_image
 
 
-def make_paired_images_datasets(dir_a, dir_b, crop, random=np.random, preload=False):
+def make_paired_images_datasets(dir_a, dir_b, crop, random=np.random, preload=False, cutoff=0):
     # train denoising model
     # make the dataset
     A = []
@@ -103,13 +104,13 @@ def make_paired_images_datasets(dir_a, dir_b, crop, random=np.random, preload=Fa
     print('# training with', len(A_train), 'image pairs', file=sys.stderr)
     print('# validating on', len(A_val), 'image pairs', file=sys.stderr)
 
-    dataset_train = dn.PairedImages(A_train, B_train, crop=crop, xform=True, preload=preload)
-    dataset_val = dn.PairedImages(A_val, B_val, crop=crop, preload=preload)
+    dataset_train = dn.PairedImages(A_train, B_train, crop=crop, xform=True, preload=preload, cutoff=cutoff)
+    dataset_val = dn.PairedImages(A_val, B_val, crop=crop, preload=preload, cutoff=cutoff)
 
     return dataset_train, dataset_val
 
 
-def make_images_datasets(dir_a, dir_b, crop, random=np.random):
+def make_images_datasets(dir_a, dir_b, crop, random=np.random, cutoff=0):
     # train denoising model
     # make the dataset
     paths = []
@@ -134,14 +135,14 @@ def make_images_datasets(dir_a, dir_b, crop, random=np.random):
     print('# training with', len(path_train), 'image pairs', file=sys.stderr)
     print('# validating on', len(path_val), 'image pairs', file=sys.stderr)
 
-    dataset_train = dn.NoiseImages(path_train, crop=crop, xform=True)
-    dataset_val = dn.NoiseImages(path_val, crop=crop)
+    dataset_train = dn.NoiseImages(path_train, crop=crop, xform=True, cutoff=cutoff)
+    dataset_val = dn.NoiseImages(path_val, crop=crop, cutoff=cutoff)
 
     return dataset_train, dataset_val
 
 
 class HDFPairedDataset:
-    def __init__(self, dataset, start=0, end=None, xform=False):
+    def __init__(self, dataset, start=0, end=None, xform=False, cutoff=0):
         self.dataset = dataset
         self.start = start
         self.end = end
@@ -149,6 +150,7 @@ class HDFPairedDataset:
             self.end = len(dataset)
         self.n = (self.end - self.start)//2
         self.xform = xform
+        self.cutoff = cutoff
 
     def __len__(self):
         return self.n
@@ -183,14 +185,15 @@ class HDFPairedDataset:
             x = np.ascontiguousarray(x)
             y = np.ascontiguousarray(y)
 
-        x = np.clip(x, -4, 4)
-        y = np.clip(y, -4, 4)
+        if self.cutoff > 0:
+            x[(x < -self.cutoff) | (x > self.cutoff)] = 0
+            y[(y < -self.cutoff) | (y > self.cutoff)] = 0
 
         return x,y
 
 
 class HDFDataset:
-    def __init__(self, dataset, start=0, end=None, xform=False):
+    def __init__(self, dataset, start=0, end=None, xform=False, cutoff=0):
         self.dataset = dataset
         self.start = start
         self.end = end
@@ -198,6 +201,7 @@ class HDFDataset:
             self.end = len(dataset)
         self.n = self.end - self.start
         self.xform = xform
+        self.cutoff = cutoff
 
     def __len__(self):
         return self.n
@@ -219,12 +223,13 @@ class HDFDataset:
 
             x = np.ascontiguousarray(x)
 
-        x = np.clip(x, -4, 4)
+        if self.cutoff > 0:
+            x[(x < -self.cutoff) | (x > self.cutoff)] = 0
 
         return x
 
 
-def make_hdf5_datasets(path, paired=True, preload=False):
+def make_hdf5_datasets(path, paired=True, preload=False, cutoff=0):
 
     # open the hdf5 dataset
     import h5py
@@ -241,11 +246,11 @@ def make_hdf5_datasets(path, paired=True, preload=False):
     split = 2*(N-n)
 
     if paired:
-        dataset_train = HDFPairedDataset(dataset, end=split, xform=True)
-        dataset_val = HDFPairedDataset(dataset, start=split)
+        dataset_train = HDFPairedDataset(dataset, end=split, xform=True, cutoff=cutoff)
+        dataset_val = HDFPairedDataset(dataset, start=split, cutoff=cutoff)
     else:
-        dataset_train = HDFDataset(dataset, end=split, xform=True)
-        dataset_val = HDFDataset(dataset, start=split)
+        dataset_train = HDFDataset(dataset, end=split, xform=True, cutoff=cutoff)
+        dataset_val = HDFDataset(dataset, start=split, cutoff=cutoff)
 
     print('# training with', len(dataset_train), 'image pairs', file=sys.stderr)
     print('# validating on', len(dataset_val), 'image pairs', file=sys.stderr)
@@ -258,6 +263,8 @@ def main(args):
     ## set the device
     use_cuda = topaz.cuda.set_device(args.device)
     print('# using device={} with cuda={}'.format(args.device, use_cuda), file=sys.stderr)
+
+    cutoff = args.pixel_cutoff # pixel truncation limit
 
     do_train = (args.dir_a is not None and args.dir_b is not None) or (args.hdf is not None)
     if do_train:
@@ -280,9 +287,12 @@ def main(args):
                     dataset_train, dataset_val = make_paired_images_datasets(dir_a, dir_b, crop
                                                                             , random=random
                                                                             , preload=preload 
+                                                                            , cutoff=cutoff
                                                                             )
                 else:
-                    dataset_train, dataset_val = make_images_datasets(dir_a, dir_b, crop, random=random)
+                    dataset_train, dataset_val = make_images_datasets(dir_a, dir_b, crop
+                                                                     , cutoff=cutoff
+                                                                     , random=random)
                 dset_train.append(dataset_train)
                 dset_val.append(dataset_val)
 
@@ -300,7 +310,9 @@ def main(args):
 
             shuffle = True
         else: # make HDF datasets
-            dataset_train, dataset_val = make_hdf5_datasets(args.hdf, paired=paired, preload=preload)
+            dataset_train, dataset_val = make_hdf5_datasets(args.hdf, paired=paired
+                                                           , cutoff=cutoff
+                                                           , preload=preload)
             shuffle = preload
 
         # initialize the model
@@ -385,7 +397,7 @@ def main(args):
                     sys.exit(1)
                 model = dn.load_model(arg)
             elif arg == 'none':
-                print('# Warnining: no denoising model will be used', file=sys.stderr)
+                print('# Warning: no denoising model will be used', file=sys.stderr)
                 model = dn.Identity()
             else:
                 model = torch.load(arg)
@@ -467,7 +479,8 @@ def main(args):
             mu = mic.mean()
             std = mic.std()
             x = (mic - mu)/std
-            x[(x < -4) | (x > 4)] = 0
+            if cutoff > 0:
+                x[(x < -cutoff) | (x > cutoff)] = 0
 
             # apply guassian/inverse gaussian filter
             if gaus is not None:

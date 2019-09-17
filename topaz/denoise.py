@@ -389,7 +389,7 @@ class Identity(nn.Module):
 
 class UDenoiseNet(nn.Module):
     # U-net from noise2noise paper
-    def __init__(self, nf=48, base_width=11, top_width=5):
+    def __init__(self, nf=48, base_width=11, top_width=3):
         super(UDenoiseNet, self).__init__()
 
         self.enc1 = nn.Sequential( nn.Conv2d(1, nf, base_width, padding=base_width//2)
@@ -455,8 +455,6 @@ class UDenoiseNet(nn.Module):
         # upsampling
         n = p4.size(2)
         m = p4.size(3)
-        #h = F.upsample(h, size=(n,m))
-        #h = F.upsample(h, size=(n,m), mode='bilinear', align_corners=False)
         h = F.interpolate(h, size=(n,m), mode='nearest')
         h = torch.cat([h, p4], 1)
 
@@ -464,8 +462,6 @@ class UDenoiseNet(nn.Module):
 
         n = p3.size(2)
         m = p3.size(3)
-        #h = F.upsample(h, size=(n,m))
-        #h = F.upsample(h, size=(n,m), mode='bilinear', align_corners=False)
         h = F.interpolate(h, size=(n,m), mode='nearest')
         h = torch.cat([h, p3], 1)
 
@@ -473,8 +469,6 @@ class UDenoiseNet(nn.Module):
 
         n = p2.size(2)
         m = p2.size(3)
-        #h = F.upsample(h, size=(n,m))
-        #h = F.upsample(h, size=(n,m), mode='bilinear', align_corners=False)
         h = F.interpolate(h, size=(n,m), mode='nearest')
         h = torch.cat([h, p2], 1)
 
@@ -482,8 +476,6 @@ class UDenoiseNet(nn.Module):
 
         n = p1.size(2)
         m = p1.size(3)
-        #h = F.upsample(h, size=(n,m))
-        #h = F.upsample(h, size=(n,m), mode='bilinear', align_corners=False)
         h = F.interpolate(h, size=(n,m), mode='nearest')
         h = torch.cat([h, p1], 1)
 
@@ -491,8 +483,6 @@ class UDenoiseNet(nn.Module):
 
         n = x.size(2)
         m = x.size(3)
-        #h = F.upsample(h, size=(n,m))
-        #h = F.upsample(h, size=(n,m), mode='bilinear', align_corners=False)
         h = F.interpolate(h, size=(n,m), mode='nearest')
         h = torch.cat([h, x], 1)
 
@@ -502,7 +492,7 @@ class UDenoiseNet(nn.Module):
 
 
 class UDenoiseNetSmall(nn.Module):
-    def __init__(self, nf=48, width=11):
+    def __init__(self, nf=48, width=11, top_width=3):
         super(UDenoiseNetSmall, self).__init__()
 
         self.enc1 = nn.Sequential( nn.Conv2d(1, nf, width, padding=width//2)
@@ -531,11 +521,11 @@ class UDenoiseNetSmall(nn.Module):
                                  , nn.Conv2d(2*nf, 2*nf, 3, padding=1)
                                  , nn.LeakyReLU(0.1)
                                  )
-        self.dec1 = nn.Sequential( nn.Conv2d(2*nf+1, 64, 5, padding=2)
+        self.dec1 = nn.Sequential( nn.Conv2d(2*nf+1, 64, top_width, padding=top_width//2)
                                  , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(64, 32, 5, padding=2)
+                                 , nn.Conv2d(64, 32, top_width, padding=top_width//2)
                                  , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(32, 1, 5, padding=2)
+                                 , nn.Conv2d(32, 1, top_width, padding=top_width//2)
                                  )
 
     def forward(self, x):
@@ -776,11 +766,12 @@ class UDenoiseNet3(nn.Module):
 
 
 class PairedImages:
-    def __init__(self, x, y, crop=800, xform=True, preload=False):
+    def __init__(self, x, y, crop=800, xform=True, preload=False, cutoff=0):
         self.x = x
         self.y = y
         self.crop = crop
         self.xform = xform
+        self.cutoff = cutoff
 
         self.preload = preload
         if preload:
@@ -793,8 +784,8 @@ class PairedImages:
         mu = x.mean()
         std = x.std()
         x = (x - mu)/std
-        x[(x < -4) | (x > 4)] = 0
-        #x = np.clip(x, -4, 4)
+        if self.cutoff > 0:
+            x[(x < -self.cutoff) | (x > self.cutoff)] = 0
         return x
 
     def __len__(self):
@@ -846,10 +837,11 @@ class PairedImages:
 
 
 class NoiseImages:
-    def __init__(self, x, crop=800, xform=True, preload=False):
+    def __init__(self, x, crop=800, xform=True, preload=False, cutoff=0):
         self.x = x
         self.crop = crop
         self.xform = xform
+        self.cutoff = cutoff
 
         self.preload = preload
         if preload:
@@ -860,6 +852,8 @@ class NoiseImages:
         mu = x.mean()
         std = x.std()
         x = (x - mu)/std
+        if self.cutoff > 0:
+            x[(x < -self.cutoff) | (x > self.cutoff)] = 0
         return x
 
     def __len__(self):
@@ -892,8 +886,6 @@ class NoiseImages:
             x = np.rot90(x, k=k)
 
         x = np.ascontiguousarray(x)
-        x[(x < -4) | (x > 4)] = 0
-        #x = np.clip(x, -4, 4)
 
         return x
 
