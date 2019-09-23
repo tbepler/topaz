@@ -13,16 +13,44 @@ from topaz.utils.data.loader import load_image
 
 
 def load_model(name):
-    if name in ['L0', 'L1', 'L2']:
-        name = 'unet_' + name + '_v2.sav'
 
+    if name == 'none':
+        return Identity()
+
+    # set the name aliases
+    if name == 'unet':
+        name = 'unet_L2_v0.2.2.sav'
+    elif name == 'unet-small':
+        name = 'unet_small_L1_v0.2.2.sav'
+    elif name == 'fcnn':
+        name = 'fcnn_L1_v0.2.2.sav'
+    elif name == 'affine':
+        name = 'affine_L1_v0.2.2.sav'
+    elif name == 'unet-v0.2.1':
+        name = 'unet_L2_v0.2.1.sav'
+
+    # construct model and load the state
+    if name == 'unet_L2_v0.2.1.sav':
+        model = UDenoiseNet(base_width=7, top_width=3)
+    elif name == 'unet_L2_v0.2.2.sav':
+        model = UDenoiseNet(base_width=11, top_width=5)
+    elif name == 'unet_small_L1_v0.2.2.sav':
+        model = UDenoiseNetSmall(base_width=11, top_width=5)
+    elif name == 'fcnn_L1_v0.2.2.sav':
+        model = DenoiseNet(32)
+    elif name == 'affine_L1_v0.2.2.sav':
+        model = AffineDenoise(max_size=31)
+    else:
+        # if not set to a pretrained model, try loading path directly
+        return torch.load(name)
+
+    # load the pretrained model parameters
     import pkg_resources
     pkg = __name__
     path = 'pretrained/denoise/' + name
     f = pkg_resources.resource_stream(pkg, path)
+    state_dict = torch.load(f) # load the parameters
 
-    state_dict = torch.load(f)
-    model = UDenoiseNet(base_width=7, top_width=3)
     model.load_state_dict(state_dict)
 
     return model

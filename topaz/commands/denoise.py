@@ -36,7 +36,7 @@ def add_arguments(parser):
     parser.add_argument('--stack', action='store_true', help='denoise a MRC stack rather than list of micorgraphs')
 
     parser.add_argument('--save-prefix', help='path prefix to save denoising model')
-    parser.add_argument('-m', '--model', nargs='+', default='L2', help='use pretrained denoising model, use L2 for pretrained model. can accept arguments for multiple models the outputs of which will be averaged (default: L2)')
+    parser.add_argument('-m', '--model', nargs='+', default='unet', help='use pretrained denoising model(s). can accept arguments for multiple models the outputs of which will be averaged. pretrained model options are: unet, unet-small, fcnn, affine. to use older unet version specify unet-v0.2.1 (default: unet)')
 
     parser.add_argument('-a', '--dir-a', nargs='+', help='directory of training images part A')
     parser.add_argument('-b', '--dir-b', nargs='+', help='directory of training images part B')
@@ -390,19 +390,12 @@ def main(args):
     else: # load the saved model(s)
         models = []
         for arg in args.model:
-            if arg in ['L0', 'L1', 'L2']:
-                if arg in ['L0', 'L1']:
-                    print('ERROR: L0 and L1 models are not implemented in the current version'
-                         , file=sys.stderr)
-                    sys.exit(1)
-                model = dn.load_model(arg)
-            elif arg == 'none':
+            if arg == 'none':
                 print('# Warning: no denoising model will be used', file=sys.stderr)
-                model = dn.Identity()
             else:
-                model = torch.load(arg)
-                
-            print('# using model:', arg, file=sys.stderr)
+                print('# Loading model:', arg, file=sys.stderr)
+            model = dn.load_model(arg)
+
             model.eval()
             if use_cuda:
                 model.cuda()
