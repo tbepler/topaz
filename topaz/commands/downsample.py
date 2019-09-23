@@ -21,7 +21,7 @@ def main(args):
     path = args.file
     im = load_image(path)
     # convert PIL image to array
-    im = np.array(im, copy=False)
+    im = np.array(im, copy=False).astype(np.float32)
 
     scale = args.scale # how much to downscale by
     small = downsample(im, scale)

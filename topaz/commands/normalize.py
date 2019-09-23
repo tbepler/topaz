@@ -57,7 +57,7 @@ class Normalize:
 
     def __call__(self, path):
         # load the image
-        x = np.array(load_image(path), copy=False)
+        x = np.array(load_image(path), copy=False).astype(np.float32)
 
         if self.scale > 1:
             x = downsample(x, self.scale)
