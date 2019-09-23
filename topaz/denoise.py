@@ -35,9 +35,9 @@ def load_model(name):
     elif name == 'unet_L2_v0.2.2.sav':
         model = UDenoiseNet(base_width=11, top_width=5)
     elif name == 'unet_small_L1_v0.2.2.sav':
-        model = UDenoiseNetSmall(base_width=11, top_width=5)
+        model = UDenoiseNetSmall(width=11, top_width=5)
     elif name == 'fcnn_L1_v0.2.2.sav':
-        model = DenoiseNet(32)
+        model = DenoiseNet2(64, width=11)
     elif name == 'affine_L1_v0.2.2.sav':
         model = AffineDenoise(max_size=31)
     else:
