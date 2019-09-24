@@ -29,7 +29,7 @@ def downsample(x, factor=1, shape=None):
 
     f = np.fft.irfft2(F, s=shape)
 
-    return f
+    return f.astype(x.dtype)
 
 def quantize(x, mi=-3, ma=3, dtype=np.uint8):
     if mi is None:
