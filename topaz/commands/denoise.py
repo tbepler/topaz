@@ -258,6 +258,53 @@ def make_hdf5_datasets(path, paired=True, preload=False, cutoff=0):
     return dataset_train, dataset_val
 
 
+def denoise_image(mic, models, lowpass=1, cutoff=0, gaus=None, inv_gaus=None, deconvolve=False
+                 , deconv_patch=1, patch_size=-1, padding=0, normalize=False
+                 , use_cuda=False):
+    if lowpass > 1:
+        mic = dn.lowpass(mic, lowpass)
+
+    mic = torch.from_numpy(mic)
+    if use_cuda:
+        mic = mic.cuda()
+
+    # normalize and remove outliers
+    mu = mic.mean()
+    std = mic.std()
+    x = (mic - mu)/std
+    if cutoff > 0:
+        x[(x < -cutoff) | (x > cutoff)] = 0
+
+    # apply guassian/inverse gaussian filter
+    if gaus is not None:
+        x = dn.denoise(gaus, x)
+        x = (x - x.mean())/x.std()
+    elif inv_gaus is not None:
+        x = dn.denoise(inv_gaus, x)
+        x = (x - x.mean())/x.std()
+    elif deconvolve:
+        # estimate optimal filter and correct spatial correlation
+        x = dn.correct_spatial_covariance(x, patch=deconv_patch)
+
+    # denoise
+    mic = 0
+    for model in models:
+        mic += dn.denoise(model, x, patch_size=patch_size, padding=padding)
+    mic /= len(models)
+
+    # restore pixel scaling
+    if normalize:
+        mic = (mic - mic.mean())/mic.std()
+    else:
+        # add back std. dev. and mean
+        mic = std*mic + mu
+
+    # back to numpy/cpu
+    mic = mic.cpu().numpy()
+
+    return mic
+
+
 def main(args):
 
     ## set the device
@@ -402,105 +449,85 @@ def main(args):
 
             models.append(model)
 
+    # using trained model
+    # denoise the images
 
+    normalize = args.normalize
+    if args.format_ == 'png' or args.format_ == 'jpg':
+        # always normalize png and jpg format
+        normalize = True
+
+    format_ = args.format_
+    suffix = args.suffix
+
+    lowpass = args.lowpass
+    gaus = args.gaussian
+    if gaus > 0:
+        gaus = dn.GaussianDenoise(gaus)
+        if use_cuda:
+            gaus.cuda()
+    else:
+        gaus = None
+    inv_gaus = args.inv_gaussian
+    if inv_gaus > 0:
+        inv_gaus = dn.InvGaussianFilter(inv_gaus)
+        if use_cuda:
+            inv_gaus.cuda()
+    else:
+        inv_gaus = None
+    deconvolve = args.deconvolve
+    deconv_patch = args.deconv_patch
+
+    ps = args.patch_size
+    padding = args.patch_padding
+
+    count = 0
+
+    # we are denoising a single MRC stack
     if args.stack:
-        # we are denoising a single MRC stack
         with open(args.micrographs[0], 'rb') as f:
             content = f.read()
         stack,_,_ = mrc.parse(content)
         print('# denoising stack with shape:', stack.shape, file=sys.stderr)
+        total = len(stack)
 
-        denoised = 0
-        for model in models:
-            denoised += dn.denoise_stack(model, stack, use_cuda=use_cuda)
-        denoised /= len(models)
+        denoised = np.zeros_like(stack)
+        for i in range(len(stack)):
+            mic = stack[i]
+            # process and denoise the micrograph
+            mic = denoise_image(mic, models, lowpass=lowpass, cutoff=cutoff, gaus=gaus
+                               , inv_gaus=inv_gaus, deconvolve=deconvolve
+                               , deconv_patch=deconv_patch
+                               , patch_size=ps, padding=padding, normalize=normalize
+                               , use_cuda=use_cuda
+                               )
+            denoised[i] = mic
 
+            count += 1
+            print('# {} of {} completed.'.format(count, total), file=sys.stderr, end='\r')
+
+        print('', file=sys.stderr)
         # write the denoised stack
         path = args.output
         print('# writing', path, file=sys.stderr)
         with open(path, 'wb') as f:
             mrc.write(f, denoised)
-
+    
     else:
-        # using trained model
-        # stream the micrographs and denoise as we go
-
-        normalize = args.normalize
-        if args.format_ == 'png' or args.format_ == 'jpg':
-            # always normalize png and jpg format
-            normalize = True
-
-        format_ = args.format_
-        suffix = args.suffix
-
-        count = 0
+        # stream the micrographs and denoise them
         total = len(args.micrographs)
 
-        lowpass = args.lowpass
-        gaus = args.gaussian
-        if gaus > 0:
-            gaus = dn.GaussianDenoise(gaus)
-            if use_cuda:
-                gaus.cuda()
-        else:
-            gaus = None
-        inv_gaus = args.inv_gaussian
-        if inv_gaus > 0:
-            inv_gaus = dn.InvGaussianFilter(inv_gaus)
-            if use_cuda:
-                inv_gaus.cuda()
-        else:
-            inv_gaus = None
-        deconvolve = args.deconvolve
-        deconv_patch = args.deconv_patch
-
-        ps = args.patch_size
-        padding = args.patch_padding
-
-        # now, stream the micrographs and denoise them
         for path in args.micrographs:
             name,_ = os.path.splitext(os.path.basename(path))
             mic = np.array(load_image(path), copy=False).astype(np.float32)
-            if lowpass > 1:
-                mic = dn.lowpass(mic, lowpass)
 
-            mic = torch.from_numpy(mic)
-            if use_cuda:
-                mic = mic.cuda()
-
-            # normalize and remove outliers
-            mu = mic.mean()
-            std = mic.std()
-            x = (mic - mu)/std
-            if cutoff > 0:
-                x[(x < -cutoff) | (x > cutoff)] = 0
-
-            # apply guassian/inverse gaussian filter
-            if gaus is not None:
-                x = dn.denoise(gaus, x)
-                x = (x - x.mean())/x.std()
-            elif inv_gaus is not None:
-                x = dn.denoise(inv_gaus, x)
-                x = (x - x.mean())/x.std()
-            elif deconvolve:
-                # estimate optimal filter and correct spatial correlation
-                x = dn.correct_spatial_covariance(x, patch=deconv_patch)
-
-            # denoise
-            mic = 0
-            for model in models:
-                mic += dn.denoise(model, x, patch_size=ps, padding=padding)
-            mic /= len(models)
-
-            # restore pixel scaling
-            if normalize:
-                mic = (mic - mic.mean())/mic.std()
-            else:
-                # add back std. dev. and mean
-                mic = std*mic + mu
-
-            # back to numpy/cpu
-            mic = mic.cpu().numpy()
+            # process and denoise the micrograph
+            mic = denoise_image(mic, models, lowpass=lowpass, cutoff=cutoff, gaus=gaus
+                               , inv_gaus=inv_gaus, deconvolve=deconvolve
+                               , deconv_patch=deconv_patch
+                               , patch_size=ps, padding=padding, normalize=normalize
+                               , use_cuda=use_cuda
+                               )
 
             # write the micrograph
             outpath = args.output + os.sep + name + suffix + '.' + format_
@@ -508,7 +535,6 @@ def main(args):
 
             count += 1
             print('# {} of {} completed.'.format(count, total), file=sys.stderr, end='\r')
-
         print('', file=sys.stderr)
 
 
