@@ -459,7 +459,29 @@ A user guide is also built into the Topaz GUI.
 
 # Reference
 
-Bepler, T., Morin, A., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2018). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs. arXiv. https://arxiv.org/abs/1803.08207
+Bepler, T., Morin, A., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2019). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs. 
+Nature Methods. https://doi.org/10.1038/s41592-019-0575-8
+
+### Bibtex
+```
+@Article{Bepler2019,
+author={Bepler, Tristan
+and Morin, Andrew
+and Rapp, Micah
+and Brasch, Julia
+and Shapiro, Lawrence
+and Noble, Alex J.
+and Berger, Bonnie},
+title={Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs},
+journal={Nature Methods},
+year={2019},
+issn={1548-7105},
+doi={10.1038/s41592-019-0575-8},
+url={https://doi.org/10.1038/s41592-019-0575-8}
+}
+
+
+```
 
 # Authors
 
