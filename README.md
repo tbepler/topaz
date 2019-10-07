@@ -1,6 +1,10 @@
 # Topaz
 A pipeline for particle detection in cryo-electron microscopy images using convolutional neural networks trained from positive and unlabeled examples.
 
+## New in v0.2.2
+- The topaz publication is out [here](https://doi.org/10.1038/s41592-019-0575-8)
+- Bug fixes and GUI update
+
 ## New in v0.2.0
 
 - Topaz now supports the newest versions of pytorch (>= 1.0.0). If you have pytorch installed for an older version of topaz, it will need to be upgraded. See installation instructions for details.
