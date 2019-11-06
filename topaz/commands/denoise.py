@@ -278,10 +278,8 @@ def denoise_image(mic, models, lowpass=1, cutoff=0, gaus=None, inv_gaus=None, de
     # apply guassian/inverse gaussian filter
     if gaus is not None:
         x = dn.denoise(gaus, x)
-        x = (x - x.mean())/x.std()
     elif inv_gaus is not None:
         x = dn.denoise(inv_gaus, x)
-        x = (x - x.mean())/x.std()
     elif deconvolve:
         # estimate optimal filter and correct spatial correlation
         x = dn.correct_spatial_covariance(x, patch=deconv_patch)
