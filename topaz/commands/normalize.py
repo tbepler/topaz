@@ -22,7 +22,7 @@ def add_arguments(parser):
     parser.add_argument('-s', '--scale', default=1, type=int, help='downsample images by this factor (default: 1)')
     parser.add_argument('--affine', action='store_true', help='use standard normalization (x-mu)/std of whole image rather than GMM normalization')
 
-    parser.add_argument('--sample', default=1, type=int, help='pixel sampling factor for model fit. speeds up estimation of parameters but introduces sample error if set >1. (default: 1)')
+    parser.add_argument('--sample', default=10, type=int, help='pixel sampling factor for model fit. speeds up estimation of parameters but introduces sample error if set >1. (default: 10)')
     parser.add_argument('--niters', default=100, type=int, help='maximum number of EM iterations to run for model fit (default: 100)')
 
     parser.add_argument('-a', '--alpha', default=900, type=float, help='alpha parameter of the beta distribution prior on the mixing proportion (default: 900)')

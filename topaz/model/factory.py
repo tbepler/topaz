@@ -51,7 +51,7 @@ def load_model(path):
 
 
     else: # load model using torch load
-        model = torch.load(model)
+        model = torch.load(path)
         return model
 
     # load the pretrained model
