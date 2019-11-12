@@ -1,5 +1,11 @@
 # Topaz
-A pipeline for particle detection in cryo-electron microscopy images using convolutional neural networks trained from positive and unlabeled examples.
+A pipeline for particle detection in cryo-electron microscopy images using convolutional neural networks trained from positive and unlabeled examples. Topaz also includes methods for micrograph denoising using deep denoising models.
+
+## New in v0.2.3
+- Improvements to the pretrained denoising models
+- Topaz now includes pretrained particle picking models
+- Updated tutorials
+- Denoising paper preprint is available [here](https://www.biorxiv.org/content/10.1101/838920v1)
 
 ## New in v0.2.2
 - The topaz publication is out [here](https://doi.org/10.1038/s41592-019-0575-8)
@@ -196,6 +202,7 @@ The tutorials are presented in Jupyter notebooks. Please install Jupyter followi
 1. [Quick start guide](tutorial/01_quick_start_guide.ipynb)
 2. [Complete walkthrough](tutorial/02_walkthrough.ipynb)
 3. [Cross validation](tutorial/03_cross_validation.ipynb)
+5. [Micrograph denoising](tutorial/05_denoising.ipynb)
 
 The tutorial data can be downloaded [here](http://bergerlab-downloads.csail.mit.edu/topaz/topaz-tutorial-data.tar.gz).
 
@@ -486,6 +493,9 @@ url={https://doi.org/10.1038/s41592-019-0575-8}
 
 
 ```
+
+Bepler, T., Noble, A.J., Berger, B. (2019). Topaz-Denoise: general deep denoising models for cryoEM. bioRxiv. https://www.biorxiv.org/content/10.1101/838920v1
+
 
 # Authors
 

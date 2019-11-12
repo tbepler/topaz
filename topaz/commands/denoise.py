@@ -36,7 +36,7 @@ def add_arguments(parser):
     parser.add_argument('--stack', action='store_true', help='denoise a MRC stack rather than list of micorgraphs')
 
     parser.add_argument('--save-prefix', help='path prefix to save denoising model')
-    parser.add_argument('-m', '--model', nargs='+', default='unet', help='use pretrained denoising model(s). can accept arguments for multiple models the outputs of which will be averaged. pretrained model options are: unet, unet-small, fcnn, affine. to use older unet version specify unet-v0.2.1 (default: unet)')
+    parser.add_argument('-m', '--model', nargs='+', default=['unet'], help='use pretrained denoising model(s). can accept arguments for multiple models the outputs of which will be averaged. pretrained model options are: unet, unet-small, fcnn, affine. to use older unet version specify unet-v0.2.1 (default: unet)')
 
     parser.add_argument('-a', '--dir-a', nargs='+', help='directory of training images part A')
     parser.add_argument('-b', '--dir-b', nargs='+', help='directory of training images part B')
