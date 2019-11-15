@@ -23,7 +23,7 @@ def add_arguments(parser):
     parser.add_argument('--targets', help='path to file specifying target particle coordinates') 
 
     parser.add_argument('-r', '--assignment-radius', required=True, type=int, help='maximum distance between prediction and labeled target allowed for considering them a match')
-    parser.add_argument('--images', choices=['target', 'predicted', 'union'], default='target', help='only count particles on micrographs with coordinates labeled in the targets file, the predicted file, or the union of those (default; target)')
+    parser.add_argument('--images', choices=['target', 'predicted', 'union'], default='target', help='only count particles on micrographs with coordinates labeled in the targets file, the predicted file, or the union of those (default: target)')
 
     return parser
 
@@ -77,8 +77,10 @@ def main(args):
 
     print('# auprc={}, mae={}'.format(auprc,np.sqrt(mae)))     
 
-    f1 = 2*precision*recall/(precision + recall)
-    f1[precision + recall == 0] = 0
+    mask = (precision + recall) == 0
+    f1 = 2*precision*recall
+    f1[mask] = 0
+    f1[~mask] /= (precision + recall)[~mask]
 
     table = pd.DataFrame({'threshold': threshold})
     table['precision'] = precision

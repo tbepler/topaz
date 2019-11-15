@@ -36,10 +36,11 @@ def precision_recall_curve(target, pred, N=None):
     tp = counts[1:] # numer of true positives at each bucket
     
     pr = tp/pp # precision at each bucket
+    pr[np.isnan(pr)] = 1
     avpr = np.sum(pr*r)/n # average-precision score = sum_buckets [precision(bucket)*recall(bucket)]
     
-    re = r/n # recall at each bucket 
-    threshold = matrix[:,0][mask] # threshold of each bucket
+    re = tp/n # recall at each bucket 
+    threshold = -matrix[:,0][mask] # threshold of each bucket
 
     return pr, re, threshold, avpr
 

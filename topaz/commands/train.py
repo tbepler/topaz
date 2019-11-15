@@ -83,7 +83,7 @@ def add_arguments(parser):
 
     training.add_argument('--minibatch-size', default=256, type=int, help='number of data points per minibatch (default: 256)')
     training.add_argument('--minibatch-balance', default=0.0625, type=float, help='fraction of minibatch that is positive data points (default: 0.0625)')
-    training.add_argument('--epoch-size', default=500, type=int, help='number of parameter updates per epoch (default: 500)')
+    training.add_argument('--epoch-size', default=1000, type=int, help='number of parameter updates per epoch (default: 1000)')
     training.add_argument('--num-epochs', default=10, type=int, help='maximum number of training epochs (default: 10)')
 
 
