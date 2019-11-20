@@ -515,6 +515,10 @@ def main(args):
         # stream the micrographs and denoise them
         total = len(args.micrographs)
 
+        # make the output directory if it doesn't exist
+        if not os.path.exists(args.output):
+            os.makedirs(args.output)
+
         for path in args.micrographs:
             name,_ = os.path.splitext(os.path.basename(path))
             mic = np.array(load_image(path), copy=False).astype(np.float32)
