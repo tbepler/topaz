@@ -201,14 +201,13 @@
 		$('.denoise_micrographs_inputs').each(function() {
 			$(this).on('keyup', function() {
 				var input7 = $('#input7').val() == '' ? '/path/to/input/images/*.mrc' : $('#input7').val();
-				var model7 = $('#model7').val() == '' ? 'L2' : $('#model7').val();
+				var model7 = $('#model7').val() == '' ? 'unet' : $('#model7').val();
 				var device7 = $('#device7').val() == '' ? '0' : $('#device7').val();
 				var format7 = $('#format7').val() == '' ? 'mrc' : $('#format7').val();
-				var bin7 = $('#bin7').val() == '' ? '1' : $('#bin7').val();
 				var patchsize7 = $('#patchsize7').val() == '' ? '1536' : $('#patchsize7').val();
 				var patchpadding7 = $('#patchpadding7').val() == '' ? '384' : $('#patchpadding7').val();
-				var output7 = $('#output7').val() == '' ? '/path/to/output/folder' : $('#output7').val();
-				$('#result7').html("topaz denoise " + input7 + " --model " + model7 + " --device " + device7 + " --format " + format7 + " --bin " + bin7 + " --patch-size " + patchsize7 + " --patch-padding " + patchpadding7 + " --normalize --output " + output7);
+				var output7 = $('#output7').val() == '' ? '/path/to/output/folder/' : $('#output7').val();
+				$('#result7').html("topaz denoise " + input7 + " --model " + model7 + " --device " + device7 + " --format " + format7 + " --patch-size " + patchsize7 + " --patch-padding " + patchpadding7 + " --normalize --output " + output7);
 			});
 		});
 	});
@@ -216,29 +215,34 @@
 		$('.denoise_stack_inputs').each(function() {
 			$(this).on('keyup', function() {
 				var input8 = $('#input8').val() == '' ? '/path/to/particle/stack.mrcs' : $('#input8').val();
-				var model8 = $('#model8').val() == '' ? 'L2' : $('#model8').val();
+				var model8 = $('#model8').val() == '' ? 'unet' : $('#model8').val();
 				var device8 = $('#device8').val() == '' ? '0' : $('#device8').val();
 				var format8 = $('#format8').val() == '' ? 'mrc' : $('#format8').val();
-				var bin8 = $('#bin8').val() == '' ? '1' : $('#bin8').val();
 				var output8 = $('#output8').val() == '' ? '/path/to/denoised/stack.mrcs' : $('#output8').val();
-				$('#result8').html("topaz denoise " + input8 + " --model " + model8 + " --device " + device8 + " --format " + format8 + " --bin " + bin8 + " --stack --normalize --output " + output8);
+				$('#result8').html("topaz denoise " + input8 + " --model " + model8 + " --device " + device8 + " --format " + format8 + " --stack --normalize --output " + output8);
 			});
 		});
 	});
-	/*$( document ).ready(function() {
+	$( document ).ready(function() {
 		$('.denoise_training_inputs').each(function() {
 			$(this).on('keyup', function() {
-				var coordinateinput9 = $('#coordinateinput9').val() == '' ? '/path/to/Topaz/coordinate/file.txt' : $('#coordinateinput9').val();
-				var imageroot9 = $('#imageroot9').val() == '' ? '/path/to/full/micrographs/' : $('#imageroot9').val();
-				var boxsize9 = $('#boxsize9').val() == '' ? '192' : $('#boxsize9').val();
-				var threshold9 = $('#threshold9').val() == '' ? '-9999' : $('#threshold9').val();
-				var resize9 = $('#resize9').val() == '' ? '-1' : $('#resize9').val();
-				var imageext9 = $('#imageext9').val() == '' ? 'mrc' : $('#imageext9').val();
-				var output9 = $('#output9').val() == '' ? '/path/to/output/particles.mrcs' : $('#output9').val();
-				$('#result9').html("topaz particle_stack " + coordinateinput9 + " --image-root " + imageroot9 + " --size " + boxsize9 + " --threshold " + threshold9 + " --resize " + resize9 + " --image-ext ." + imageext9 + " --output " + output9);
+				var dira10 = $('#dira10').val() == '' ? '/path/to/input/images/half1/' : $('#dira10').val();
+				var dirb10 = $('#dirb10').val() == '' ? '/path/to/input/images/half2/' : $('#dirb10').val();
+				var method10 = $('#method10').val() == '' ? 'noise2noise' : $('#method10').val();
+				var arch10 = $('#arch10').val() == '' ? 'unet' : $('#arch10').val();
+				var optim10 = $('#optim10').val() == '' ? 'adagrad' : $('#optim10').val();
+				var lr10 = $('#lr10').val() == '' ? '0.001' : $('#lr10').val();
+				var criteria10 = $('#criteria10').val() == '' ? 'L2' : $('#criteria10').val();
+				var crop10 = $('#crop10').val() == '' ? '800' : $('#crop10').val();
+				var batchsize10 = $('#batchsize10').val() == '' ? '4' : $('#batchsize10').val();
+				var numepochs10 = $('#numepochs10').val() == '' ? '100' : $('#numepochs10').val();
+				var device10 = $('#device10').val() == '' ? '0' : $('#device10').val();
+				var numworkers10 = $('#numworkers10').val() == '' ? '16' : $('#numworkers10').val();
+				var output10 = $('#output10').val() == '' ? '/path/to/output/folder/and/file' : $('#output10').val();
+				$('#result10').html("topaz denoise --dir-a " + dira10 + " --dir-b " + dirb10 + " --method " + method10 + " --arch " + arch10 + " --optim " + optim10 + " --lr " + lr10 + " --criteria " + criteria10 + " --crop " + crop10 + " --batch-size " + batchsize10 + " --num-epochs " + numepochs10 + " --device " + device10 + " --num-workers " + numworkers10 + " --save-prefix " + output10);
 			});
 		});
-	});*/
+	});
 	</script>
 
     <!-- CSS style definition -->
@@ -478,7 +482,7 @@
 	    display: block;
 	    background-color: inherit;
 	    color: black;
-	    padding: 12px 16px;
+	    padding: 9.75px 16px;
 	    width: 100%;
 	    border: none;
 	    outline: none;
@@ -808,6 +812,8 @@
 	  
 	  .via_logo { background:url(data:image/png;base64,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); display:inline-block; width:250px; height:100px;}
 	  
+	  .denoising_logo { background:url(data:image/png;base64,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); display:inline-block; width:78px; height:75px;}
+	  
 	  .preprocessing_logo { background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADYAAABLBAMAAADJ12nxAAAACXBIWXMAABbqAAAW6gHljkMQAAAAMFBMVEWkpKT9/f39/f3////9/f36+vqJiYl7e3tycnLu7u6Xl5djY2PU1NTFxcW0tLTh4eFzh75wAAAAA3RSTlP6696exOcsAAAETklEQVRIx62V32tbVRzAg4V22haZb/4Xoefch4y0kZ1zhULmYOccobJue/G2S5eQB0lKiqNP7aWXsmKSSRW2giyhIUqf2ot3dkKk0FWkTBMHdb5UM2OLViMD13X4Pefe2x+J88kLgXA+53O+3+/53nNuoJeIFzxnA8UyfgG7ECikX3Wh1s6KnVMNOXz+O619zfWuqSoMh2eaeptXCRczFV2E09ezbV6FnBtNNvVwajSh4BA+5lF0CYbDmb3xOIOh4M/aMY+iufF4JIPup8tQbHDGy0p5AJ+mP8twrTYN9QTTMrzvYUJxbTqGWOgx1BNMyvCeRxDGRKulGohFoJ7g7CU3K+UhRDEBp4oJ1LM3i9ysXE/BCJSJyfBo6n3NzcrzECLSSTKKbo0ksxAedtn3EORDho2srCcdhwj16UafzyQMGVlZz/0M5BbqmnpwyBCWTNYTnsQyfCF5xBCWDLICJuGZdoakB7nR4L8wrBj+D4b+d0Z8RtsZJT6jrUwj2GMckZNsJgu7o9jLskE+g8VwOJVgWNX+OFXFLlQelmw87nrwGkBLqWIj8h/Eg9aqeCxazDQVBJbIqj5o0Fr0RjIg2PDodTkk14T3hEomWwueEOzWaIJBU4GpxaKTGodIm5IJtieDI+htTi4GnuDhYkoxgdR88HJyMckg0siVgHtm4W1XnoDX9JFkEMn1hAjVpxp4EBhESmXUWSEHHpPBq9ITPFpMuueoz2OCwdu+LpkQwxn/jPknGMpMuowd6C0Mgo+4TCD/3B6dffI87bK8OOlxCb9U7HJCMO2Yx+ZlDAo/nfYbzXPVI48/MXPetTXX2Cv11K9phx7fsjoEOwWzeS1WMIzYon7osR3zHgo6SzD7o9KVHzaNDup5RGR3zJXdbnMV2IDxFdLq5XnP+x2FxhzTsc27mqBP42pC6S/lDTjxh8u7fz87Zd/QxWZhUV6YsWJFemwDlCqiKNR9QyOdhZ+ADRbKKh7/0Lauyux5/0r+9o+KDRWabrywveLenGxr2nqvdgf+RWIVN0/efde7FYOO+cVNWfZArKwrj+9/4m3qoGUu1UtwadaNGHPZTsXf8G6r1zASX2/GfuuJcliTXBzP+S3cWo0sbBqGsUB21/IXAvz5xLJ/wfP9Dp4PlUqlBdJVeuVBgI/Zn/tfBv7xdl4XhcW52Defztc/AGYe896FaZ2VwZ61DvZOb4B1Oyt5n22sQM23BacD2yKYCIiLdeswzx1rVZfd52uL6MkfsJ9oo8NjQxOm7SZ88OujwkuyR2/f85J5y1HtlbDW1fhTMS8Zvj9lXHMZfzZQ6VP7Yt1RI+fNJqX+NnC1Z0OWudzEguOHS9rJ7xjsvm05S+v8cs1e1k9+/4SIOvbumG1MOJaZa/X49w30pu1M/mJb37Z6QsfijG1tRyxru9VTldl2nt+cbfneUi6PUL+zqulalgqduw/8ORs4rZ7XO6+ebn1e+wc/BQRd7DBzCAAAAABJRU5ErkJggg==); display:inline-block; width:54px; height:75px;}
 	  
 	  .picking_logo { background:url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEwAAABLBAMAAAAovHygAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAAD1BMVEWBgYFHcEx/f3+AgIB/f3/QWM4IAAAABXRSTlP+AEfMi12fsSIAAAHwSURBVEjHpZbhtYMgDIVTcYCCDCDWAVA7gFr3n+khUEgQ1J6Xf8JHEi5IAvxo/UcDe694CA5Q9wFnbD3Beg3B1iLWA7axgEkXbpomTfxRTGibk4rRVQ5rzcRbfb/2vdQZTOJ0jL3CN8F0WB05plJMfgejzd4d0LEl0UeYlQkm05A+7ECx9ujMSlQTzA+k1lrtAMdcMpjJrsJY65I92LwHASRalcWaPSog50sWE/teAS3iedvDQEytLmD7DFyl5uIEzKldSG6BqJoqYfoWZvJ5QEiAlSgjcAWXG7VzEauK2PMeZhKCGP8e9jjBIGJDEZMYu+lt/L+3X3fa3sVuHVZzilU/3pDz+zbA1f9HL/m+pKyuAn4p3NOkDfiDFx8R4Jd7II+DKP2o9kED+kBlxWX44WoKUTV9BgVkr1xjBQW8jGX3CTwJmnEn7dNLHtVjkbHOFMYaWmdj9ahxlRG+dtPzl9qPAKqJB06EkgjUmUlvobVaYax1zGbru0I9xIirs3BU7WJPW9d12wSxhntsDnnNpMEIAkFsK6yOYs5RDvNTKvQLzmIPYTFJW5jegdOatFI6icC7fus7nnRcDWTPKcG8soyfY/6YhnPMO6v5OfbK3YwjNt9xxuGWMx6P6RzDPd9FbiO/xGTuf8rI+2HLJcX/AKTZty2z1S2iAAAAAElFTkSuQmCC); display:inline-block; width:76px; height:75px;}
@@ -905,6 +911,7 @@
 	<div class="tab" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">
 	  <span class="black_background"></span>
 	  <button class="tablinks" onclick="openTab(event, 'Start')" id="defaultOpen">Start</button>
+	  <button class="tablinks" onclick="openTab(event, 'Denoise')">Denoise</button>
 	  <button class="tablinks" onclick="openTab(event, 'Preprocessing')">Pre-process</button>
 	  <button class="tablinks" onclick="openTab(event, 'Picking')">Pick | Analyze</button>
 	  <button class="tablinks" onclick="openTab(event, 'Training')">Train</button>
@@ -925,13 +932,14 @@
 	  <tr><div style="display:block; margin: 0px auto;"><a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo" style="display:block; margin: 0px auto;"></span></a></div></tr><br>
 	  <tr><div style="text-align:center; margin: 0px auto;"><h2>Welcome!</h2></div></tr>
 	  <tr><p style="line-height:1.3; text-align:center; margin: 0px auto;">This GUI will allow you to pick training particles and make Topaz commands. Here is the general workflow:</p></tr>
-	  <br>
-		<tr><td><div class="workflow"><button class="tablinks" onclick="openTab(event, 'Preprocessing')">Pre-process</button></div></td><td></td>
+		<tr><td><div class="workflow"><button class="tablinks" onclick="openTab(event, 'Denoise')">Denoise</button></div></td><td></td>
+		<td><div class="workflow"><button class="tablinks" onclick="openTab(event, 'Preprocessing')">Pre-process</button></div></td><td></td>
 		<td><div class="workflow"><button class="tablinks" onclick="openTab(event, 'Picking')">Pick | Analyze</button></div></td><td></td>
 		<td><div class="workflow"><button class="tablinks" onclick="openTab(event, 'Training')">Train</button></div></td><td></td>
 		<td><div class="workflow"><button class="tablinks" onclick="openTab(event, 'Extracting')">Extract</button></div></td>
 		</tr>
 		<tr>
+		<td><span class="denoising_logo"></span></td><td><font size="20"><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">&#x2192</span></font></td>
 		<td><span class="preprocessing_logo"></span></td><td><font size="20"><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">&#x2192</span></font></td>
 		<td><span class="picking_logo"></span></td><td><font size="20"><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">&#x2192</span></font></td>
 		<td><span class="training_logo"></span></td><td><font size="20"><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">&#x2192</span></font></td>
@@ -939,15 +947,123 @@
 		</tr>
 		<tr></tr><tr></tr><tr></tr><tr></tr><tr></tr>
 		<tr>
+		<td><font size="4px">Denoise<br>images</font></td></td><td>
 		<td><font size="4px">Normalize &<br>downsample images</font></td></td><td>
 		<td><font size="4px">Pick training<br>particles, or<br>analyze picks</font></td></td><td>
 		<td><font size="4px">Train a<br>neural network</font></td></td><td>
 		<td><font size="4px">Extract particle<br>coordinates</font></td></td><td>
 		</tr>
 	  </table>
-	  <div style="line-height:1.3; width: 45%; margin: 0px auto;">
-	  <br><br><center><p><i><strong>Citation: </strong>Bepler, T., Morin, A., Rapp, M., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2019). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs.<a href="https://doi.org/10.1038/s41592-019-0575-8" target="_blank"> Nature Methods</a></i></center>
+	  <div style="line-height:1.3; width: 55%; margin: 0px auto;">
+	  <br><center><p><i><strong>Citations: </strong>Bepler, T., Morin, A., Rapp, M., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2019). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs.<a href="https://doi.org/10.1038/s41592-019-0575-8" target="_blank"> Nature Methods</a>
+	  <br><br>Bepler, T., Noble, A.J., Berger, B. (2019). Topaz-Denoise: general deep denoising models for cryoEM.<a href="https://doi.org/10.1101/838920" target="_blank"> bioRxiv</a></i></center>
 	  </div>
+	</div>
+
+	<div id="Denoise" class="tabcontent" style="overflow-x:hidden;">
+      <div class="top_panel" id="ui_top_panel">
+        <div class="menubar">
+        <ul>
+          <li><a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo_small"></span></a></li>
+		</ul>
+        </div> <!-- end of menubar -->
+      </div> <!-- endof #top_panel -->
+	  <span class="tab1"><table><tr><td><span class="denoising_logo"></span></td><td><h2>&nbsp&nbsp&nbspTopaz-Denoise</h2></td></tr></table></span>
+	  <span class="tab2"><br>
+
+	  <br><section><details><summary class="collapsibletools"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Denoise Micrographs</summary>
+		<div class="content">
+		  <p style=line-height:1.3>
+	      <span class="tab0"><p style=line-height:1.3>Create a command for denoising micrographs.<br><br>
+		  <strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
+		  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
+		  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
+		  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7>
+		  </p>
+		  <hr width="20%">
+		  <br><table style="height:9.1em">
+		  <tr title="Input micrographs for denoising (type: string; full path 𝘸𝘪𝘵𝘩 𝘸𝘪𝘭𝘥𝘤𝘢𝘳𝘥 for *.mrc files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input7" class="denoise_micrographs_inputs" style="width:30em" value="/path/to/input/images/*.mrc"></td></tr>
+		  <tr title="Output directory. Different from the input firectory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output7" class="denoise_micrographs_inputs" style="width:30em" value="/path/to/output/folder/"></td></tr>
+		  <tr title="Denoising model to use on micrographs (type: string; use one of these {unet, unet-small, fcnn, affine, unet-v0.2.1} to use the pretrained models or a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pretrained models were trained on hundreds of datasets of K2 micrograph frame sums of various particles."><td><hl4><span><font size="3" color="white">Model</font></span></hl4></td><td><input id="model7" class="denoise_micrographs_inputs" style="width:30em" value="unet"></td></tr>
+		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU denoising (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device7" class="denoise_micrographs_inputs" style="width:3em" value="0"></td></tr>
+		  <tr title="Output format of denoised images (type: string; options: mrc, png, tiff, jpg)"><td><hl4><span><font size="3" color="white">Format</font></span></hl4></td><td><input id="format7" class="denoise_micrographs_inputs" style="width:3em" value="mrc"></td></tr>
+		  </table>
+		  <br><section><details><summary class="collapsibleoptions2" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
+			<div class="content">
+			  <table style="height:3.7em">
+			  <tr title="Patch size (type: integer)&#013;&#013;This will break the micrographs up in patches where each patch will be denoised seperately and then stitched back together with overlap defined by Patch Padding. A negative value means that this option is ignored."><td><hl8><span><font size="3" color="white">Patch size</font></span></hl8></td><td><input id="patchsize7" class="denoise_micrographs_inputs" style="width:3em" value="1536"></td></tr>
+			  <tr title="Padding around each patch to remove edge artifacts (type: integer)"><td><hl8><span><font size="3" color="white">Patch padding</font></span></hl8></td><td><input id="patchpadding7" class="denoise_micrographs_inputs" style="width:3em" value="384"></td></tr>
+			  </table>
+			</details></summary>
+			</span>
+		  <br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
+		  <code><div id="result7" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
+		  topaz denoise /path/to/input/images/*.mrc --model unet --device 0 --format mrc --patch-size 1536 --patch-padding 384 --normalize --output /path/to/output/folder/
+		  </div></span></code>
+		</div></br>
+	  </details></summary>
+
+	  <section><details><summary class="collapsibletools"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Denoise Particle Stack</summary>
+		<div class="content">
+		  <p style=line-height:1.3>
+	      <span class="tab0"><p style=line-height:1.3>Create a command for denoising a particle or micrograph stack.<br><br>
+		  <strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
+		  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
+		  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
+		  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7>
+		  </p>
+		  <hr width="20%">
+		  <br><table style="height:9.1em">
+		  <tr title="Input micrographs for denoising (type: string; full path to a single mrc/mrcs stack)"><td><hl2><span><font size="3" color="white">Input stack</font></span></hl2></td><td><input id="input8" class="denoise_stack_inputs" style="width:30em" value="/path/to/particle/stack.mrcs"></td></tr>
+		  <tr title="Output stack (type: string; full path)"><td><hl2><span><font size="3" color="white">Output stack</font></span></hl2></td><td><input id="output8" class="denoise_stack_inputs" style="width:30em" value="/path/to/denoised/stack.mrcs"></td></tr>
+		  <tr title="Denoising model to use on the particle stack (type: string; use one of these {unet, unet-small, fcnn, affine, unet-v0.2.1} to use the pretrained models or a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pretrained models were trained on hundreds of datasets of K2 micrograph frames of various particles."><td><hl4><span><font size="3" color="white">Model</font></span></hl4></td><td><input id="model8" class="denoise_stack_inputs" style="width:30em" value="unet"></td></tr>
+		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU denoising (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device8" class="denoise_stack_inputs" style="width:3em" value="0"></td></tr>
+		  <tr title="Output format of denoised images in stack (type: string; options: mrc, png, tiff, jpg. mrc is highly recommended)"><td><hl8><span><font size="3" color="white">Format</font></span></hl8></td><td><input id="format8" class="denoise_stack_inputs" style="width:3em" value="mrc"></td></tr>
+		  </table></span>
+		  <br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
+		  <code><div id="result8" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
+		  topaz denoise /path/to/particle/stack.mrcs --model unet --device 0 --format mrc --stack --normalize --output /path/to/denoised/stack.mrcs
+		  </div></span></code>
+		</div></br>
+	  </details></summary>
+	  
+	 <section><details><summary class="collapsibletools"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Train New Denoising Model</summary>
+		<div class="content">
+		  <p style=line-height:1.3>
+	      <span class="tab0"><p style=line-height:1.3>Create a command for training a Topaz-Denoise model.<br><br>
+		  <strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
+		  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
+		  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
+		  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7>
+		  </p>
+		  <hr width="20%">
+		  <br><table style="height:12.6em">
+		  <tr title="First input directory for training. Must contain only .mrc files. The files in the first and second input directory for training must have the same number of files with the same filenames. Each pair of files should be a different image of the same field of view (type: string; full directory path)"><td><hl2><span><font size="3" color="white">Input folder #1</font></span></hl2></td><td><input id="dira10" class="denoise_training_inputs" style="width:30em" value="/path/to/input/images/half1/"></td></tr>
+		  <tr title="Second input directory for training. Must contain only .mrc files. The files in the first and second input directory for training must have the same number of files with the same filenames. Each pair of files should be a different image of the same field of view (type: string; full directory path)"><td><hl2><span><font size="3" color="white">Input folder #2</font></span></hl2></td><td><input id="dirb10" class="denoise_training_inputs" style="width:30em" value="/path/to/input/images/half2/"></td></tr>
+		  <tr title="Output folder and files (type: string; full file path for output)"><td><hl2><span><font size="3" color="white">Output files</font></span></hl2></td><td><input id="output10" class="denoise_training_inputs" style="width:30em" value="/path/to/output/folder/and/file"></td></tr>
+		  <tr title="Denoising model architecture (type: string; options are unet, unet-small, unet2, unet3, fcnet, fcnet2, affine)"><td><hl4><span><font size="3" color="white">Model architecture</font></span></hl4></td><td><input id="arch10" class="denoise_training_inputs" style="width:3em" value="unet"></td></tr>
+		  <tr title="Training criteria (type: string; options are L0 (mode-seeking), L1 (median-seeking), or L2 (mean-seeking))"><td><hl4><span><font size="3" color="white">Training criteria</font></span></hl4></td><td><input id="criteria10" class="denoise_training_inputs" style="width:3em" value="L2"></td></tr>
+		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU training (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device10" class="denoise_training_inputs" style="width:3em" value="0"></td></tr>
+		  <tr title="Number of CPU cores to use in parallel (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers10" class="denoise_training_inputs" style="width:3em" value="16"></td></tr>
+		  </table>
+		  <br><section><details><summary class="collapsibleoptions2" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
+			<div class="content">
+			  <table style="height:10.9em">
+			  <tr title="Denoising training method (type: string; either 'noise2noise' or 'masked')"><td><hl8><span><font size="3" color="white">Training method</font></span></hl8></td><td><input id="method10" class="denoise_training_inputs" style="width:6em" value="noise2noise"></td></tr>
+			  <tr title="Optimizer (type: string; options are adam, adagrad, sgd)"><td><hl8><span><font size="3" color="white">Optimizer</font></span></hl8></td><td><input id="optim10" class="denoise_training_inputs" style="width:6em" value="adagrad"></td></tr>
+			  <tr title="Learning rate (type: float)"><td><hl8><span><font size="3" color="white">Learning rate</font></span></hl8></td><td><input id="lr10" class="denoise_training_inputs" style="width:3em" value="0.001"></td></tr>
+			  <tr title="Training crop size (type: integer)"><td><hl8><span><font size="3" color="white">Crop size</font></span></hl8></td><td><input id="crop10" class="denoise_training_inputs" style="width:3em" value="800"></td></tr>
+			  <tr title="Training batch size (type: integer)"><td><hl8><span><font size="3" color="white">Batch size</font></span></hl8></td><td><input id="batchsize10" class="denoise_training_inputs" style="width:3em" value="4"></td></tr>
+			  <tr title="Number of epochs during training (type: integer)"><td><hl8><span><font size="3" color="white">Number of epochs</font></span></hl8></td><td><input id="numepochs10" class="denoise_training_inputs" style="width:3em" value="100"></td></tr>
+			  </table>
+			</details></summary>
+			</span>
+		  <br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
+		  <code><div id="result10" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
+		  topaz denoise --dir-a /path/to/input/images/half1/ --dir-b /path/to/input/images/half2/ --method noise2noise --arch unet --optim adagrad --lr 0.001 --criteria L2 --crop 800 --batch-size 4 --num-epochs 100 --device 0 --num-workers 16 --save-prefix /path/to/output/folder/and/file
+		  </div></span></code>
+		</div></br>
+	  </details></summary><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;"	unselectable="on" onselectstart="return false;" onmousedown="return false;"></br></br></span>
 	</div>
 
 	<div id="Preprocessing" class="tabcontent" style="overflow-x:hidden;">
@@ -966,16 +1082,16 @@
 	  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7></p>
 	  <hr width="20%">
 	  <br><table style="height:9.2em">
-	  <tr title="Input micrographs for preprocessing (type: string; full path ð˜¸ð˜ªð˜µð˜© ð˜¸ð˜ªð˜­ð˜¥ð˜¤ð˜¢ð˜³ð˜¥ for *.mrc files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input1" class="preprocessing_inputs" style="width:30em" value="/path/to/input/images/*.mrc"></td></tr>
+	  <tr title="Input micrographs for preprocessing (type: string; full path 𝘸𝘪𝘵𝘩 𝘸𝘪𝘭𝘥𝘤𝘢𝘳𝘥 for *.mrc files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input1" class="preprocessing_inputs" style="width:30em" value="/path/to/input/images/*.mrc"></td></tr>
 	  <tr title="Output directory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output1" class="preprocessing_inputs" style="width:30em" value="/path/to/output/preprocessed/images/"></td></tr>
 	  <tr title="Number of CPU cores to use for parallel image downsampling.&#013;-1 means use all CPUs (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers1" class="preprocessing_inputs" style="width:3em" value="-1"></td></tr>
-	  <tr title="Device to use. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU training (type: integer)&#013;&#013;ð—¡ð—¼ð˜ð—²: It is highly recommended that a GPU is used for speed."><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device1" class="preprocessing_inputs" style="width:3em" value="0"></td></tr>
-	  <tr title="Rescaling factor for image downsampling (e.g. a 4k x 4k image downsampled by 4 results in a 1k x 1k image) (type: even integer).&#013;&#013;Recommended: Downsample such that the resulting pixelsize is about 8 angstroms; usually downsample by 4, 8, or 16 depending on pixelsize and particle size.&#013;&#013;ð—¡ð—¼ð˜ð—²: Your particle ð˜®ð˜¶ð˜´ð˜µ have a diameter (longest dimension) after downsampling of:&#013;&#013;70 pixels or less for resnet8&#013;30 pixels or less for conv31&#013;62 pixels or less for conv63&#013;126 pixels or less for conv127"><td><hl4><span><font size="3" color="white">Scale factor</font></span></hl4></td><td><input id="scale1" class="preprocessing_inputs" style="width:3em" value="4"></td></tr>
+	  <tr title="Device to use. Non-negative numbers correspond to G  PU IDs. Negative numbers correspond to CPU training (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: It is highly recommended that a GPU is used for speed."><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device1" class="preprocessing_inputs" style="width:3em" value="0"></td></tr>
+	  <tr title="Rescaling factor for image downsampling (e.g. a 4k x 4k image downsampled by 4 results in a 1k x 1k image) (type: even integer).&#013;&#013;Recommended: Downsample such that the resulting pixelsize is about 8 angstroms; usually downsample by 4, 8, or 16 depending on pixelsize and particle size.&#013;&#013;𝗡𝗼𝘁𝗲: Your particle 𝘮𝘶𝘴𝘵 have a diameter (longest dimension) after downsampling of maximum:&#013;&#013;70 pixels or less for resnet8&#013;30 pixels or less for conv31&#013;62 pixels or less for conv63&#013;126 pixels or less for conv127"><td><hl4><span><font size="3" color="white">Scale factor</font></span></hl4></td><td><input id="scale1" class="preprocessing_inputs" style="width:3em" value="4"></td></tr>
 	  </table>
 	  <br><section><details><summary class="collapsibleoptions" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
 		<div class="content">
 		  <table style="height:9.1em">
-		  <tr title="Output format for preprocessed images (any comma-separated combination of options: mrc,tiff,png,jpg) (type: string)&#013;&#013;ð—¡ð—¼ð˜ð—²: Default is mrc,png because Topaz trains on mrc files, which have pixel values of floats, and because Topaz GUI is able to display png or jpg files, which have pixel values of integers."><td><hl8><span><font size="3" color="white">Output format</font></span></hl8></td><td><input id="format1" class="preprocessing_inputs" style="width:6em" value="mrc,png"></td></tr>
+		  <tr title="Output format for preprocessed images (any comma-separated combination of options: mrc,tiff,png,jpg) (type: string)&#013;&#013;𝗡𝗼𝘁𝗲: Default is mrc,png because Topaz trains on mrc files, which have pixel values of floats, and because Topaz GUI is able to display png or jpg files, which have pixel values of integers."><td><hl8><span><font size="3" color="white">Output format</font></span></hl8></td><td><input id="format1" class="preprocessing_inputs" style="width:6em" value="mrc,png"></td></tr>
 		  <tr title="Pixel sampling factor for model fit. Speeds up estimation of parameters but introduces sample error if set >1 (type: integer)"><td><hl8><span><font size="3" color="white">Sample</font></span></hl8></td><td><input id="sample1" class="preprocessing_inputs" style="width:3em" value="1"></td></tr>
 		  <tr title="Number of iterations to run for model fit (type: integer)"><td><hl8><span><font size="3" color="white">Number of iterations</font></span></hl8></td><td><input id="niters1" class="preprocessing_inputs" style="width:3em" value="100"></td></tr>
 		  <tr title="alpha parameter of the beta distribution prior on the mixing proportion (type: integer)"><td><hl8><span><font size="3" color="white">Alpha</font></span></hl8></td><td><input id="alpha1" class="preprocessing_inputs" style="width:3em" value="900"></td></tr>
@@ -987,7 +1103,7 @@
 	  <code><span class="tab0"><div id="result1" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
 	  topaz preprocess /path/to/input/images/*.mrc --scale 4 --sample 1 --num-workers -1 --format mrc,png --device 0 --niters 100 --alpha 900 --beta 1 --verbose --destdir /path/to/output/preprocessed/images/
 	  </div></span></code>
-	  <br><br><br><b><i>Note:</i></b> Denoising micrographs before preprocessing will make particle picking even easier. Training on denoised micrographs may not work any better than the originals. You can denoise micrographs in More Tools on the right.
+	  <br><br><br><b><i>Note:</i></b> Denoising micrographs before preprocessing and before binning will make particle picking easier. Training on denoised micrographs may not work any better than the originals. It is recommended that you denoise micrographs for manual picking/inspection by using the Denoise tab on the right.
 	  <span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;"	unselectable="on" onselectstart="return false;" onmousedown="return false;"></br></br></br></span>
 	  </div>
 	</div>
@@ -1066,6 +1182,7 @@
               <li onclick="set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_GETTING_STARTED)" title="Show a guide to get started with this Topaz GUI">Getting Started (F2)</li>
               <li title="Visit the Topaz GitHub page"><a href="https://github.com/tbepler/topaz/" target="_blank">Topaz GitHub Page</a></li>
               <li title="Cite Topaz if you use it!"><a href="https://doi.org/10.1038/s41592-019-0575-8" target="_blank">Topaz Citation</a></li>
+              <li title="Cite Topaz-Denoise if you use it!"><a href="https://doi.org/10.1101/838920" target="_blank">Topaz-Denoise Citation</a></li>
               <li title="Visit the project page for the base GUI"><a href="http://www.robots.ox.ac.uk/~vgg/software/via/" target="_blank">VIA Project Page</a></li>
               <li class="submenu_divider"></li>
               <li title="If you have an issue with this GUI, please report it and include as much information as possible"><a href="https://github.com/tbepler/topaz/issues" target="_blank">Report an Issue</a></li>
@@ -1444,14 +1561,19 @@
 
         <div id="page_getting_started" class="display_area_content display_none narrow_page_content">
           <font size="+1"><ol>
-            <li><strong>Preprocess MRCs</strong>: Use Topaz to downsample, normalize, and convert micrographs to PNG (for use in Topaz GUI) and MRC (for use with Topaz training).</li>
+            <li><strong>Denoise MRCs (recommended)</strong>: Use Topaz-Denoise to denoise full-size raw micrographs.</li>
+              <ul>
+			    <li>Denoising using the pre-trained models works best on K2, K3, Falcon II, and Falcon III micrographs. You may wish to make your own denoising model if the pre-trained models are not optimal.
+				</li>
+              </ul>
+            <li><strong>Preprocess MRCs</strong>: Use Topaz to downsample, normalize, and convert denoised micrographs to PNG (for use in Topaz picking GUI) and raw micrographs to MRC (for use with Topaz training).</li>
               <ul>
 			    <li>Your particle must have a diameter (longest dimension) after downsampling of: 70 pixels or less for resnet8; 30 pixels or less for conv31; 62 pixels or less for conv63; 126 pixels or less for conv127.
 				</li>
                 <li>Topaz normalization uses image statistics for all input micrographs. A Gaussian mixture model is used to effectively make the ice region of each micrograph visible, even if there is gold in the image.
                 </li>
               </ul>
-            <li><strong>Pick Particles</strong>: Add images then pick particles:
+            <li><strong>Pick Particles</strong>: Add images then pick particles:</li>
               <ul>
                 <li>To add images:
                   <ul>
@@ -1472,15 +1594,13 @@
                   </ul>
                 </li>
               </ul>
-
-            <li><strong>Train a model</strong>: Use Topaz to train a neural network model to pick your particles.
-			</li>
+            <li><strong>Train a model</strong>: Use Topaz to train a neural network model to pick your particles.</li>
               <ul>
+                <li>Training often works best when the training radius is 3 pixels or less.
+                </li>
                 <li>Several parameters are optimizable by cross-validation.
                 </li>
               </ul>
-				
-
             <li><strong>Export Particles</strong>: To export particles, click <span class="text_button" onclick="download_all_region_data('csv')"><code>Particle Picks &rarr; Export Picks</code></span> in the top menu. These picks may then be used in Topaz training.</li>
             <li><strong>Analyze Topaz Picks</strong>: Load Topaz picks by clicking <span class="text_button" onclick="sel_local_data_file('annotations')"><code>Particle Picks &rarr; Import Picks.</code></span></li>
 			  <ul>
@@ -1506,7 +1626,7 @@
           <div style="text-align:center">
              <table style="font-family:mono; font-size:0.8em;text-align:center;">
 			 <tr><td><a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo_medium"></span></a></td><td>&nbsp&nbsp&nbsp&nbsp<a href="http://www.robots.ox.ac.uk/~vgg/software/via/" target="_blank"><span class="via_logo"></span></a></td></tr>
-			 <tr><td><a href="https://github.com/tbepler/topaz#topaz" target="_blank">Topaz Version 0.2.2</a></td><td><a href="https://gitlab.com/vgg/via/blob/master/CHANGELOG" target="_blank">VIA Version 2.0.7 (modified)</a></td></tr>
+			 <tr><td><a href="https://github.com/tbepler/topaz#topaz" target="_blank">Topaz Version 0.2.3</a></td><td><a href="https://gitlab.com/vgg/via/blob/master/CHANGELOG" target="_blank">VIA Version 2.0.7 (modified)</a></td></tr>
 			 </table>
           </div>
 
@@ -1560,21 +1680,21 @@ POSSIBILITY OF SUCH DAMAGE.
 			  <p style=line-height:1.4>
 			  <font size="+1"><b>1) </b>To start picking, <span class="text_button" title="Load or Add Images" onclick="sel_local_images()"><font size="+2">select images</font></span> or add images from <span class="text_button" title="Add images from absolute or local paths (e.g. /my/beautiful/particles.jpg)" onclick="project_file_add_abs_path_with_input()">paths.</span></font></br>
               <font size="+1"><b>2) </b>Pick 100-1,000 particles (more is better) representing all orientations.</font></br>
-              <font size="+1">&nbsp&nbsp&nbsp&nbspâ€¢ Pick across several representative images.</font></br>
-              <font size="+1">&nbsp&nbsp&nbsp&nbspâ€¢ Not all particles need to be picked from each image.</font></br>
+              <font size="+1">&nbsp&nbsp&nbsp&nbsp• Pick across several representative images.</font></br>
+              <font size="+1">&nbsp&nbsp&nbsp&nbsp• Not all particles need to be picked from each image.</font></br>
               <font size="+1"><b>3) </b>Export your particle picks and proceed to Topaz training.</font></br>
-              <br><font size="+1">â€¢ <span class="text_button" onclick="download_all_region_data('csv')"><font size="+1">Save your particles</font></span> and <span class="text_button" onclick="project_save_with_confirm()">project</span> regularly. You may <span class="text_button" onclick="sel_local_data_file('annotations')">load</span> <span class="text_button" onclick="project_open_select_project_file()">them</span> later to continue.</font></br>
-              <br><font size="+1">â€¢ For further help, see the <span class="text_button" onclick="set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_GETTING_STARTED)">Getting Started</span> page.</font>
+              <br><font size="+1">• <span class="text_button" onclick="download_all_region_data('csv')"><font size="+1">Save your particles</font></span> and <span class="text_button" onclick="project_save_with_confirm()">project</span> regularly. You may <span class="text_button" onclick="sel_local_data_file('annotations')">load</span> <span class="text_button" onclick="project_open_select_project_file()">them</span> later to continue.</font></br>
+              <br><font size="+1">• For further help, see the <span class="text_button" onclick="set_display_area_content(VIA_DISPLAY_AREA_CONTENT_NAME.PAGE_GETTING_STARTED)">Getting Started</span> page.</font>
 			  </p>
 			</div>
 			</details></summary>
 			<section><details><summary class="collapsible" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on"	onselectstart="return false;" onmousedown="return false;">Analyzing Topaz picks</summary>
 			<div class="content" style=line-height:1.4>
 			  <p>
-			  <font size="+1">â€¢ </b><span class="text_button" onclick="sel_local_data_file('annotations')">Import</span> your Topaz particle picks as a CSV file and review the picks.</font></br></br>
-			  <font size="+1">&nbsp&nbspâ—¦ </b>Press <span class="key">L</span> on your keyboard to show the particle number, then the Up <span class="key">&uarr;</span> key will toggle the Topaz particle scores. Zoom-in  on the image with <span class="key">+</span> to inspect.</font></br></br>
+			  <font size="+1">• </b><span class="text_button" onclick="sel_local_data_file('annotations')">Import</span> your Topaz particle picks as a CSV file and review the picks.</font></br></br>
+			  <font size="+1">&nbsp&nbsp◦ </b>Press <span class="key">L</span> on your keyboard to show the particle number, then the Up <span class="key">&uarr;</span> key will toggle the Topaz particle scores. Zoom-in  on the image with <span class="key">+</span> to inspect.</font></br></br>
 			  <font size="+1">Or</font></br></br>
-			  <font size="+1">â€¢ Load your micrographs and particles in .star format into Relion. Picks may be colored based on Topaz score by using the AutopickFigureOfMerit column in the .star file.</font>
+			  <font size="+1">• Load your micrographs and particles in .star format into Relion. Picks may be colored based on Topaz score by using the AutopickFigureOfMerit column in the .star file.</font>
 			  </p>
 			</details></summary>
 			</div>
@@ -1594,7 +1714,7 @@ POSSIBILITY OF SUCH DAMAGE.
         </div> <!-- end of menubar -->
       </div> <!-- endof #top_panel -->
 	  <span class="tab1"><table><tr><td><span class="training_logo"></span></td><td><h2>&nbsp&nbsp&nbsp&nbspTopaz Training Command Generator</h2></td></tr></table></span>
-	  <span class="tab2"><p style=line-height:1.3>Create a command for training a network using particle picks.
+	  <span class="tab2"><p style=line-height:1.3>Create a command for training a model using particle picks.
 	  <br><br><br><br><strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
 	  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
 	  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
@@ -1604,13 +1724,13 @@ POSSIBILITY OF SUCH DAMAGE.
 	  <br><table style="height:21.7em">
 	  <tr title="Path to input micrographs for training (type: string; full path)"><td><hl2><span><font size="3" color="white">Training images folder</font></span></hl2></td><td><input id="trainimages2" class="training_inputs" style="width:30em" value="/path/to/preprocessed/images/"></td></tr>
 	  <tr title="Training particles in CSV, STAR, or tab-delimited format (type: string; full file path)"><td><hl2><span><font size="3" color="white">Training particles</font></span></hl2></td><td><input id="traintargets2" class="training_inputs" style="width:30em" value="/path/to/training_particles.csv"></td></tr>
-	  <tr title="Output folder to write the train/test curve and models for each epoch (type: string; full file path)&#013;&#013;ð—¡ð—¼ð˜ð—²: The output directory ð˜®ð˜¶ð˜´ð˜µ ð˜¦ð˜¹ð˜ªð˜´ð˜µ."><td><hl2><span><font size="3" color="white">Output</font></span></hl2></td><td><input id="output2" class="training_inputs" style="width:30em" value="/output/path/"></td></tr>
-	  <tr title="Pixel radius around particle centers to consider (type: integer)&#013;&#013;ð—¡ð—¼ð˜ð—²: Try a value that is roughly equal to the minor axis radius of your particle. The goal is to train a model that knows what a single particle looks like, so the training radius should be set such that it does not include neighboring potential particles."><td><hl4><span><font size="3" color="white">Particle radius</font></span></hl4></td><td><input id="radius2" class="training_inputs" style="width:3em" value="3"></td></tr>
+	  <tr title="Output folder to write the train/test curve and models for each epoch (type: string; full file path)&#013;&#013;𝗡𝗼𝘁𝗲: The output directory 𝘮𝘶𝘴𝘵 𝘦𝘹𝘪𝘴𝘵."><td><hl2><span><font size="3" color="white">Output</font></span></hl2></td><td><input id="output2" class="training_inputs" style="width:30em" value="/output/path/"></td></tr>
+	  <tr title="Pixel radius around particle centers to consider (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: A training radius of 3 or less is often suitable as long as the value is less than the minor axis of your particle, even if the particle is hollow. The goal is to train a model that knows what a single particle looks like, so the training radius should be set such that it does not include neighboring potential particles."><td><hl4><span><font size="3" color="white">Particle radius</font></span></hl4></td><td><input id="radius2" class="training_inputs" style="width:3em" value="3"></td></tr>
 	  <tr title="Augment the method with an autoencoder where the weight is on the reconstruction error (type: float)"><td><hl4><span><font size="3" color="white">Autoencoder</font></span></hl4></td><td><input id="autoencoder2" class="training_inputs" style="width:3em" value="0"></td></tr>
 	  <tr title="Number of training epochs (type: integer)"><td><hl4><span><font size="3" color="white">Number of epochs</font></span></hl4></td><td><input id="numepochs2" class="training_inputs" style="width:3em" value="10"></td></tr>
 	  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU training (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device2" class="training_inputs" style="width:3em" value="0"></td></tr>
 	  <tr title="Number of CPU cores to use for parallel image downsampling.&#013;-1 means use all CPUs (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers2" class="training_inputs" style="width:3em" value="-1"></td></tr>
-	  <tr title="Model type to fit (options: resnet8, conv31, conv63, conv127) (type: string)&#013;&#013;ð—¡ð—¼ð˜ð—²: Your particle ð˜®ð˜¶ð˜´ð˜µ have a diameter (longest dimension) after downsampling of:&#013;&#013;70 pixels or less for resnet8&#013;30 pixels or less for conv31&#013;62 pixels or less for conv63&#013;126 pixels or less for conv127"><td><hl6><span><font size="3" color="white">CNN model</font></span></hl6></td><td><input id="model2" class="training_inputs" style="width:6em" value="resnet8"></td></tr>
+	  <tr title="Model type to fit (options: resnet8, conv31, conv63, conv127) (type: string)&#013;&#013;𝗡𝗼𝘁𝗲: Your particle 𝘮𝘶𝘴𝘵 have a diameter (longest dimension) after downsampling of:&#013;&#013;70 pixels or less for resnet8&#013;30 pixels or less for conv31&#013;62 pixels or less for conv63&#013;126 pixels or less for conv127"><td><hl6><span><font size="3" color="white">CNN model</font></span></hl6></td><td><input id="model2" class="training_inputs" style="width:6em" value="resnet8"></td></tr>
 	  <tr title="Objective function to use for learning the region classifier (options: PN, GE-KL, GE-binomial, PU) (type: string)"><td><hl6><span><font size="3" color="white">Method</font></span></hl6></td><td><input id="method2" class="training_inputs" style="width:6em" value="GE-binomial"></td></tr>
 	  <tr title="Expected number of particles per micrograph (type: integer)"><td><hl6><span><font size="3" color="white">Num particles/image</font></span></hl6></td><td><input id="numparticles2" class="training_inputs" style="width:3em" value="300"></td></tr>
 	  <tr title="Number of subsets to divide the training micrographs into. This will determine the train/test dataset sizes. E.g. '5' splits the picks into five micrograph subsets where one will be used as the test dataset; 20% will be held-out for validation (type: integer)"><td><hl6><span><font size="3" color="white">K-fold</font></span></hl6></td><td><input id="kfold2" class="training_inputs" style="width:3em" value="5"></td></tr>
@@ -1684,7 +1804,7 @@ POSSIBILITY OF SUCH DAMAGE.
 	  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7></p>
 	  <hr width="20%">
 	  <br><table style="height:12.7em">
-	  <tr title="Input micrographs for extracting (type: string; full path ð˜¸ð˜ªð˜µð˜© ð˜¸ð˜ªð˜­ð˜¥ð˜¤ð˜¢ð˜³ð˜¥ for *.mrc/*.tiff/*.png files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input4" class="extracting_inputs" style="width:30em" value="/path/to/preprocessed/images/*.mrc"></td></tr>
+	  <tr title="Input micrographs for extracting (type: string; full path 𝘸𝘪𝘵𝘩 𝘸𝘪𝘭𝘥𝘤𝘢𝘳𝘥 for *.mrc/*.tiff/*.png files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input4" class="extracting_inputs" style="width:30em" value="/path/to/preprocessed/images/*.mrc"></td></tr>
 	  <tr title="Path to network model from training (type: string; full path)"><td><hl2><span><font size="3" color="white">Model</font></span></hl2></td><td><input id="model4" class="extracting_inputs" style="width:30em" value="/path/to/model_epoch##.sav"></td></tr>
 	  <tr title="Basename for output files. A .star, Topaz GUI .csv, and a Topaz .txt file will be written (type: string; full file path without extension)"><td><hl2><span><font size="3" color="white">Output filenames</font></span></hl2></td><td><input id="output4" class="extracting_inputs" style="width:30em" value="/path/to/extracted/particles"></td></tr>
 	  <tr title="Pixel radius of the region to extract (type: integer)&#013;&#013;This will prevent extracting particle coordinates closer than the value of two particle radii."><td><hl4><span><font size="3" color="white">Particle radius</font></span></hl4></td><td><input id="radius4" class="extracting_inputs" style="width:3em" value="8"></td></tr>
@@ -1737,9 +1857,9 @@ POSSIBILITY OF SUCH DAMAGE.
 		<br><table style="height:9.0em">
 		<tr title="Input coordinate file for converting (type: string; full path to .csv, .star, or Topaz .txt)"><td><hl2><span><font size="3" color="white">Input file</font></span></hl2></td><td><input id="input5" class="converting_inputs" style="width:30em" value="/path/to/input/coordinate/file.[csv|star|txt]"></td></tr>
 		<tr title="Output coordinate file for converting (type: string; full path to .csv, .star, or Topaz .txt)"><td><hl2><span><font size="3" color="white">Output file</font></span></hl2></td><td><input id="output5" class="converting_inputs" style="width:30em" value="/path/to/output/coordinate/file.[csv|star|txt]"></td></tr>
-		<tr title="Topaz ð˜´ð˜¤ð˜°ð˜³ð˜¦ ð˜µð˜©ð˜³ð˜¦ð˜´ð˜©ð˜°ð˜­ð˜¥ at which to cut off (type: float)"><td><hl4><span><font size="3" color="white">Threshold</font></span></hl4></td><td><input id="threshold5" class="converting_inputs" style="width:3em" value="-9999"></td></tr>
-		<tr title="Upscale the coordinates by this factor. '1' means no scaling (type: integer)&#013;&#013;ð—¡ð—¼ð˜ð—²: Coordinates will be scaled by (Upscale/Downscale)."><td><hl4><span><font size="3" color="white">Upscale picks</font></span></hl4></td><td><input id="upscale5" class="converting_inputs" style="width:3em" value="1"></td></tr>
-		<tr title="Downscale the coordinates by this factor. '1' means no scaling (type: integer)&#013;&#013;ð—¡ð—¼ð˜ð—²: Coordinates will be scaled by (Upscale/Downscale)."><td><hl4><span><font size="3" color="white">Downscale picks</font></span></hl4></td><td><input id="downscale5" class="converting_inputs" style="width:3em" value="1"></td></tr>
+		<tr title="Topaz 𝘴𝘤𝘰𝘳𝘦 𝘵𝘩𝘳𝘦𝘴𝘩𝘰𝘭𝘥 at which to cut off (type: float)"><td><hl4><span><font size="3" color="white">Threshold</font></span></hl4></td><td><input id="threshold5" class="converting_inputs" style="width:3em" value="-9999"></td></tr>
+		<tr title="Upscale the coordinates by this factor. '1' means no scaling (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: Coordinates will be scaled by (Upscale/Downscale)."><td><hl4><span><font size="3" color="white">Upscale picks</font></span></hl4></td><td><input id="upscale5" class="converting_inputs" style="width:3em" value="1"></td></tr>
+		<tr title="Downscale the coordinates by this factor. '1' means no scaling (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: Coordinates will be scaled by (Upscale/Downscale)."><td><hl4><span><font size="3" color="white">Downscale picks</font></span></hl4></td><td><input id="downscale5" class="converting_inputs" style="width:3em" value="1"></td></tr>
 		</table>
 		</span>
 		<br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
@@ -1759,9 +1879,9 @@ POSSIBILITY OF SUCH DAMAGE.
 		<br><table style="height:12.6em">
 		<tr title="Input Topaz .txt coordinate file for defining extraction coordinates (type: string; full path to Topaz .txt file)"><td><hl2><span><font size="3" color="white">Input picks</font></span></hl2></td><td><input id="coordinateinput6" class="particle_extracting_inputs" style="width:30em" value="/path/to/Topaz/coordinate/file.txt"></td></tr>
 		<tr title="Directory containing micrographs (not pre-processed) to extract particles from (type: string; full path)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="imageroot6" class="particle_extracting_inputs" style="width:30em" value="/path/to/full/micrographs/"></td></tr>
-		<tr title="Output particle stack file (type: string; full path to .mrcs file).&#013;&#013;ð—¡ð—¼ð˜ð—²: A .star file will be written along with the .mrcs stack with the same base filename."><td><hl2><span><font size="3" color="white">Output stack</font></span></hl2></td><td><input id="output6" class="particle_extracting_inputs" style="width:30em" value="/path/to/output/particles.mrcs"></td></tr>
+		<tr title="Output particle stack file (type: string; full path to .mrcs file).&#013;&#013;𝗡𝗼𝘁𝗲: A .star file will be written along with the .mrcs stack with the same base filename."><td><hl2><span><font size="3" color="white">Output stack</font></span></hl2></td><td><input id="output6" class="particle_extracting_inputs" style="width:30em" value="/path/to/output/particles.mrcs"></td></tr>
 		<tr title="Boxsize of the extracted particle stack (type: integer)."><td><hl4><span><font size="3" color="white">Boxsize</font></span></hl4></td><td><input id="boxsize6" class="particle_extracting_inputs" style="width:3em" value="192"></td></tr>
-		<tr title="Topaz ð˜´ð˜¤ð˜°ð˜³ð˜¦ ð˜µð˜©ð˜³ð˜¦ð˜´ð˜©ð˜°ð˜­ð˜¥ at which to cut off (type: float)"><td><hl4><span><font size="3" color="white">Threshold</font></span></hl4></td><td><input id="threshold6" class="particle_extracting_inputs" style="width:3em" value="-9999"></td></tr>
+		<tr title="Topaz 𝘴𝘤𝘰𝘳𝘦 𝘵𝘩𝘳𝘦𝘴𝘩𝘰𝘭𝘥 at which to cut off (type: float)"><td><hl4><span><font size="3" color="white">Threshold</font></span></hl4></td><td><input id="threshold6" class="particle_extracting_inputs" style="width:3em" value="-9999"></td></tr>
 		<tr title="Image extension for input micrographs (options: .mrc, .tiff, or .png; include the '.') (type: string)"><td><hl8><span><font size="3" color="white">Image extension</font></span></hl8></td><td><input id="imageext6" class="particle_extracting_inputs" style="width:3em" value=".mrc"></td></tr>
 		<tr title="Rescale the extracted particle stack to this boxsize using Fourier upscaling/downscaling (negative values turn this option off) (type: integer)."><td><hl8><span><font size="3" color="white">Resize particles</font></span></hl8></td><td><input id="resize6" class="particle_extracting_inputs" style="width:3em" value="-1"></td></tr> -->
 		<!--- <tr title="Path to .star file containing per-micrograph metadata, such as CTF parameters. This information will be transfered to the .star file that gets written alongside the stack .mrcs file (type: string; full path; optional)."><td><hl4><span><font size="3" color="white">Metadata</font></span></hl4></td><td><input id="metadata6" class="particle_extracting_inputs" style="width:3em" value=""></td></tr> -->
@@ -1775,100 +1895,6 @@ POSSIBILITY OF SUCH DAMAGE.
 		</div>
 	  </div> -->
 
-	  <br><section><details><summary class="collapsibletools"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Denoise Micrographs</summary>
-		<div class="content">
-		  <p style=line-height:1.3>
-	      <span class="tab0"><p style=line-height:1.3>Create a command for denoising micrographs using an implementation of Noise2Noise.<br><br>
-		  <strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
-		  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
-		  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
-		  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7>
-		  </p>
-		  <hr width="20%">
-		  <br><table style="height:11em">
-		  <tr title="Input micrographs for denoising (type: string; full path ð˜¸ð˜ªð˜µð˜© ð˜¸ð˜ªð˜­ð˜¥ð˜¤ð˜¢ð˜³ð˜¥ for *.mrc files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input7" class="denoise_micrographs_inputs" style="width:30em" value="/path/to/input/images/*.mrc"></td></tr>
-		  <tr title="Output directory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output7" class="denoise_micrographs_inputs" style="width:30em" value="/path/to/output/folder"></td></tr>
-		  <tr title="Denoising model to use on micrographs (type: string; use either L2 to use the pretrained model or a full path to a trained .sav file)&#013;&#013;ð—¡ð—¼ð˜ð—²: The pretrained models were trained on hundreds of datasets of K2 micrograph frame sums of various particles."><td><hl4><span><font size="3" color="white">Model</font></span></hl4></td><td><input id="model7" class="denoise_micrographs_inputs" style="width:30em" value="L2"></td></tr>
-		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU denoising (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device7" class="denoise_micrographs_inputs" style="width:3em" value="0"></td></tr>
-		  <tr title="Output format of denoised images (type: string; options: mrc, png, tiff, jpg)"><td><hl4><span><font size="3" color="white">Format</font></span></hl4></td><td><input id="format7" class="denoise_micrographs_inputs" style="width:3em" value="mrc"></td></tr>
-		  <tr title="Bin micrographs before denoising. '1' means no binning (type: integer)&#013;&#013;ð—¡ð—¼ð˜ð—²: If micrographs are too big for the GPU ram, there will be an error. To get around this, the micrographs may be binned, denoised in patches, or the CPU may be used instead of GPU. Recommended: patched or CPU."><td><hl4><span><font size="3" color="white">Bin micrographs</font></span></hl4></td><td><input id="bin7" class="denoise_micrographs_inputs" style="width:3em" value="1"></td></tr>
-		  </table>
-		  <br><section><details><summary class="collapsibleoptions2" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
-			<div class="content">
-			  <table style="height:3.7em">
-			  <tr title="Patch size (type: integer)&#013;&#013;This will break the micrographs up in patches where each patch will be denoised seperately and then stitched back together with overlap defined by Patch Padding. A negative value means that this option is ignored."><td><hl8><span><font size="3" color="white">Patch size</font></span></hl8></td><td><input id="patchsize7" class="denoise_micrographs_inputs" style="width:3em" value="1536"></td></tr>
-			  <tr title="Padding around each patch to remove edge artifacts (type: integer)"><td><hl8><span><font size="3" color="white">Patch padding</font></span></hl8></td><td><input id="patchpadding7" class="denoise_micrographs_inputs" style="width:3em" value="384"></td></tr>
-			  </table>
-			</details></summary>
-			</span>
-		  <br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
-		  <code><div id="result7" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
-		  topaz denoise /path/to/input/images/*.mrc --model L2 --device 0 --format mrc --bin 1 --patch-size 1536 --patch-padding 384 --normalize --output /path/to/output/folder
-		  </div></span></code>
-		</div></br>
-	  </details></summary>
-
-	  <section><details><summary class="collapsibletools"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Denoise Particle Stack</summary>
-		<div class="content">
-		  <p style=line-height:1.3>
-	      <span class="tab0"><p style=line-height:1.3>Create a command for denoising a particle stack using an implementation of Noise2Noise.<br><br>
-		  <strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
-		  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
-		  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
-		  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7>
-		  </p>
-		  <hr width="20%">
-		  <br><table style="height:11em">
-		  <tr title="Input micrographs for denoising (type: string; full path to a single mrc/mrcs stack)"><td><hl2><span><font size="3" color="white">Input stack</font></span></hl2></td><td><input id="input8" class="denoise_stack_inputs" style="width:30em" value="/path/to/particle/stack.mrcs"></td></tr>
-		  <tr title="Output stack (type: string; full path)"><td><hl2><span><font size="3" color="white">Output stack</font></span></hl2></td><td><input id="output8" class="denoise_stack_inputs" style="width:30em" value="/path/to/denoised/stack.mrcs"></td></tr>
-		  <tr title="Denoising model to use on the particle stack (type: string; use either L2 to use the pretrained model or a full path to a trained .sav file)&#013;&#013;ð—¡ð—¼ð˜ð—²: The pretrained models were trained on hundreds of datasets of K2 micrograph frames of various particles."><td><hl4><span><font size="3" color="white">Model</font></span></hl4></td><td><input id="model8" class="denoise_stack_inputs" style="width:30em" value="L2"></td></tr>
-		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU denoising (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device8" class="denoise_stack_inputs" style="width:3em" value="0"></td></tr>
-		  <tr title="Output format of denoised images in stack (type: string; options: mrc, png, tiff, jpg. mrc is highly recommended)"><td><hl8><span><font size="3" color="white">Format</font></span></hl8></td><td><input id="format8" class="denoise_stack_inputs" style="width:3em" value="mrc"></td></tr>
-		  <tr title="Bin stack before denoising. '1' means no binning (type: integer)"><td><hl8><span><font size="3" color="white">Bin Stack</font></span></hl8></td><td><input id="bin8" class="denoise_stack_inputs" style="width:3em" value="1"></td></tr>
-		  </table></span>
-		  <br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
-		  <code><div id="result8" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
-		  topaz denoise /path/to/particle/stack.mrcs --model L2 --device 0 --format mrc --bin 1 --stack --normalize --output /path/to/denoised/stack.mrcs
-		  </div></span></code>
-		</div></br>
-	  </details></summary>
-	  
-	 <!-- <section><details><summary class="collapsibletools"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Train New Denoising Model</summary>
-		<div class="content">
-		  <p style=line-height:1.3>
-	      <span class="tab0"><p style=line-height:1.3>Create a command for converting between Topaz GUI CSV files, STAR files, or Topaz txt files.<br><br>
-		  <strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
-		  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
-		  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
-		  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7>
-		  </p>
-		  <hr width="20%">
-		  <br><table style="height:9.1em">
-		  <tr title="Input coordinate file for converting (type: string; full path to .csv, .star, or Topaz .txt)"><td><hl2><span><font size="3" color="white">Input file</font></span></hl2></td><td><input id="input5" class="converting_inputs" style="width:30em" value="/path/to/input/coordinate/file.[csv|star|txt]"></td></tr>
-		  <tr title="Output coordinate file for converting (type: string; full path to .csv, .star, or Topaz .txt)"><td><hl2><span><font size="3" color="white">Output file</font></span></hl2></td><td><input id="output5" class="converting_inputs" style="width:30em" value="/path/to/output/coordinate/file.[csv|star|txt]"></td></tr>
-		  <tr title="Topaz ð˜´ð˜¤ð˜°ð˜³ð˜¦ ð˜µð˜©ð˜³ð˜¦ð˜´ð˜©ð˜°ð˜­ð˜¥ at which to cut off (type: float)"><td><hl4><span><font size="3" color="white">Threshold</font></span></hl4></td><td><input id="threshold5" class="converting_inputs" style="width:3em" value="-9999"></td></tr>
-		  <tr title="Upscale the coordinates by this factor. '1' means no scaling (type: integer)&#013;&#013;ð—¡ð—¼ð˜ð—²: Coordinates will be scaled by (Upscale/Downscale)."><td><hl4><span><font size="3" color="white">Upscale picks</font></span></hl4></td><td><input id="upscale5" class="converting_inputs" style="width:3em" value="1"></td></tr>
-		  <tr title="Downscale the coordinates by this factor. '1' means no scaling (type: integer)&#013;&#013;ð—¡ð—¼ð˜ð—²: Coordinates will be scaled by (Upscale/Downscale)."><td><hl4><span><font size="3" color="white">Downscale picks</font></span></hl4></td><td><input id="downscale5" class="converting_inputs" style="width:3em" value="1"></td></tr>
-		  </table>
-		  <br><section><details><summary class="collapsibleoptions2" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Specific filetype options</summary></br>
-			<div class="content">
-			  <table style="height:10.9em">
-			  <tr title="Microscope voltage in keV (type: float)&#013;&#013;ð—¡ð—¼ð˜ð—²: Only used when converting ð˜ð—¼ ð—® .ð˜€ð˜ð—®ð—¿ file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Voltage</font></span></hl4></td><td><input id="voltage5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
-			  <tr title="Pixel size of the detector in microns (type: float)&#013;&#013;ð—¡ð—¼ð˜ð—²: Only used when converting ð˜ð—¼ ð—® .ð˜€ð˜ð—®ð—¿ file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Detector pixelsize</font></span></hl4></td><td><input id="detectorpixelsize5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
-			  <tr title="Magnification of the un-binned images at the image plane; e.g. 10000 (type: float)&#013;&#013;ð—¡ð—¼ð˜ð—²: Only used when converting ð˜ð—¼ ð—® .ð˜€ð˜ð—®ð—¿ file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Magnification</font></span></hl4></td><td><input id="magnification5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
-			  <tr title="Amplitude contrast as a fraction of total protein contrast. Usually 0.07 for cryo and about 0.15 for negative stain (type: float)&#013;&#013;ð—¡ð—¼ð˜ð—²: Only used when converting ð˜ð—¼ ð—® .ð˜€ð˜ð—®ð—¿ file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Amplitude contrast</font></span></hl4></td><td><input id="ampcontrast5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
-			  <tr title="Size of box particles (type: integer)&#013;&#013;ð—¡ð—¼ð˜ð—²: Only used when converting ð˜ð—¼ ð—® .ð—¯ð—¼ð˜… file. A value of 0 means that this option is ignored."><td><hl4><span><font size="3" color="white">Box size</font></span></hl4></td><td><input id="boxsize5" class="converting_inputs" style="width:3em" value="0"></td></tr>
-			  <tr title="Image extension for micrographs (type: string)&#013;&#013;ð—¡ð—¼ð˜ð—²: Only used when converting ð˜ð—¼ ð—® .ð˜€ð˜ð—®ð—¿ ð—¼ð—¿ .ð—¯ð—¼ð˜… file."><td><hl8><span><font size="3" color="white">Image extension</font></span></hl8></td><td><input id="imageext5" class="converting_inputs" style="width:3em" value="mrc"></td></tr>
-			  </table>
-			</details></summary>
-			</span>
-		  <br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
-		  <code><div id="result5" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
-		  topaz convert /path/to/input/coordinate/file.[csv|star|txt] --threshold -9999 --up-scale 1 --down-scale 1 --voltage -1 --detector-pixel-size -1 --magnification -1 --amplitude-contrast -1 --boxsize 0 --image-ext .mrc --verbose 1 --output /path/to/output/coordinate/file.[csv|star|txt]
-		  </div></span></code>
-		</div></br>
-	  </details></summary> -->
-	  
 	  <section><details><summary class="collapsibletools"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Convert | Threshold Picks</summary>
 		<div class="content">
 		  <p style=line-height:1.3>
@@ -1882,19 +1908,19 @@ POSSIBILITY OF SUCH DAMAGE.
 		  <br><table style="height:9.1em">
 		  <tr title="Input coordinate file for converting (type: string; full path to .csv, .star, or Topaz .txt)"><td><hl2><span><font size="3" color="white">Input file</font></span></hl2></td><td><input id="input5" class="converting_inputs" style="width:30em" value="/path/to/input/coordinate/file.[csv|star|txt]"></td></tr>
 		  <tr title="Output coordinate file for converting (type: string; full path to .csv, .star, or Topaz .txt)"><td><hl2><span><font size="3" color="white">Output file</font></span></hl2></td><td><input id="output5" class="converting_inputs" style="width:30em" value="/path/to/output/coordinate/file.[csv|star|txt]"></td></tr>
-		  <tr title="Topaz ð˜´ð˜¤ð˜°ð˜³ð˜¦ ð˜µð˜©ð˜³ð˜¦ð˜´ð˜©ð˜°ð˜­ð˜¥ at which to cut off (type: float)"><td><hl4><span><font size="3" color="white">Threshold</font></span></hl4></td><td><input id="threshold5" class="converting_inputs" style="width:3em" value="-9999"></td></tr>
-		  <tr title="Upscale the coordinates by this factor. '1' means no scaling (type: integer)&#013;&#013;ð—¡ð—¼ð˜ð—²: Coordinates will be scaled by (Upscale/Downscale)."><td><hl4><span><font size="3" color="white">Upscale picks</font></span></hl4></td><td><input id="upscale5" class="converting_inputs" style="width:3em" value="1"></td></tr>
-		  <tr title="Downscale the coordinates by this factor. '1' means no scaling (type: integer)&#013;&#013;ð—¡ð—¼ð˜ð—²: Coordinates will be scaled by (Upscale/Downscale)."><td><hl4><span><font size="3" color="white">Downscale picks</font></span></hl4></td><td><input id="downscale5" class="converting_inputs" style="width:3em" value="1"></td></tr>
+		  <tr title="Topaz 𝘴𝘤𝘰𝘳𝘦 𝘵𝘩𝘳𝘦𝘴𝘩𝘰𝘭𝘥 at which to cut off (type: float)"><td><hl4><span><font size="3" color="white">Threshold</font></span></hl4></td><td><input id="threshold5" class="converting_inputs" style="width:3em" value="-9999"></td></tr>
+		  <tr title="Upscale the coordinates by this factor. '1' means no scaling (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: Coordinates will be scaled by (Upscale/Downscale)."><td><hl4><span><font size="3" color="white">Upscale picks</font></span></hl4></td><td><input id="upscale5" class="converting_inputs" style="width:3em" value="1"></td></tr>
+		  <tr title="Downscale the coordinates by this factor. '1' means no scaling (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: Coordinates will be scaled by (Upscale/Downscale)."><td><hl4><span><font size="3" color="white">Downscale picks</font></span></hl4></td><td><input id="downscale5" class="converting_inputs" style="width:3em" value="1"></td></tr>
 		  </table>
 		  <br><section><details><summary class="collapsibleoptions2" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Specific filetype options</summary></br>
 			<div class="content">
 			  <table style="height:10.9em">
-			  <tr title="Microscope voltage in keV (type: float)&#013;&#013;ð—¡ð—¼ð˜ð—²: Only used when converting ð˜ð—¼ ð—® .ð˜€ð˜ð—®ð—¿ file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Voltage</font></span></hl4></td><td><input id="voltage5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
-			  <tr title="Pixel size of the detector in microns (type: float)&#013;&#013;ð—¡ð—¼ð˜ð—²: Only used when converting ð˜ð—¼ ð—® .ð˜€ð˜ð—®ð—¿ file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Detector pixelsize</font></span></hl4></td><td><input id="detectorpixelsize5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
-			  <tr title="Magnification of the un-binned images at the image plane; e.g. 10000 (type: float)&#013;&#013;ð—¡ð—¼ð˜ð—²: Only used when converting ð˜ð—¼ ð—® .ð˜€ð˜ð—®ð—¿ file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Magnification</font></span></hl4></td><td><input id="magnification5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
-			  <tr title="Amplitude contrast as a fraction of total protein contrast. Usually 0.07 for cryo and about 0.15 for negative stain (type: float)&#013;&#013;ð—¡ð—¼ð˜ð—²: Only used when converting ð˜ð—¼ ð—® .ð˜€ð˜ð—®ð—¿ file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Amplitude contrast</font></span></hl4></td><td><input id="ampcontrast5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
-			  <tr title="Size of box particles (type: integer)&#013;&#013;ð—¡ð—¼ð˜ð—²: Only used when converting ð˜ð—¼ ð—® .ð—¯ð—¼ð˜… file. A value of 0 means that this option is ignored."><td><hl4><span><font size="3" color="white">Box size</font></span></hl4></td><td><input id="boxsize5" class="converting_inputs" style="width:3em" value="0"></td></tr>
-			  <tr title="Image extension for micrographs (type: string)&#013;&#013;ð—¡ð—¼ð˜ð—²: Only used when converting ð˜ð—¼ ð—® .ð˜€ð˜ð—®ð—¿ ð—¼ð—¿ .ð—¯ð—¼ð˜… file."><td><hl8><span><font size="3" color="white">Image extension</font></span></hl8></td><td><input id="imageext5" class="converting_inputs" style="width:3em" value="mrc"></td></tr>
+			  <tr title="Microscope voltage in keV (type: float)&#013;&#013;𝗡𝗼𝘁𝗲: Only used when converting 𝘁𝗼 𝗮 .𝘀𝘁𝗮𝗿 file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Voltage</font></span></hl4></td><td><input id="voltage5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
+			  <tr title="Pixel size of the detector in microns (type: float)&#013;&#013;𝗡𝗼𝘁𝗲: Only used when converting 𝘁𝗼 𝗮 .𝘀𝘁𝗮𝗿 file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Detector pixelsize</font></span></hl4></td><td><input id="detectorpixelsize5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
+			  <tr title="Magnification of the un-binned images at the image plane; e.g. 10000 (type: float)&#013;&#013;𝗡𝗼𝘁𝗲: Only used when converting 𝘁𝗼 𝗮 .𝘀𝘁𝗮𝗿 file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Magnification</font></span></hl4></td><td><input id="magnification5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
+			  <tr title="Amplitude contrast as a fraction of total protein contrast. Usually 0.07 for cryo and about 0.15 for negative stain (type: float)&#013;&#013;𝗡𝗼𝘁𝗲: Only used when converting 𝘁𝗼 𝗮 .𝘀𝘁𝗮𝗿 file. A negative value means that this option is ignored."><td><hl4><span><font size="3" color="white">Amplitude contrast</font></span></hl4></td><td><input id="ampcontrast5" class="converting_inputs" style="width:3em" value="-1"></td></tr>
+			  <tr title="Size of box particles (type: integer)&#013;&#013;𝗡𝗼𝘁𝗲: Only used when converting 𝘁𝗼 𝗮 .𝗯𝗼𝘅 file. A value of 0 means that this option is ignored."><td><hl4><span><font size="3" color="white">Box size</font></span></hl4></td><td><input id="boxsize5" class="converting_inputs" style="width:3em" value="0"></td></tr>
+			  <tr title="Image extension for micrographs (type: string)&#013;&#013;𝗡𝗼𝘁𝗲: Only used when converting 𝘁𝗼 𝗮 .𝘀𝘁𝗮𝗿 𝗼𝗿 .𝗯𝗼𝘅 file."><td><hl8><span><font size="3" color="white">Image extension</font></span></hl8></td><td><input id="imageext5" class="converting_inputs" style="width:3em" value="mrc"></td></tr>
 			  </table>
 			</details></summary>
 			</span>
@@ -1917,9 +1943,9 @@ POSSIBILITY OF SUCH DAMAGE.
 		  <br><table style="height:12.7em">
 		  <tr title="Input Topaz .txt coordinate file for defining extraction coordinates (type: string; full path to Topaz .txt file)"><td><hl2><span><font size="3" color="white">Input picks</font></span></hl2></td><td><input id="coordinateinput6" class="particle_extracting_inputs" style="width:30em" value="/path/to/Topaz/coordinate/file.txt"></td></tr>
 		  <tr title="Directory containing micrographs (not pre-processed) to extract particles from (type: string; full path)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="imageroot6" class="particle_extracting_inputs" style="width:30em" value="/path/to/full/micrographs/"></td></tr>
-		  <tr title="Output particle stack file (type: string; full path to .mrcs file).&#013;&#013;ð—¡ð—¼ð˜ð—²: A .star file will be written along with the .mrcs stack with the same base filename."><td><hl2><span><font size="3" color="white">Output stack</font></span></hl2></td><td><input id="output6" class="particle_extracting_inputs" style="width:30em" value="/path/to/output/particles.mrcs"></td></tr>
+		  <tr title="Output particle stack file (type: string; full path to .mrcs file).&#013;&#013;𝗡𝗼𝘁𝗲: A .star file will be written along with the .mrcs stack with the same base filename."><td><hl2><span><font size="3" color="white">Output stack</font></span></hl2></td><td><input id="output6" class="particle_extracting_inputs" style="width:30em" value="/path/to/output/particles.mrcs"></td></tr>
 		  <tr title="Boxsize of the extracted particle stack (type: integer)."><td><hl4><span><font size="3" color="white">Boxsize</font></span></hl4></td><td><input id="boxsize6" class="particle_extracting_inputs" style="width:3em" value="192"></td></tr>
-		  <tr title="Topaz ð˜´ð˜¤ð˜°ð˜³ð˜¦ ð˜µð˜©ð˜³ð˜¦ð˜´ð˜©ð˜°ð˜­ð˜¥ at which to cut off (type: float)"><td><hl4><span><font size="3" color="white">Threshold</font></span></hl4></td><td><input id="threshold6" class="particle_extracting_inputs" style="width:3em" value="-9999"></td></tr>
+		  <tr title="Topaz 𝘴𝘤𝘰𝘳𝘦 𝘵𝘩𝘳𝘦𝘴𝘩𝘰𝘭𝘥 at which to cut off (type: float)"><td><hl4><span><font size="3" color="white">Threshold</font></span></hl4></td><td><input id="threshold6" class="particle_extracting_inputs" style="width:3em" value="-9999"></td></tr>
 		  <tr title="Image extension for input micrographs (options: .mrc, .tiff, or .png) (type: string)"><td><hl8><span><font size="3" color="white">Image extension</font></span></hl8></td><td><input id="imageext6" class="particle_extracting_inputs" style="width:3em" value="mrc"></td></tr>
 		  <tr title="Rescale the extracted particle stack to this boxsize using Fourier upscaling/downscaling (negative values turn this option off) (type: integer)."><td><hl8><span><font size="3" color="white">Resize particles</font></span></hl8></td><td><input id="resize6" class="particle_extracting_inputs" style="width:3em" value="-1"></td></tr>
 		  <!--- <tr title="Path to .star file containing per-micrograph metadata, such as CTF parameters. This information will be transfered to the .star file that gets written alongside the stack .mrcs file (type: string; full path; optional)."><td><hl4><span><font size="3" color="white">Metadata</font></span></hl4></td><td><input id="metadata6" class="particle_extracting_inputs" style="width:3em" value=""></td></tr> -->
