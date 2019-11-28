@@ -431,6 +431,8 @@ def main(args):
                 torch.save(model, path)
                 if use_cuda:
                     model.cuda()
+                    
+        models = [model]
 
     else: # load the saved model(s)
         models = []
