@@ -42,6 +42,7 @@ def add_arguments(parser):
     parser.add_argument('-b', '--dir-b', nargs='+', help='directory of training images part B')
     parser.add_argument('--hdf', help='path to HDF5 file containing training image stack as an alternative to dirA/dirB')
     parser.add_argument('--preload', action='store_true', help='preload micrographs into RAM')
+    parser.add_argument('--holdout', type=float, default=0.1, help='fraction of training micrograph pairs to holdout for validation (default: 0.1)')
 
     parser.add_argument('--lowpass', type=float, default=1, help='lowpass filter micrographs by this amount (in pixels) before applying the denoising filter. uses a hard lowpass filter (i.e. sinc) (default: no lowpass filtering)')
     parser.add_argument('--gaussian', type=float, default=0, help='Gaussian filter micrographs with this standard deviation (in pixels) before applying the denoising filter (default: 0)')
@@ -76,7 +77,7 @@ import topaz.denoise as dn
 from topaz.utils.image import save_image
 
 
-def make_paired_images_datasets(dir_a, dir_b, crop, random=np.random, preload=False, cutoff=0):
+def make_paired_images_datasets(dir_a, dir_b, crop, random=np.random, holdout=0.1, preload=False, cutoff=0):
     # train denoising model
     # make the dataset
     A = []
@@ -87,7 +88,7 @@ def make_paired_images_datasets(dir_a, dir_b, crop, random=np.random, preload=Fa
         B.append(dir_b + os.sep + name)
 
     # randomly hold out some image pairs for validation
-    n = int(0.1*len(A))
+    n = int(holdout*len(A))
     order = random.permutation(len(A))
 
     A_train = []
@@ -110,7 +111,7 @@ def make_paired_images_datasets(dir_a, dir_b, crop, random=np.random, preload=Fa
     return dataset_train, dataset_val
 
 
-def make_images_datasets(dir_a, dir_b, crop, random=np.random, cutoff=0):
+def make_images_datasets(dir_a, dir_b, crop, random=np.random, holdout=0.1, cutoff=0):
     # train denoising model
     # make the dataset
     paths = []
@@ -122,7 +123,7 @@ def make_images_datasets(dir_a, dir_b, crop, random=np.random, cutoff=0):
             paths.append(path)
 
     # randomly hold out some image pairs for validation
-    n = int(0.1*len(paths))
+    n = int(holdout*len(paths))
     order = random.permutation(len(paths))
 
     path_train = []
@@ -229,7 +230,7 @@ class HDFDataset:
         return x
 
 
-def make_hdf5_datasets(path, paired=True, preload=False, cutoff=0):
+def make_hdf5_datasets(path, paired=True, preload=False, holdout=0.1, cutoff=0):
 
     # open the hdf5 dataset
     import h5py
@@ -242,7 +243,7 @@ def make_hdf5_datasets(path, paired=True, preload=False, cutoff=0):
     N = len(dataset) # number of image pairs
     if paired:
         N = N//2
-    n = int(0.1*N)
+    n = int(holdout*N)
     split = 2*(N-n)
 
     if paired:
@@ -317,6 +318,7 @@ def main(args):
         method = args.method
         paired = (method == 'noise2noise')
         preload = args.preload
+        holdout = args.holdout # fraction of image pairs to holdout for validation
 
         if args.hdf is None: #use dirA/dirB
             crop = args.crop
@@ -331,13 +333,15 @@ def main(args):
                 if paired:
                     dataset_train, dataset_val = make_paired_images_datasets(dir_a, dir_b, crop
                                                                             , random=random
+                                                                            , holdout=holdout
                                                                             , preload=preload 
                                                                             , cutoff=cutoff
                                                                             )
                 else:
                     dataset_train, dataset_val = make_images_datasets(dir_a, dir_b, crop
                                                                      , cutoff=cutoff
-                                                                     , random=random)
+                                                                     , random=random
+                                                                     , holdout=holdout)
                 dset_train.append(dataset_train)
                 dset_val.append(dataset_val)
 
@@ -357,6 +361,7 @@ def main(args):
         else: # make HDF datasets
             dataset_train, dataset_val = make_hdf5_datasets(args.hdf, paired=paired
                                                            , cutoff=cutoff
+                                                           , holdout=holdout
                                                            , preload=preload)
             shuffle = preload
 
