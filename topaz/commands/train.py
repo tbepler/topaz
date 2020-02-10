@@ -266,6 +266,10 @@ def load_data(train_images, train_targets, test_images, test_targets, radius
     num_micrographs = sum(len(train_images[k]) for k in train_images.keys())
     num_particles = len(train_targets)
     report('Loaded {} training micrographs with {} labeled particles'.format(num_micrographs, num_particles))
+    if num_particles == 0:
+        print('ERROR: no training particles specified. Check that micrograph names in the particles file match those in the micrographs file/directory.', file=sys.stderr)
+        raise Exception('No training particles.')
+
 
     train_images, train_targets = match_images_targets(train_images, train_targets, radius)
 
