@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 name = 'topaz-em'
-version = '0.2.3'
+version = '0.2.4a'
 
 description = 'Particle picking with positive-unlabeled CNNs'
 long_description = 'Particle picking software for single particle cryo-electron microscopy using convolutional neural networks and positive-unlabeled learning. Includes methods for micrograph denoising.'

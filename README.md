@@ -5,6 +5,7 @@ A pipeline for particle detection in cryo-electron microscopy images using convo
 - Improvements to the pretrained denoising models
 - Topaz now includes pretrained particle picking models
 - Updated tutorials
+- Updated GUI to include denoising commands
 - Denoising paper preprint is available [here](https://www.biorxiv.org/content/10.1101/838920v1)
 
 ## New in v0.2.2
