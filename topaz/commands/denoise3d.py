@@ -1,0 +1,647 @@
+#!/usr/bin/env python
+from __future__ import print_function, division
+
+import os
+import sys
+import glob
+import time
+import datetime
+import multiprocessing as mp
+
+import numpy as np
+import pandas as pd
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+from topaz.utils.data.loader import load_image
+from topaz.utils.image import downsample
+import topaz.mrc as mrc
+import topaz.cuda
+
+from topaz.denoise import UDenoiseNet3D
+
+name = 'denoise3d'
+help = 'denoise 3D tomograms with various denoising algorithms'
+
+def add_arguments(parser):
+
+    parser.add_argument('tomograms', nargs='*', help='tomograms to denoise')
+    parser.add_argument('-o', '--output', help='directory to save denoised tomograms')
+
+    parser.add_argument('-m', '--model', help='use pretrained denoising model(s). can accept arguments for multiple models the outputs of which will be averaged. pretrained model options are: unet, unet-small, fcnn, affine. to use older unet version specify unet-v0.2.1 (default: unet)')
+
+    ## training parameters
+    parser.add_argument('-a', '--even-train-path', help='path to even training data')
+    parser.add_argument('-b', '--odd-train-path', help='path to odd training data')
+
+    parser.add_argument('--N-train', type=int, default=1000, help='Number of train points per tomogram (default: 1000)')
+    parser.add_argument('--N-test', type=int, default=200, help='Number of test points per tomogram (default: 200)')
+
+    parser.add_argument('-c', '--crop', type=int, default=96, help='training tile size (default: 96)')
+
+    parser.add_argument('--optim', choices=['adam', 'adagrad', 'sgd'], default='adagrad', help='optimizer (default: adagrad)')
+    parser.add_argument('--lr', default=0.001, type=float, help='learning rate for the optimizer (default: 0.001)')
+    parser.add_argument('--criteria', default='L2', choices=['L1', 'L2'], help='training criteria (default: L2)')
+    parser.add_argument('--momentum', type=float, default=0.8, help='momentum parameter for SGD optimizer (default: 0.8)')
+    parser.add_argument('--batch-size', type=int, default=10, help='minibatch size (default: 10)')
+    parser.add_argument('--num-epochs', type=int, default=500, help='number of training epochs (default: 500)')
+
+
+    parser.add_argument('-w', '--weight_decay', type=float, default=0, help='L2 regularizer on the generative network (default: 0)')
+    parser.add_argument('--save-interval', default=10, type=int, help='save frequency in epochs (default: 10)')
+    parser.add_argument('--save-prefix', help='path prefix to save denoising model')
+
+    parser.add_argument('--num-workers', type=int, default=1, help='number of workers for dataloader (default: 1)')
+
+
+    ## denoising parameters
+    parser.add_argument('-s', '--patch-size', type=int, default=-1, help='denoises micrographs in patches of this size. not used if <1 (default: -1)')
+    parser.add_argument('-p', '--patch-padding', type=int, default=500, help='padding around each patch to remove edge artifacts (default: 500)')
+
+    ## other parameters
+    parser.add_argument('-d', '--device', type=int, default=-2, help='compute device/s to use (default: -2, multi gpu), set to >= 0 for single gpu, set to -1 for cpu')
+
+
+def train_epoch(iterator, model, cost_func, optim, epoch=1, num_epochs=1, N=1, use_cuda=False):
+    
+    c = 0
+    loss_accum = 0    
+    model.train()
+
+    for batch_idx , (source,target), in enumerate(iterator):
+        
+        b = source.size(0)        
+        loss_mb = 0
+        if use_cuda:
+            source = source.cuda()
+            target = target.cuda()
+            
+        denoised_source = model(source)
+        loss = cost_func(denoised_source,target)
+        
+        loss.backward()
+        optim.step()
+        optim.zero_grad()
+
+        loss = loss.item()
+
+        c += b
+        delta = b*(loss - loss_accum)
+        loss_accum += delta/c
+
+        template = '# [{}/{}] training {:.1%}, Error={:.5f}'
+        line = template.format(epoch+1, num_epochs, c/N, loss_accum)
+        print(line, end='\r', file=sys.stderr)
+    
+    print(' '*80, end='\r', file=sys.stderr)    
+    return loss_accum
+
+
+def eval_model(iterator, model, cost_func, epoch=1, num_epochs=1, N=1, use_cuda=False):
+    
+    c = 0
+    loss_accum = 0
+    model.eval()
+    
+    with torch.no_grad():
+        for batch_idx , (source,target), in enumerate(iterator):
+            
+            b = source.size(0)        
+            loss_mb = 0
+            if use_cuda:
+                source = source.cuda()
+                target = target.cuda()
+                
+            denoised_source = model(source)
+            loss = cost_func(denoised_source,target)
+            
+            loss = loss.item()
+    
+            c += b
+            delta = b*(loss - loss_accum)
+            loss_accum += delta/c
+    
+            template = '# [{}/{}] testing {:.1%}, Error={:.5f}'
+            line = template.format(epoch+1, num_epochs, c/N, loss_accum)
+            print(line, end='\r', file=sys.stderr)
+            
+            
+    print(' '*80, end='\r', file=sys.stderr)    
+    return loss_accum
+
+## TODO - FIX THIS CLASS
+class TrainingDataset3D(torch.utils.data.Dataset):
+    
+    def __init__(self,even_path,odd_path,tilesize,N_train,N_test):
+
+        self.tilesize = tilesize
+        self.N_train = N_train
+        self.N_test = N_test
+        self.mode = 'train'
+        
+        self.even_paths = []
+        self.odd_paths = []
+
+        if os.path.isfile(even_path) and os.path.isfile(odd_path):
+            self.even_paths.append(even_path)
+            self.odd_paths.append(odd_path)
+        elif os.path.isdir(even_path) and os.path.isdir(odd_path):
+            for epath in glob.glob(even_path + os.sep + '*'):
+                name = os.path.basename(path)
+                opath = odd_path + os.sep + name 
+                if not os.path.isfile(opath):
+                    print('# Error: name mismatch between even and odd directory,', name, file=sys.stderr)
+                    print('# Skipping...', file=sys.stderr)
+                else:
+                    self.even_paths.append(epath)
+                    self.odd_paths.append(opath)
+
+        self.means = []
+        self.stds = []
+        self.even = []
+        self.odd = []
+        self.train_idxs = []
+        self.test_idxs = []
+
+        for i,(f_even,f_odd) in enumerate(zip(self.even_paths, self.odd_paths)):
+            even = self.load_mrc(f_even)
+            odd = self.load_mrc(f_odd)
+
+            if even.shape != odd.shape:
+                print('# Error: shape mismatch:', f_even, f_odd, file=sys.stderr)
+                print('# Skipping...', file=sys.stderr)
+            else:
+                even_mean,even_std = self.calc_mean_std(even)
+                odd_mean,odd_std = self.calc_mean_std(odd)
+                self.means.append((even_mean,odd_mean))
+                self.stds.append((even_std,odd_std))  
+
+                self.even.append(even)
+                self.odd.append(odd)
+
+                mask = np.ones(even.shape, dtype=np.uint8)
+                train_idxs, test_idxs = self.sample_coordinates(mask, N_train, N_test, vol_dims=(tilesize, tilesize, tilesize))
+
+                        
+                self.train_idxs += train_idxs
+                self.test_idxs += test_idxs
+
+        if len(self.even) < 1:
+            print('# Error: need at least 1 file to proceeed', file=sys.stderr)
+            sys.exit(2)
+
+    def load_mrc(self, path):
+        with open(path, 'rb') as f:
+            content = f.read()
+        tomo,_,_ = mrc.parse(content)
+        return tomo
+    
+    def get_train_test_idxs(self,dim):
+        assert len(dim) == 2
+        t = self.tilesize
+        x = np.arange(0,dim[0]-t,t,dtype=np.int32)
+        y = np.arange(0,dim[1]-t,t,dtype=np.int32)
+        xx,xy = np.meshgrid(x,y)
+        xx = xx.reshape(-1)
+        xy = xy.reshape(-1)
+        lattice_pts = [list(pos) for pos in zip(xx,xy)]
+        n_val = int(self.test_frac*len(lattice_pts))
+        test_idx = np.random.choice(np.arange(len(lattice_pts)),
+                                   size=n_val,replace=False)
+        test_pts = np.hstack([lattice_pts[idx] for idx in test_idx]).reshape((-1,2))
+        mask = np.ones(dim,dtype=np.int32)
+        for pt in test_pts:
+            mask[pt[0]:pt[0]+t-1,pt[1]:pt[1]+t-1] = 0
+            mask[pt[0]-t+1:pt[0],pt[1]-t+1:pt[1]] = 0
+            mask[pt[0]-t+1:pt[0],pt[1]:pt[1]+t-1] = 0
+            mask[pt[0]:pt[0]+t-1,pt[1]-t+1:pt[1]] = 0
+    
+        mask[-t:,:] = 0
+        mask[:,-t:] = 0
+        
+        train_pts = np.where(mask)
+        train_pts = np.hstack([list(pos) for pos in zip(train_pts[0],
+                                                train_pts[1])]).reshape((-1,2))
+        return train_pts, test_pts
+    
+    def sample_coordinates(self, mask, num_train_vols, num_val_vols, vol_dims=(96, 96, 96)):
+        
+        #This function is borrowed from:
+        #https://github.com/juglab/cryoCARE_T2T/blob/master/example/generate_train_data.py
+        """
+        Sample random coordinates for train and validation volumes. The train and validation 
+        volumes will not overlap. The volumes are only sampled from foreground regions in the mask.
+        
+        Parameters
+        ----------
+        mask : array(int)
+            Binary image indicating foreground/background regions. Volumes will only be sampled from 
+            foreground regions.
+        num_train_vols : int
+            Number of train-volume coordinates.
+        num_val_vols : int
+            Number of validation-volume coordinates.
+        vol_dims : tuple(int, int, int)
+            Dimensionality of the extracted volumes. Default: ``(96, 96, 96)``
+            
+        Returns
+        -------
+        list(tuple(slice, slice, slice))
+            Training volume coordinates.
+         list(tuple(slice, slice, slice))
+            Validation volume coordinates.
+        """
+
+        dims = mask.shape
+        cent = (np.array(vol_dims) / 2).astype(np.int32)
+        mask[:cent[0]] = 0
+        mask[-cent[0]:] = 0
+        mask[:, :cent[1]] = 0
+        mask[:, -cent[1]:] = 0
+        mask[:, :, :cent[2]] = 0
+        mask[:, :, -cent[2]:] = 0
+        
+        tv_span = np.round(np.array(vol_dims) / 2).astype(np.int32)
+        span = np.round(np.array(mask.shape) * 0.1 / 2 ).astype(np.int32)
+        val_sampling_mask = mask.copy()
+        val_sampling_mask[:, :span[1]] = 0
+        val_sampling_mask[:, -span[1]:] = 0
+        val_sampling_mask[:, :, :span[2]] = 0
+        val_sampling_mask[:, :, -span[2]:] = 0
+
+        foreground_pos = np.where(val_sampling_mask == 1)
+        sample_inds = np.random.choice(len(foreground_pos[0]), 2, replace=False)
+    
+        val_sampling_mask = np.zeros(mask.shape, dtype=np.int8)
+        val_sampling_inds = [fg[sample_inds] for fg in foreground_pos]
+        for z, y, x in zip(*val_sampling_inds):
+            val_sampling_mask[z - span[0]:z + span[0],
+            y - span[1]:y + span[1],
+            x - span[2]:x + span[2]] = mask[z - span[0]:z + span[0],
+                                            y - span[1]:y + span[1],
+                                            x - span[2]:x + span[2]].copy()
+    
+            mask[max(0, z - span[0] - tv_span[0]):min(mask.shape[0], z + span[0] + tv_span[0]),
+            max(0, y - span[1] - tv_span[1]):min(mask.shape[1], y + span[1] + tv_span[1]),
+            max(0, x - span[2] - tv_span[2]):min(mask.shape[2], x + span[2] + tv_span[2])] = 0
+    
+        foreground_pos = np.where(val_sampling_mask)
+        sample_inds = np.random.choice(len(foreground_pos[0]), num_val_vols, replace=num_val_vols<len(foreground_pos[0]))
+        val_sampling_inds = [fg[sample_inds] for fg in foreground_pos]
+        val_coords = []
+        for z, y, x in zip(*val_sampling_inds):
+            val_coords.append(tuple([slice(z-tv_span[0], z+tv_span[0]),
+                                     slice(y-tv_span[1], y+tv_span[1]),
+                                     slice(x-tv_span[2], x+tv_span[2])]))
+    
+        foreground_pos = np.where(mask)
+        sample_inds = np.random.choice(len(foreground_pos[0]), num_train_vols, replace=num_train_vols < len(foreground_pos[0]))
+        train_sampling_inds = [fg[sample_inds] for fg in foreground_pos]
+        train_coords = []
+        for z, y, x in zip(*train_sampling_inds):
+            train_coords.append(tuple([slice(z - tv_span[0], z + tv_span[0]),
+                                     slice(y - tv_span[1], y + tv_span[1]),
+                                     slice(x - tv_span[2], x + tv_span[2])]))
+        
+        return train_coords, val_coords
+
+    def calc_mean_std(self,tomo):
+        mu = tomo.mean()
+        std = tomo.std()
+        return mu, std
+
+    def __len__(self):
+        if self.mode == 'train':
+            return self.N_train * len(self.even)
+        else:
+            return self.N_test * len(self.even)
+            
+    def __getitem__(self,idx):
+        
+        if self.mode == 'train':
+            Idx = int(idx / self.N_train)
+            idx = self.train_idxs[idx]
+        else:
+            Idx = int(idx / self.N_test)
+            idx = self.test_idxs[idx]
+
+        even = self.even[Idx]
+        odd = self.odd[Idx]
+       
+        mean = self.means[Idx]
+        std = self.stds[Idx]
+        
+        even_ = even[idx]
+        odd_  = odd[idx]
+        
+        even_ = (even_ - mean[0]) / std[0]
+        odd_  = (odd_ - mean[1]) / std[1]
+        even_, odd_ = self.augment(even_,odd_)
+
+        even_ = np.expand_dims(even_, axis=0)
+        odd_ = np.expand_dims(odd_, axis=0)
+        
+        source = torch.from_numpy(even_).float()
+        target = torch.from_numpy(odd_).float()
+        
+        return source , target
+
+    def set_mode(self,mode):
+        modes = ['train','test']
+        assert mode in modes
+        self.mode = mode 
+
+    def augment(self, x, y):
+        # mirror axes
+        for ax in range(3):
+            if np.random.rand() < 0.5:
+                x = np.flip(x, axis=ax)
+                y = np.flip(y, axis=ax)
+        
+        # rotate around each axis
+        for ax in [(0,1), (0,2), (1,2)]:
+            k = np.random.randint(4)
+            x = np.rot90(x, k=k, axes=ax)
+            y = np.rot90(y, k=k, axes=ax)
+
+        return np.ascontiguousarray(x), np.ascontiguousarray(y)
+
+
+def train_model(even_path, odd_path, save_prefix, save_interval, device
+               , cost_func='L2'
+               , weight_decay=0
+               , learning_rate=0.001
+               , optim='adagrad'
+               , momentum=0.8
+               , minibatch_size=10
+               , num_epochs=500
+               , N_train=1000
+               , N_test=200
+               , tilesize=96
+               , num_workers=1
+               ):
+    output = sys.stdout
+    log = sys.stderr
+
+    if save_prefix is not None:
+        save_dir = os.path.dirname(save_prefix)
+        if not os.path.exists(save_dir):
+            print('# creating save directory:', save_dir, file=log)
+            os.makedir(save_dir)
+
+    start_time = time.time()
+    now = datetime.datetime.now()
+    print('# starting time: {:02d}/{:02d}/{:04d} {:02d}h:{:02d}m:{:02d}s'.format(now.month,now.day,now.year,now.hour,now.minute,now.second), file=log)
+
+    # initialize the model
+    print('# initializing model...', file=log)
+    model = UDenoiseNet3D()
+    
+    # set the device or devices
+    d = device
+    use_cuda = (d != -1) and torch.cuda.is_available()
+    if use_cuda:
+        device_count = torch.cuda.device_count()
+        try:
+            if d >= 0:
+                assert d < device_count
+                torch.cuda.set_device(d)
+                print('# using CUDA device:', d, file=log)
+            elif d == -2:
+                print('# using all available CUDA devices:', device_count, file=log)
+                model = nn.DataParallel(model)
+            else:
+                raise ValueError
+        except (AssertionError, ValueError):
+            print('ERROR: Invalid device id or format', file=log)
+            sys.exit(1)
+        except Exception:
+            print('ERROR: Something went wrong with setting the compute device', file=log)
+            sys.exit(2)
+
+    if use_cuda:
+        model.cuda()
+    
+    if cost_func == 'L2':
+        cost_func = nn.MSELoss()
+    elif cost_func == 'L1':
+        cost_func = nn.L1Loss()
+    else:
+        cost_func = nn.MSELoss()
+
+    wd = weight_decay
+    params = [{'params': model.parameters(), 'weight_decay': wd}]
+    lr = learning_rate
+    if optim == 'sgd':
+        optim = torch.optim.SGD(params, lr=lr, momentum=momentum)
+    elif optim == 'rmsprop':
+        optim = torch.optim.RMSprop(params, lr=lr)
+    elif optim == 'adam':
+        optim = torch.optim.Adam(params, lr=lr, betas=(0.9, 0.999), eps=1e-8, amsgrad=True)
+    elif optim == 'adagrad':
+        optim = torch.optim.Adagrad(params, lr=lr)
+    else:
+        raise Exception('Unrecognized optim: ' + optim)
+        
+    # Load the data
+    print('# loading data...', file=log)
+    if not (os.path.isdir(even_path) or os.path.isfile(even_path)):
+        print('ERROR: Cannot find file or directory:', even_path, file=log)
+        sys.exit(3)
+    if not (os.path.isdir(odd_path) or os.path.isfile(odd_path)):
+        print('ERROR: Cannot find directory:', odd_path, file=log)
+        sys.exit(3)
+    
+    if tilesize < 1:
+        print('ERROR: tilesize must be >0', file=log)
+        sys.exit(4)
+    if tilesize < 10:
+        print('WARNING: small tilesize is not recommended', file=log)
+    data = TrainingDataset3D(even_path, odd_path, tilesize, N_train, N_test)
+    
+    N_train = len(data)
+    data.set_mode('test')
+    N_test = len(data)
+    data.set_mode('train')
+    num_workers = min(num_workers, mp.cpu_count())
+
+    iterator = torch.utils.data.DataLoader(data,batch_size=minibatch_size,num_workers=num_workers,shuffle=False)
+    
+    ## Begin model training
+    print('# training model...', file=log)
+    print('\t'.join(['Epoch', 'Split', 'Error']), file=output)
+
+    for epoch in range(num_epochs):
+        data.set_mode('train')
+        epoch_loss_accum = train_epoch(iterator,
+                                       model,
+                                       cost_func,
+                                       optim,
+                                       epoch=epoch,
+                                       num_epochs=num_epochs,
+                                       N=N_train,
+                                       use_cuda=use_cuda)
+
+        line = '\t'.join([str(epoch+1), 'train', str(epoch_loss_accum)])
+        print(line, file=output)
+        
+        # evaluate on the test set
+        data.set_mode('test')
+        epoch_loss_accum = eval_model(iterator,
+                                   model,
+                                   cost_func,
+                                   epoch=epoch,
+                                   num_epochs=num_epochs,
+                                   N=N_test,
+                                   use_cuda=use_cuda)
+    
+        line = '\t'.join([str(epoch+1), 'test', str(epoch_loss_accum)])
+        print(line, file=output)
+
+        ## save the models
+        if save_prefix is not None and (epoch+1)%save_interval == 0:
+            model.eval().cpu()
+            save_model(model,epoch+1,save_prefix)
+            if use_cuda:
+                model.cuda()
+
+    print('# training completed!', file=log)
+
+    end_time = time.time()
+    now = datetime.datetime.now()
+    print("# ending time: {:02d}/{:02d}/{:04d} {:02d}h:{:02d}m:{:02d}s".format(now.month,now.day,now.year,now.hour,now.minute,now.second), file=log)
+    print("# total time:", time.strftime("%Hh:%Mm:%Ss", time.gmtime(end_time - start_time)), file=log)
+
+    return model
+
+
+def save_model(model, epoch, save_prefix):
+    if type(model) is nn.DataParallel:
+        model = model.module
+
+    path = save_prefix + '_epoch{}.sav'.format(epoch)
+    torch.save(model, path)
+
+
+def load_model(path, device):
+    log = sys.stderr
+
+    # load the model
+    model = torch.load(path)
+    model.eval()
+
+    # set the device or devices
+    d = device
+    use_cuda = (d != -1) and torch.cuda.is_available()
+    if use_cuda:
+        device_count = torch.cuda.device_count()
+        try:
+            if d >= 0:
+                assert d < device_count
+                torch.cuda.set_device(d)
+                print('# using CUDA device:', d, file=log)
+            elif d == -2:
+                print('# using all available CUDA devices:', device_count, file=log)
+                model = nn.DataParallel(model)
+            else:
+                raise ValueError
+        except (AssertionError, ValueError):
+            print('ERROR: Invalid device id or format', file=log)
+            sys.exit(1)
+        except Exception:
+            print('ERROR: Something went wrong with setting the compute device', file=log)
+            sys.exit(2)
+
+    if use_cuda:
+        model.cuda()
+
+    return model
+
+
+def denoise(model, path, outdir, patch_size=128, padding=128):
+    with open(path, 'rb') as f:
+        content = f.read()
+    tomo,_,_ = mrc.parse(content)
+
+    mu = tomo.mean()
+    std = tomo.std()
+
+    # denoise in patches
+    d = next(iter(model.parameters())).device
+    denoised = np.zeros_like(tomo)
+
+    with torch.no_grad():
+        for i in range(0, tomo.shape[0], patch_size):
+            for j in range(0, tomo.shape[1], patch_size):
+                for k in range(0, tomo.shape[2], patch_size):
+                    # get padded patch
+                    si = np.max(0, i-padding)
+                    ei = np.min(tomo.shape[0], i+padding)
+                    sj = np.max(0, j-padding)
+                    ej = np.min(tomo.shape[1], j+padding)
+                    sk = np.max(0, k-padding)
+                    ek = np.min(tomo.shape[2], k+padding)
+                    x = tomo[si:ei,sj:ej,sk:ek]
+
+                    # normalize
+                    x = (x - mu)/std
+                    # torch
+                    x = torch.from_numpy(x).to(d)
+                    # denoise
+                    x = model(x.unsqueeze(0).unsqueeze(0)).squeeze().cpu().numpy()
+                    # add back mean and std dev.
+                    x = std*x + mu
+
+                    # remove padding from the patch
+                    si = i - si
+                    ei = si + patch_size
+                    sj = j - sj
+                    ej = sj + patch_size
+                    sk = k - sk
+                    ek = sk + patch_size
+                    x = x[si:ei,sj:ej,sk:ek]
+
+                    # put in denoised tomogram
+                    denoised[i:i+patch_size,j:j+patch_size,k:k+patch_size] = x
+
+    ## save the denoised tomogram
+    name = os.path.basename(path)
+    outpath = outdir + os.sep + name
+    with open(outpath, 'wb') as f:
+        mrc.write(f, denoised)
+
+
+def main(args):
+    model = None
+    do_train = (args.even_train_path is not None) or (args.odd_train_path is not None)
+    if do_train:
+        print('# training denoising model!', file=sys.stderr)
+        model = train_model(args.even_train_path, args.odd_train_path
+                           , args.save_prefix, args.save_interval
+                           , args.device
+                           , cost_func=args.criteria
+                           , learning_rate=args.lr
+                           , optim=args.optim
+                           , momentum=args.momentum
+                           , minibatch_size=args.batch_size
+                           , num_epochs=args.num_epochs
+                           , N_train=args.N_train
+                           , N_test=args.N_test
+                           , tilesize=args.crop
+                           , num_workers=args.num_workers
+                           )
+
+    if len(args.tomograms) > 0: # tomograms to denoise!
+        if model is None: # need to load model
+            model = load_model(args.model, args.device)
+
+        # denoise the tomograms
+        for path in args.tomograms:
+            denoise(model, path, args.output
+                   , patch_size=args.patch_size
+                   , padding=args.patch_padding)
+
+
+

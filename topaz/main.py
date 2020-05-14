@@ -66,6 +66,7 @@ def main():
     import topaz.commands.normalize
     import topaz.commands.preprocess
     import topaz.commands.denoise
+    import topaz.commands.denoise3d
 
     import topaz.commands.gui
 
@@ -95,6 +96,7 @@ def main():
                        topaz.commands.normalize,
                        topaz.commands.preprocess,
                        topaz.commands.denoise,
+                       topaz.commands.denoise3d,
                       ]
                      ),
                      ('File utilities',

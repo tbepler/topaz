@@ -792,6 +792,121 @@ class UDenoiseNet3(nn.Module):
 
         return y
 
+class UDenoiseNet3D(nn.Module):
+    # U-net from noise2noise paper
+    def __init__(self, nf=48, base_width=11, top_width=3):
+        super(UDenoiseNet3D, self).__init__()
+
+        self.enc1 = nn.Sequential( nn.Conv3d(1, nf, base_width, padding=base_width//2)
+                                 , nn.LeakyReLU(0.1)
+                                 , nn.MaxPool3d(2)
+                                 )
+        self.enc2 = nn.Sequential( nn.Conv3d(nf, nf, 3, padding=1)
+                                 , nn.LeakyReLU(0.1)
+                                 , nn.MaxPool3d(2)
+                                 )
+        self.enc3 = nn.Sequential( nn.Conv3d(nf, nf, 3, padding=1)
+                                 , nn.LeakyReLU(0.1)
+                                 , nn.MaxPool3d(2)
+                                 )
+        self.enc4 = nn.Sequential( nn.Conv3d(nf, nf, 3, padding=1)
+                                 , nn.LeakyReLU(0.1)
+                                 , nn.MaxPool3d(2)
+                                 )
+        self.enc5 = nn.Sequential( nn.Conv3d(nf, nf, 3, padding=1)
+                                 , nn.LeakyReLU(0.1)
+                                 , nn.MaxPool3d(2)
+                                 )
+        self.enc6 = nn.Sequential( nn.Conv3d(nf, nf, 3, padding=1)
+                                 , nn.LeakyReLU(0.1)
+                                 )
+
+        self.dec5 = nn.Sequential( nn.Conv3d(2*nf, 2*nf, 3, padding=1)
+                                 , nn.LeakyReLU(0.1)
+                                 , nn.Conv3d(2*nf, 2*nf, 3, padding=1)
+                                 , nn.LeakyReLU(0.1)
+                                 )
+        self.dec4 = nn.Sequential( nn.Conv3d(3*nf, 2*nf, 3, padding=1)
+                                 , nn.LeakyReLU(0.1)
+                                 , nn.Conv3d(2*nf, 2*nf, 3, padding=1)
+                                 , nn.LeakyReLU(0.1)
+                                 )
+        self.dec3 = nn.Sequential( nn.Conv3d(3*nf, 2*nf, 3, padding=1)
+                                 , nn.LeakyReLU(0.1)
+                                 , nn.Conv3d(2*nf, 2*nf, 3, padding=1)
+                                 , nn.LeakyReLU(0.1)
+                                 )
+        self.dec2 = nn.Sequential( nn.Conv3d(3*nf, 2*nf, 3, padding=1)
+                                 , nn.LeakyReLU(0.1)
+                                 , nn.Conv3d(2*nf, 2*nf, 3, padding=1)
+                                 , nn.LeakyReLU(0.1)
+                                 )
+        self.dec1 = nn.Sequential( nn.Conv3d(2*nf+1, 64, top_width, padding=top_width//2)
+                                 , nn.LeakyReLU(0.1)
+                                 , nn.Conv3d(64, 32, top_width, padding=top_width//2)
+                                 , nn.LeakyReLU(0.1)
+                                 , nn.Conv3d(32, 1, top_width, padding=top_width//2)
+                                 )
+
+    def forward(self, x):
+        # downsampling
+        p1 = self.enc1(x)
+        p2 = self.enc2(p1)
+        p3 = self.enc3(p2)
+        p4 = self.enc4(p3)
+        p5 = self.enc5(p4)
+        h = self.enc6(p5)
+
+        # upsampling
+        n = p4.size(2)
+        m = p4.size(3)
+        o = p4.size(4)
+        #h = F.upsample(h, size=(n,m))
+        #h = F.upsample(h, size=(n,m), mode='bilinear', align_corners=False)
+        h = F.interpolate(h, size=(n,m,o), mode='nearest')
+        h = torch.cat([h, p4], 1)
+
+        h = self.dec5(h)
+
+        n = p3.size(2)
+        m = p3.size(3)
+        o = p3.size(4)
+        
+        h = F.interpolate(h, size=(n,m,o), mode='nearest')
+        h = torch.cat([h, p3], 1)
+
+        h = self.dec4(h)
+
+        n = p2.size(2)
+        m = p2.size(3)
+        o = p2.size(4)
+
+        h = F.interpolate(h, size=(n,m,o), mode='nearest')
+        h = torch.cat([h, p2], 1)
+
+        h = self.dec3(h)
+
+        n = p1.size(2)
+        m = p1.size(3)
+        o = p1.size(4)
+
+        h = F.interpolate(h, size=(n,m,o), mode='nearest')
+        h = torch.cat([h, p1], 1)
+
+        h = self.dec2(h)
+
+        n = x.size(2)
+        m = x.size(3)
+        o = x.size(4)
+
+        h = F.interpolate(h, size=(n,m,o), mode='nearest')
+        h = torch.cat([h, x], 1)
+
+        y = self.dec1(h)
+
+        return y
+
+
 
 class PairedImages:
     def __init__(self, x, y, crop=800, xform=True, preload=False, cutoff=0):
@@ -1211,6 +1326,28 @@ def lowpass(x, factor=1):
     f = f.astype(x.dtype)
 
     return f
+
+
+def lowpass3d(x, factor=1):
+    """ low pass filter with FFT """
+
+    freq0 = np.fft.fftfreq(x.shape[-3])
+    freq1 = np.fft.fftfreq(x.shape[-2])
+    freq2 = np.fft.rfftfreq(x.shape[-1])
+    freq = np.meshgrid(freq0, freq1, freq2, indexing='ij')
+    freq = np.stack(freq, 3)
+
+    r = np.abs(freq)
+    mask = np.any((r > 0.5/factor), 3) 
+
+    F = np.fft.rfftn(x)
+    F[...,mask] = 0
+
+    f = np.fft.irfftn(F, s=x.shape)
+    f = f.astype(x.dtype)
+
+    return f
+
 
 def gaussian(x, sigma=1, scale=5, use_cuda=False):
     """
