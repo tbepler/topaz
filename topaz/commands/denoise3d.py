@@ -30,7 +30,7 @@ def add_arguments(parser):
     parser.add_argument('tomograms', nargs='*', help='tomograms to denoise')
     parser.add_argument('-o', '--output', help='directory to save denoised tomograms')
 
-    parser.add_argument('-m', '--model', help='use pretrained denoising model(s). can accept arguments for multiple models the outputs of which will be averaged. pretrained model options are: unet, unet-small, fcnn, affine. to use older unet version specify unet-v0.2.1 (default: unet)')
+    parser.add_argument('-m', '--model', default='unet-3d', help='use pretrained denoising model. accepts path to a previously saved model or one of the provided pretrained models. pretrained model options are: unet-3d (default: unet-3d)')
 
     ## training parameters
     parser.add_argument('-a', '--even-train-path', help='path to even training data')
@@ -526,11 +526,30 @@ def save_model(model, epoch, save_prefix):
 
 
 def load_model(path, device):
+    from collections import OrderedDict
     log = sys.stderr
 
     # load the model
-    model = torch.load(path)
+    if path == 'unet-3d': # load the pretrained unet model
+        name = 'unet-3d-v0.2.4.sav'
+        print('# loading pretrained model:', name, file=log)
+        model = UDenoiseNet3D(base_width=7)
+
+        import pkg_resources
+        pkg = __name__
+        path = '../pretrained/denoise/' + name
+        f = pkg_resources.resource_stream(pkg, path)
+        state_dict = torch.load(f) # load the parameters
+
+        model.load_state_dict(state_dict)
+    else:
+        model = torch.load(path)
+        if type(model) is OrderedDict:
+            state = model
+            model = UDenoiseNet3D()
+            model.load_state_dict(state)
     model.eval()
+
 
     # set the device or devices
     d = device
