@@ -402,6 +402,7 @@ def train_model(even_path, odd_path, save_prefix, save_interval, device
     # set the device or devices
     d = device
     use_cuda = (d != -1) and torch.cuda.is_available()
+    num_devices = 1
     if use_cuda:
         device_count = torch.cuda.device_count()
         try:
@@ -412,6 +413,7 @@ def train_model(even_path, odd_path, save_prefix, save_interval, device
             elif d == -2:
                 print('# using all available CUDA devices:', device_count, file=log)
                 model = nn.DataParallel(model)
+                num_devices = device_count
             else:
                 raise ValueError
         except (AssertionError, ValueError):
@@ -514,7 +516,7 @@ def train_model(even_path, odd_path, save_prefix, save_interval, device
     print("# ending time: {:02d}/{:02d}/{:04d} {:02d}h:{:02d}m:{:02d}s".format(now.month,now.day,now.year,now.hour,now.minute,now.second), file=log)
     print("# total time:", time.strftime("%Hh:%Mm:%Ss", time.gmtime(end_time - start_time)), file=log)
 
-    return model
+    return model, num_devices
 
 
 def save_model(model, epoch, save_prefix):
@@ -554,6 +556,7 @@ def load_model(path, device):
     # set the device or devices
     d = device
     use_cuda = (d != -1) and torch.cuda.is_available()
+    num_devices = 1
     if use_cuda:
         device_count = torch.cuda.device_count()
         try:
@@ -563,6 +566,7 @@ def load_model(path, device):
                 print('# using CUDA device:', d, file=log)
             elif d == -2:
                 print('# using all available CUDA devices:', device_count, file=log)
+                num_devices = device_count
                 model = nn.DataParallel(model)
             else:
                 raise ValueError
@@ -576,7 +580,7 @@ def load_model(path, device):
     if use_cuda:
         model.cuda()
 
-    return model
+    return model, num_devices
 
 
 class PatchDataset:
@@ -598,18 +602,43 @@ class PatchDataset:
         return self.num_patches
 
     def __getitem__(self, patch):
-        d = self.shape[1]*self.shape[2]
-        i = patch//d
-        
-        patch = patch - i*d
-        j = patch//self.shape[2]
+        # patch index
+        i,j,k = np.unravel_index(patch, self.shape)
 
-        patch = patch - j*self.shape[2]
-        k = patch
+        patch_size = self.patch_size
+        padding = self.padding
+        tomo = self.tomo
+
+        # pixel index
+        i = patch_size*i
+        j = patch_size*j
+        k = patch_size*k
+
+        # make padded patch
+        d = patch_size + 2*padding
+        x = np.zeros((d, d, d), dtype=np.float32)
+
+        # index in tomogram
+        si = max(0, i-padding)
+        ei = min(tomo.shape[0], i+patch_size+padding)
+        sj = max(0, j-padding)
+        ej = min(tomo.shape[1], j+patch_size+padding)
+        sk = max(0, k-padding)
+        ek = min(tomo.shape[2], k+patch_size+padding)
+
+        # index in crop
+        sic = padding - i + si
+        eic = sic + (ei - si)
+        sjc = padding - j + sj
+        ejc = sjc + (ej - sj)
+        skc = padding - k + sk
+        ekc = skc + (ek - sk)
+
+        x[sic:eic,sjc:ejc,skc:ekc] = tomo[si:ei,sj:ej,sk:ek]
+        return np.array((i,j,k), dtype=int),x
 
 
-
-def denoise(model, path, outdir, patch_size=128, padding=128):
+def denoise(model, path, outdir, patch_size=128, padding=128, batch_size=1):
     with open(path, 'rb') as f:
         content = f.read()
     tomo,_,_ = mrc.parse(content)
@@ -630,48 +659,33 @@ def denoise(model, path, outdir, patch_size=128, padding=128):
             x = std*x + mu
             denoised[:] = x
         else:
-            nz,ny,nx = tomo.shape
-            nz = int(np.ceil(nz/patch_size))
-            ny = int(np.ceil(ny/patch_size))
-            nx = int(np.ceil(nx/patch_size))
-            total = nz*ny*nx
+            patch_data = PatchDataset(tomo, patch_size, padding)
+            total = len(patch_data)
             count = 0
 
-            for i in range(0, tomo.shape[0], patch_size):
-                for j in range(0, tomo.shape[1], patch_size):
-                    for k in range(0, tomo.shape[2], patch_size):
-                        # get padded patch
-                        si = max(0, i-padding)
-                        ei = min(tomo.shape[0], i+patch_size+padding)
-                        sj = max(0, j-padding)
-                        ej = min(tomo.shape[1], j+patch_size+padding)
-                        sk = max(0, k-padding)
-                        ek = min(tomo.shape[2], k+patch_size+padding)
-                        x = tomo[si:ei,sj:ej,sk:ek]
+            batch_iterator = torch.utils.data.DataLoader(patch_data, batch_size=batch_size)
+            for index,x in batch_iterator:
+                x = x.to(d)
+                x = (x - mu)/std
+                x = x.unsqueeze(1) # batch x channel
 
-                        # normalize
-                        x = (x - mu)/std
-                        # torch
-                        x = torch.from_numpy(x).to(d)
-                        # denoise
-                        x = model(x.unsqueeze(0).unsqueeze(0)).squeeze().cpu().numpy()
-                        # add back mean and std dev.
-                        x = std*x + mu
+                # denoise
+                x = model(x).squeeze(1).cpu().numpy()
 
-                        # remove padding from the patch
-                        si = i - si
-                        ei = si + patch_size
-                        sj = j - sj
-                        ej = sj + patch_size
-                        sk = k - sk
-                        ek = sk + patch_size
-                        x = x[si:ei,sj:ej,sk:ek]
+                # stitch into denoised volume
+                for b in range(len(x)):
+                    i,j,k = index[b]
+                    xb = x[b]
 
-                        # put in denoised tomogram
-                        denoised[i:i+patch_size,j:j+patch_size,k:k+patch_size] = x
+                    patch = denoised[i:i+patch_size,j:j+patch_size,k:k+patch_size]
+                    pz,py,px = patch.shape
 
-                        count += 1
-                        print('# [{}/{}] {:.2%}'.format(count, total, count/total), name, file=sys.stderr, end='\r')
+                    xb = xb[padding:padding+pz,padding:padding+py,padding:padding+px]
+                    denoised[i:i+patch_size,j:j+patch_size,k:k+patch_size] = xb
+
+                    count += 1
+                    print('# [{}/{}] {:.2%}'.format(count, total, count/total), name, file=sys.stderr, end='\r')
+
             print(' '*100, file=sys.stderr, end='\r')
 
 
@@ -686,7 +700,7 @@ def main(args):
     do_train = (args.even_train_path is not None) or (args.odd_train_path is not None)
     if do_train:
         print('# training denoising model!', file=sys.stderr)
-        model = train_model(args.even_train_path, args.odd_train_path
+        model, num_devices = train_model(args.even_train_path, args.odd_train_path
                            , args.save_prefix, args.save_interval
                            , args.device
                            , cost_func=args.criteria
@@ -703,13 +717,22 @@ def main(args):
 
     if len(args.tomograms) > 0: # tomograms to denoise!
         if model is None: # need to load model
-            model = load_model(args.model, args.device)
+            model,num_devices = load_model(args.model, args.device)
+
+        #batch_size = args.batch_size
+        #batch_size *= num_devices
+        batch_size = num_devices
+
+        patch_size = args.patch_size
+        padding = args.patch_padding
+        print('# denoising with patch size={} and padding={}'.format(patch_size, padding), file=sys.stderr)
 
         # denoise the tomograms
         for path in args.tomograms:
             denoise(model, path, args.output
-                   , patch_size=args.patch_size
-                   , padding=args.patch_padding)
+                   , patch_size=patch_size
+                   , padding=padding
+                   , batch_size=batch_size)
 
 
 
