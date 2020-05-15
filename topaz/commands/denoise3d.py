@@ -57,8 +57,8 @@ def add_arguments(parser):
 
 
     ## denoising parameters
-    parser.add_argument('-s', '--patch-size', type=int, default=-1, help='denoises micrographs in patches of this size. not used if <1 (default: -1)')
-    parser.add_argument('-p', '--patch-padding', type=int, default=500, help='padding around each patch to remove edge artifacts (default: 500)')
+    parser.add_argument('-s', '--patch-size', type=int, default=96, help='denoises micrographs in patches of this size. not used if <1 (default: 96)')
+    parser.add_argument('-p', '--patch-padding', type=int, default=48, help='padding around each patch to remove edge artifacts (default: 48)')
 
     ## other parameters
     parser.add_argument('-d', '--device', type=int, default=-2, help='compute device/s to use (default: -2, multi gpu), set to >= 0 for single gpu, set to -1 for cpu')
@@ -583,6 +583,7 @@ def denoise(model, path, outdir, patch_size=128, padding=128):
     with open(path, 'rb') as f:
         content = f.read()
     tomo,_,_ = mrc.parse(content)
+    name = os.path.basename(path)
 
     mu = tomo.mean()
     std = tomo.std()
@@ -592,41 +593,56 @@ def denoise(model, path, outdir, patch_size=128, padding=128):
     denoised = np.zeros_like(tomo)
 
     with torch.no_grad():
-        for i in range(0, tomo.shape[0], patch_size):
-            for j in range(0, tomo.shape[1], patch_size):
-                for k in range(0, tomo.shape[2], patch_size):
-                    # get padded patch
-                    si = np.max(0, i-padding)
-                    ei = np.min(tomo.shape[0], i+padding)
-                    sj = np.max(0, j-padding)
-                    ej = np.min(tomo.shape[1], j+padding)
-                    sk = np.max(0, k-padding)
-                    ek = np.min(tomo.shape[2], k+padding)
-                    x = tomo[si:ei,sj:ej,sk:ek]
+        if patch_size < 1:
+            x = (tomo - mu)/std
+            x = torch.from_numpy(x).to(d)
+            x = model(x.unsqueeze(0).unsqueeze(0)).squeeze().cpu().numpy()
+            x = std*x + mu
+            denoised[:] = x
+        else:
+            nz,ny,nx = tomo.shape
+            total = nz*ny*nx
 
-                    # normalize
-                    x = (x - mu)/std
-                    # torch
-                    x = torch.from_numpy(x).to(d)
-                    # denoise
-                    x = model(x.unsqueeze(0).unsqueeze(0)).squeeze().cpu().numpy()
-                    # add back mean and std dev.
-                    x = std*x + mu
+            for i in range(0, tomo.shape[0], patch_size):
+                for j in range(0, tomo.shape[1], patch_size):
+                    for k in range(0, tomo.shape[2], patch_size):
+                        # get padded patch
+                        si = max(0, i-padding)
+                        ei = min(tomo.shape[0], i+patch_size+padding)
+                        sj = max(0, j-padding)
+                        ej = min(tomo.shape[1], j+patch_size+padding)
+                        sk = max(0, k-padding)
+                        ek = min(tomo.shape[2], k+patch_size+padding)
+                        x = tomo[si:ei,sj:ej,sk:ek]
 
-                    # remove padding from the patch
-                    si = i - si
-                    ei = si + patch_size
-                    sj = j - sj
-                    ej = sj + patch_size
-                    sk = k - sk
-                    ek = sk + patch_size
-                    x = x[si:ei,sj:ej,sk:ek]
+                        # normalize
+                        x = (x - mu)/std
+                        # torch
+                        x = torch.from_numpy(x).to(d)
+                        # denoise
+                        x = model(x.unsqueeze(0).unsqueeze(0)).squeeze().cpu().numpy()
+                        # add back mean and std dev.
+                        x = std*x + mu
 
-                    # put in denoised tomogram
-                    denoised[i:i+patch_size,j:j+patch_size,k:k+patch_size] = x
+                        # remove padding from the patch
+                        si = i - si
+                        ei = si + patch_size
+                        sj = j - sj
+                        ej = sj + patch_size
+                        sk = k - sk
+                        ek = sk + patch_size
+                        x = x[si:ei,sj:ej,sk:ek]
+
+                        # put in denoised tomogram
+                        denoised[i:i+patch_size,j:j+patch_size,k:k+patch_size] = x
+
+                        count = i*ny*nx + j*nx + k
+
+                        print('# [{}/{}] {:.2%}'.format(count, total, count/total), name, file=sys.stderr, end='\r')
+            print(' '*100, file=sys.stderr, end='\r')
+
 
     ## save the denoised tomogram
-    name = os.path.basename(path)
     outpath = outdir + os.sep + name
     with open(outpath, 'wb') as f:
         mrc.write(f, denoised)
