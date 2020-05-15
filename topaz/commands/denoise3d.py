@@ -149,7 +149,7 @@ class TrainingDataset3D(torch.utils.data.Dataset):
             self.odd_paths.append(odd_path)
         elif os.path.isdir(even_path) and os.path.isdir(odd_path):
             for epath in glob.glob(even_path + os.sep + '*'):
-                name = os.path.basename(path)
+                name = os.path.basename(epath)
                 opath = odd_path + os.sep + name 
                 if not os.path.isfile(opath):
                     print('# Error: name mismatch between even and odd directory,', name, file=sys.stderr)
