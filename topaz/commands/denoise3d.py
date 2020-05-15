@@ -579,6 +579,36 @@ def load_model(path, device):
     return model
 
 
+class PatchDataset:
+    def __init__(self, tomo, patch_size=96, padding=48):
+        self.tomo = tomo
+        self.patch_size = patch_size
+        self.padding = padding
+
+        nz,ny,nx = tomo.shape
+
+        pz = int(np.ceil(nz/patch_size))
+        py = int(np.ceil(ny/patch_size))
+        px = int(np.ceil(nx/patch_size))
+        self.shape = (pz,py,px)
+        self.num_patches = pz*py*px
+
+
+    def __len__(self):
+        return self.num_patches
+
+    def __getitem__(self, patch):
+        d = self.shape[1]*self.shape[2]
+        i = patch//d
+        
+        patch = patch - i*d
+        j = patch//self.shape[2]
+
+        patch = patch - j*self.shape[2]
+        k = patch
+
+
+
 def denoise(model, path, outdir, patch_size=128, padding=128):
     with open(path, 'rb') as f:
         content = f.read()
@@ -601,7 +631,11 @@ def denoise(model, path, outdir, patch_size=128, padding=128):
             denoised[:] = x
         else:
             nz,ny,nx = tomo.shape
+            nz = int(np.ceil(nz/patch_size))
+            ny = int(np.ceil(ny/patch_size))
+            nx = int(np.ceil(nx/patch_size))
             total = nz*ny*nx
+            count = 0
 
             for i in range(0, tomo.shape[0], patch_size):
                 for j in range(0, tomo.shape[1], patch_size):
@@ -636,8 +670,7 @@ def denoise(model, path, outdir, patch_size=128, padding=128):
                         # put in denoised tomogram
                         denoised[i:i+patch_size,j:j+patch_size,k:k+patch_size] = x
 
-                        count = i*ny*nx + j*nx + k
-
+                        count += 1
                         print('# [{}/{}] {:.2%}'.format(count, total, count/total), name, file=sys.stderr, end='\r')
             print(' '*100, file=sys.stderr, end='\r')
 
