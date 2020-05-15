@@ -131,7 +131,6 @@ def eval_model(iterator, model, cost_func, epoch=1, num_epochs=1, N=1, use_cuda=
     print(' '*80, end='\r', file=sys.stderr)    
     return loss_accum
 
-## TODO - FIX THIS CLASS
 class TrainingDataset3D(torch.utils.data.Dataset):
     
     def __init__(self,even_path,odd_path,tilesize,N_train,N_test):
@@ -641,7 +640,7 @@ class PatchDataset:
 def denoise(model, path, outdir, patch_size=128, padding=128, batch_size=1):
     with open(path, 'rb') as f:
         content = f.read()
-    tomo,_,_ = mrc.parse(content)
+    tomo,header,_ = mrc.parse(content)
     name = os.path.basename(path)
 
     mu = tomo.mean()
@@ -691,8 +690,15 @@ def denoise(model, path, outdir, patch_size=128, padding=128, batch_size=1):
 
     ## save the denoised tomogram
     outpath = outdir + os.sep + name
+
+    # use the read header except for a few fields
+    header = header._replace(mode=2) # 32-bit real
+    header = header._replace(amin=denoised.min())
+    header = header._replace(amax=denoised.max())
+    header = header._replace(amean=denoised.mean())
+
     with open(outpath, 'wb') as f:
-        mrc.write(f, denoised)
+        mrc.write(f, denoised, header=header)
 
 
 def main(args):
