@@ -23,12 +23,12 @@ import topaz.cuda
 from topaz.denoise import UDenoiseNet3D
 
 name = 'denoise3d'
-help = 'denoise 3D tomograms with various denoising algorithms'
+help = 'denoise 3D volumes with various denoising algorithms'
 
 def add_arguments(parser):
 
-    parser.add_argument('tomograms', nargs='*', help='tomograms to denoise')
-    parser.add_argument('-o', '--output', help='directory to save denoised tomograms')
+    parser.add_argument('volumes', nargs='*', help='volumes to denoise')
+    parser.add_argument('-o', '--output', help='directory to save denoised volumes')
 
     parser.add_argument('-m', '--model', default='unet-3d', help='use pretrained denoising model. accepts path to a previously saved model or one of the provided pretrained models. pretrained model options are: unet-3d (default: unet-3d)')
 
@@ -36,8 +36,8 @@ def add_arguments(parser):
     parser.add_argument('-a', '--even-train-path', help='path to even training data')
     parser.add_argument('-b', '--odd-train-path', help='path to odd training data')
 
-    parser.add_argument('--N-train', type=int, default=1000, help='Number of train points per tomogram (default: 1000)')
-    parser.add_argument('--N-test', type=int, default=200, help='Number of test points per tomogram (default: 200)')
+    parser.add_argument('--N-train', type=int, default=1000, help='Number of train points per volume (default: 1000)')
+    parser.add_argument('--N-test', type=int, default=200, help='Number of test points per volume (default: 200)')
 
     parser.add_argument('-c', '--crop', type=int, default=96, help='training tile size (default: 96)')
     parser.add_argument('--base-kernel-width', type=int, default=11, help='width of the base convolutional filter kernel in the U-net model (default: 11)')
@@ -58,7 +58,7 @@ def add_arguments(parser):
 
 
     ## denoising parameters
-    parser.add_argument('-s', '--patch-size', type=int, default=96, help='denoises micrographs in patches of this size. not used if <1 (default: 96)')
+    parser.add_argument('-s', '--patch-size', type=int, default=96, help='denoises volumes in patches of this size. not used if <1 (default: 96)')
     parser.add_argument('-p', '--patch-padding', type=int, default=48, help='padding around each patch to remove edge artifacts (default: 48)')
 
     ## other parameters
@@ -727,7 +727,7 @@ def main(args):
                            , num_workers=args.num_workers
                            )
 
-    if len(args.tomograms) > 0: # tomograms to denoise!
+    if len(args.volumes) > 0: # tomograms to denoise!
         if model is None: # need to load model
             model,num_devices = load_model(args.model, args.device
                                           , base_kernel_width=args.base_kernel_width)
@@ -740,10 +740,10 @@ def main(args):
         padding = args.patch_padding
         print('# denoising with patch size={} and padding={}'.format(patch_size, padding), file=sys.stderr)
 
-        # denoise the tomograms
-        total = len(args.tomograms)
+        # denoise the volumes
+        total = len(args.volumes)
         count = 0
-        for path in args.tomograms:
+        for path in args.volumes:
             count += 1
             denoise(model, path, args.output
                    , patch_size=patch_size
