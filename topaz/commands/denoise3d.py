@@ -40,6 +40,7 @@ def add_arguments(parser):
     parser.add_argument('--N-test', type=int, default=200, help='Number of test points per tomogram (default: 200)')
 
     parser.add_argument('-c', '--crop', type=int, default=96, help='training tile size (default: 96)')
+    parser.add_argument('--base-kernel-width', type=int, default=11, help='width of the base convolutional filter kernel in the U-net model (default: 11)')
 
     parser.add_argument('--optim', choices=['adam', 'adagrad', 'sgd'], default='adagrad', help='optimizer (default: adagrad)')
     parser.add_argument('--lr', default=0.001, type=float, help='learning rate for the optimizer (default: 0.001)')
@@ -369,6 +370,7 @@ class TrainingDataset3D(torch.utils.data.Dataset):
 
 
 def train_model(even_path, odd_path, save_prefix, save_interval, device
+               , base_kernel_width=11
                , cost_func='L2'
                , weight_decay=0
                , learning_rate=0.001
@@ -386,9 +388,9 @@ def train_model(even_path, odd_path, save_prefix, save_interval, device
 
     if save_prefix is not None:
         save_dir = os.path.dirname(save_prefix)
-        if not os.path.exists(save_dir):
+        if len(save_dir) > 0 and not os.path.exists(save_dir):
             print('# creating save directory:', save_dir, file=log)
-            os.makedir(save_dir)
+            os.makedirs(save_dir)
 
     start_time = time.time()
     now = datetime.datetime.now()
@@ -396,7 +398,7 @@ def train_model(even_path, odd_path, save_prefix, save_interval, device
 
     # initialize the model
     print('# initializing model...', file=log)
-    model = UDenoiseNet3D()
+    model = UDenoiseNet3D(base_width=base_kernel_width)
     
     # set the device or devices
     d = device
@@ -467,6 +469,7 @@ def train_model(even_path, odd_path, save_prefix, save_interval, device
     N_test = len(data)
     data.set_mode('train')
     num_workers = min(num_workers, mp.cpu_count())
+    digits = int(np.ceil(np.log10(num_epochs)))
 
     iterator = torch.utils.data.DataLoader(data,batch_size=minibatch_size,num_workers=num_workers,shuffle=False)
     
@@ -504,7 +507,7 @@ def train_model(even_path, odd_path, save_prefix, save_interval, device
         ## save the models
         if save_prefix is not None and (epoch+1)%save_interval == 0:
             model.eval().cpu()
-            save_model(model,epoch+1,save_prefix)
+            save_model(model, epoch+1, save_prefix, digits=digits)
             if use_cuda:
                 model.cuda()
 
@@ -518,15 +521,16 @@ def train_model(even_path, odd_path, save_prefix, save_interval, device
     return model, num_devices
 
 
-def save_model(model, epoch, save_prefix):
+def save_model(model, epoch, save_prefix, digits=3):
     if type(model) is nn.DataParallel:
         model = model.module
 
-    path = save_prefix + '_epoch{}.sav'.format(epoch)
+    path = save_prefix + ('_epoch{:0'+str(digits)+'}.sav').format(epoch) 
+    #path = save_prefix + '_epoch{}.sav'.format(epoch)
     torch.save(model, path)
 
 
-def load_model(path, device):
+def load_model(path, device, base_kernel_width=11):
     from collections import OrderedDict
     log = sys.stderr
 
@@ -547,7 +551,7 @@ def load_model(path, device):
         model = torch.load(path)
         if type(model) is OrderedDict:
             state = model
-            model = UDenoiseNet3D()
+            model = UDenoiseNet3D(base_width=base_kernel_width)
             model.load_state_dict(state)
     model.eval()
 
@@ -637,7 +641,8 @@ class PatchDataset:
         return np.array((i,j,k), dtype=int),x
 
 
-def denoise(model, path, outdir, patch_size=128, padding=128, batch_size=1):
+def denoise(model, path, outdir, patch_size=128, padding=128, batch_size=1
+           , volume_num=1, total_volumes=1):
     with open(path, 'rb') as f:
         content = f.read()
     tomo,header,_ = mrc.parse(content)
@@ -683,7 +688,7 @@ def denoise(model, path, outdir, patch_size=128, padding=128, batch_size=1):
                     denoised[i:i+patch_size,j:j+patch_size,k:k+patch_size] = xb
 
                     count += 1
-                    print('# [{}/{}] {:.2%}'.format(count, total, count/total), name, file=sys.stderr, end='\r')
+                    print('# [{}/{}] {:.2%}'.format(volume_num, total_volumes, count/total), name, file=sys.stderr, end='\r')
 
             print(' '*100, file=sys.stderr, end='\r')
 
@@ -709,6 +714,7 @@ def main(args):
         model, num_devices = train_model(args.even_train_path, args.odd_train_path
                            , args.save_prefix, args.save_interval
                            , args.device
+                           , base_kernel_width=args.base_kernel_width
                            , cost_func=args.criteria
                            , learning_rate=args.lr
                            , optim=args.optim
@@ -723,7 +729,8 @@ def main(args):
 
     if len(args.tomograms) > 0: # tomograms to denoise!
         if model is None: # need to load model
-            model,num_devices = load_model(args.model, args.device)
+            model,num_devices = load_model(args.model, args.device
+                                          , base_kernel_width=args.base_kernel_width)
 
         #batch_size = args.batch_size
         #batch_size *= num_devices
@@ -734,11 +741,17 @@ def main(args):
         print('# denoising with patch size={} and padding={}'.format(patch_size, padding), file=sys.stderr)
 
         # denoise the tomograms
+        total = len(args.tomograms)
+        count = 0
         for path in args.tomograms:
+            count += 1
             denoise(model, path, args.output
                    , patch_size=patch_size
                    , padding=padding
-                   , batch_size=batch_size)
+                   , batch_size=batch_size
+                   , volume_num=count
+                   , total_volumes=total
+                   )
 
 
 

@@ -392,12 +392,14 @@ def main(args):
         lr = args.lr
         batch_size = args.batch_size
         num_epochs = args.num_epochs
+        digits = int(np.ceil(np.log10(num_epochs)))
 
         num_workers = args.num_workers
 
         print('epoch', 'loss_train', 'loss_val')
         #criteria = nn.L1Loss()
         criteria = args.criteria
+        
 
         if method == 'noise2noise':
             iterator = dn.train_noise2noise(model, dataset_train, lr=lr
@@ -430,7 +432,8 @@ def main(args):
 
             # save the model
             if args.save_prefix is not None:
-                path = args.save_prefix + '_epoch{}.sav'.format(epoch)
+                path = args.save_prefix + ('_epoch{:0'+str(digits)+'}.sav').format(epoch) 
+                #path = args.save_prefix + '_epoch{}.sav'.format(epoch)
                 model.cpu()
                 model.eval()
                 torch.save(model, path)
