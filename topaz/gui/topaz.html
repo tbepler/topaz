@@ -238,11 +238,49 @@
 				var numepochs10 = $('#numepochs10').val() == '' ? '100' : $('#numepochs10').val();
 				var device10 = $('#device10').val() == '' ? '0' : $('#device10').val();
 				var numworkers10 = $('#numworkers10').val() == '' ? '16' : $('#numworkers10').val();
-				var output10 = $('#output10').val() == '' ? '/path/to/output/folder/and/file' : $('#output10').val();
+				var output10 = $('#output10').val() == '' ? '/path/to/output/folder/and/files' : $('#output10').val();
 				$('#result10').html("topaz denoise --dir-a " + dira10 + " --dir-b " + dirb10 + " --method " + method10 + " --arch " + arch10 + " --optim " + optim10 + " --lr " + lr10 + " --criteria " + criteria10 + " --crop " + crop10 + " --batch-size " + batchsize10 + " --num-epochs " + numepochs10 + " --device " + device10 + " --num-workers " + numworkers10 + " --save-prefix " + output10);
 			});
 		});
 	});
+	
+	$( document ).ready(function() {
+		$('.denoise_volumes_inputs').each(function() {
+			$(this).on('keyup', function() {
+				var input11 = $('#input11').val() == '' ? '/path/to/input/volumes/*.mrc' : $('#input11').val();
+				var model11 = $('#model11').val() == '' ? 'unet-3d-10a' : $('#model11').val();
+				var device11 = $('#device11').val() == '' ? '-2' : $('#device11').val();
+				var patchsize11 = $('#patchsize11').val() == '' ? '96' : $('#patchsize11').val();
+				var patchpadding11 = $('#patchpadding11').val() == '' ? '48' : $('#patchpadding11').val();
+				var output11 = $('#output11').val() == '' ? '/path/to/output/folder/' : $('#output11').val();
+				$('#result11').html("topaz denoise3d " + input11 + " --model " + model11 + " --device " + device11 + " --patch-size " + patchsize11 + " --patch-padding " + patchpadding11 + " --output " + output11);
+			});
+		});
+	});
+	$( document ).ready(function() {
+		$('.denoise_3dtraining_inputs').each(function() {
+			$(this).on('keyup', function() {
+				var a12 = $('#a12').val() == '' ? '/path/to/input/volumes/half1/' : $('#a12').val();
+				var b12 = $('#b12').val() == '' ? '/path/to/input/volumes/half2/' : $('#b12').val();
+				var optim12 = $('#optim12').val() == '' ? 'adagrad' : $('#optim12').val();
+				var lr12 = $('#lr12').val() == '' ? '0.001' : $('#lr12').val();
+				var criteria12 = $('#criteria12').val() == '' ? 'L2' : $('#criteria12').val();
+				var crop12 = $('#crop12').val() == '' ? '96' : $('#crop12').val();
+				var batchsize12 = $('#batchsize12').val() == '' ? '10' : $('#batchsize12').val();
+				var weightdecay12 = $('#weightdecay12').val() == '' ? '0' : $('#weightdecay12').val();
+				var momentum12 = $('#momentum12').val() == '' ? '0.8' : $('#momentum12').val();
+				var ntrain12 = $('#ntrain12').val() == '' ? '1000' : $('#ntrain12').val();
+				var ntest12 = $('#ntest12').val() == '' ? '200' : $('#ntest12').val();
+				var numepochs12 = $('#numepochs12').val() == '' ? '100' : $('#numepochs12').val();
+				var saveinterval12 = $('#saveinterval12').val() == '' ? '5' : $('#saveinterval12').val();
+				var device12 = $('#device12').val() == '' ? '-2' : $('#device12').val();
+				var numworkers12 = $('#numworkers12').val() == '' ? '1' : $('#numworkers12').val();
+				var output12 = $('#output12').val() == '' ? '/path/to/output/folder/and/files' : $('#output12').val();
+				$('#result12').html("topaz denoise3d -a " + a12 + " -b " + b12 + " --optim " + optim12 + " --lr " + lr12 + " --criteria " + criteria12 + " --crop " + crop12 + " --batch-size " + batchsize12 + " --weight_decay " + weightdecay12 + " --momentum " + momentum12 + " --N-train " + ntrain12 + " --N-test " + ntest12 + " --num-epochs " + numepochs12 + " --save-interval " + saveinterval12 + " --device " + device12 + " --num-workers " + numworkers12 + " --save-prefix " + output12);
+			});
+		});
+	});
+	
 	</script>
 
     <!-- CSS style definition -->
@@ -621,7 +659,23 @@
 	    font-size: 22px;
 	  }
 
+	  .collapsibletools2 {
+	    background-color: #fafafa;
+	    cursor: pointer;
+	    transition: 0.1s;
+	    padding: 16px;
+	    width: 30%;
+	    border: none;
+	    text-align: left;
+	    outline: none;
+	    font-size: 22px;
+	  }
+
 	  .active, .collapsibletools:hover {
+	    background-color: #f2f2f2;
+	  }
+
+	  .active, .collapsibletools2:hover {
 	    background-color: #f2f2f2;
 	  }
 
@@ -956,7 +1010,7 @@
 	  </table>
 	  <div style="line-height:1.3; width: 55%; margin: 0px auto;">
 	  <br><center><p><i><strong>Citations: </strong>Bepler, T., Morin, A., Rapp, M., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2019). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs.<a href="https://doi.org/10.1038/s41592-019-0575-8" target="_blank"> Nature Methods</a>
-	  <br><br>Bepler, T., Noble, A.J., Berger, B. (2019). Topaz-Denoise: general deep denoising models for cryoEM.<a href="https://doi.org/10.1101/838920" target="_blank"> bioRxiv</a></i></center>
+	  <br><br>Bepler, T., Kelley, K., Noble, A.J., Berger, B. (2020). Topaz-Denoise: general deep denoising models for cryoEM.<a href="https://doi.org/10.1101/838920" target="_blank"> bioRxiv</a></i></center>
 	  </div>
 	</div>
 
@@ -970,7 +1024,8 @@
       </div> <!-- endof #top_panel -->
 	  <span class="tab1"><table><tr><td><span class="denoising_logo"></span></td><td><h2>&nbsp&nbsp&nbspTopaz-Denoise</h2></td></tr></table></span>
 	  <span class="tab2"><br>
-
+	  
+	  <br/><strong><font size="+1">2D Denoising:</font></strong><br/><hr width="20%">
 	  <br><section><details><summary class="collapsibletools"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Denoise Micrographs</summary>
 		<div class="content">
 		  <p style=line-height:1.3>
@@ -1040,7 +1095,7 @@
 		  <br><table style="height:12.6em">
 		  <tr title="First input directory for training. Must contain only .mrc files. The files in the first and second input directory for training must have the same number of files with the same filenames. Each pair of files should be a different image of the same field of view (type: string; full directory path)"><td><hl2><span><font size="3" color="white">Input folder #1</font></span></hl2></td><td><input id="dira10" class="denoise_training_inputs" style="width:30em" value="/path/to/input/images/half1/"></td></tr>
 		  <tr title="Second input directory for training. Must contain only .mrc files. The files in the first and second input directory for training must have the same number of files with the same filenames. Each pair of files should be a different image of the same field of view (type: string; full directory path)"><td><hl2><span><font size="3" color="white">Input folder #2</font></span></hl2></td><td><input id="dirb10" class="denoise_training_inputs" style="width:30em" value="/path/to/input/images/half2/"></td></tr>
-		  <tr title="Output folder and files (type: string; full file path for output)"><td><hl2><span><font size="3" color="white">Output files</font></span></hl2></td><td><input id="output10" class="denoise_training_inputs" style="width:30em" value="/path/to/output/folder/and/file"></td></tr>
+		  <tr title="Output folder and files (type: string; full file path for output)"><td><hl2><span><font size="3" color="white">Output files</font></span></hl2></td><td><input id="output10" class="denoise_training_inputs" style="width:30em" value="/path/to/output/folder/and/files"></td></tr>
 		  <tr title="Denoising model architecture (type: string; options are unet, unet-small, unet2, unet3, fcnet, fcnet2, affine)"><td><hl4><span><font size="3" color="white">Model architecture</font></span></hl4></td><td><input id="arch10" class="denoise_training_inputs" style="width:3em" value="unet"></td></tr>
 		  <tr title="Training criteria (type: string; options are L0 (mode-seeking), L1 (median-seeking), or L2 (mean-seeking))"><td><hl4><span><font size="3" color="white">Training criteria</font></span></hl4></td><td><input id="criteria10" class="denoise_training_inputs" style="width:3em" value="L2"></td></tr>
 		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU training (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device10" class="denoise_training_inputs" style="width:3em" value="0"></td></tr>
@@ -1050,7 +1105,7 @@
 			<div class="content">
 			  <table style="height:10.9em">
 			  <tr title="Denoising training method (type: string; either 'noise2noise' or 'masked')"><td><hl8><span><font size="3" color="white">Training method</font></span></hl8></td><td><input id="method10" class="denoise_training_inputs" style="width:6em" value="noise2noise"></td></tr>
-			  <tr title="Optimizer (type: string; options are adam, adagrad, sgd)"><td><hl8><span><font size="3" color="white">Optimizer</font></span></hl8></td><td><input id="optim10" class="denoise_training_inputs" style="width:6em" value="adagrad"></td></tr>
+			  <tr title="Optimizer (type: string; options are adam, adagrad, or sgd)"><td><hl8><span><font size="3" color="white">Optimizer</font></span></hl8></td><td><input id="optim10" class="denoise_training_inputs" style="width:6em" value="adagrad"></td></tr>
 			  <tr title="Learning rate (type: float)"><td><hl8><span><font size="3" color="white">Learning rate</font></span></hl8></td><td><input id="lr10" class="denoise_training_inputs" style="width:3em" value="0.001"></td></tr>
 			  <tr title="Training crop size (type: integer)"><td><hl8><span><font size="3" color="white">Crop size</font></span></hl8></td><td><input id="crop10" class="denoise_training_inputs" style="width:3em" value="800"></td></tr>
 			  <tr title="Training batch size (type: integer)"><td><hl8><span><font size="3" color="white">Batch size</font></span></hl8></td><td><input id="batchsize10" class="denoise_training_inputs" style="width:3em" value="4"></td></tr>
@@ -1060,7 +1115,81 @@
 			</span>
 		  <br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
 		  <code><div id="result10" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
-		  topaz denoise --dir-a /path/to/input/images/half1/ --dir-b /path/to/input/images/half2/ --method noise2noise --arch unet --optim adagrad --lr 0.001 --criteria L2 --crop 800 --batch-size 4 --num-epochs 100 --device 0 --num-workers 16 --save-prefix /path/to/output/folder/and/file
+		  topaz denoise --dir-a /path/to/input/images/half1/ --dir-b /path/to/input/images/half2/ --method noise2noise --arch unet --optim adagrad --lr 0.001 --criteria L2 --crop 800 --batch-size 4 --num-epochs 100 --device 0 --num-workers 16 --save-prefix /path/to/output/folder/and/files
+		  </div></span></code>
+		</div></br>
+	  </details></summary><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;"	unselectable="on" onselectstart="return false;" onmousedown="return false;"></br></br></span>
+	  
+	  <strong><font size="+1">3D Denoising:</font></strong><br/><hr width="20%">
+	  
+	 <br><section><details><summary class="collapsibletools2"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Denoise Tomogram or 3D Volume</summary>
+		<div class="content">
+		  <p style=line-height:1.3>
+	      <span class="tab0"><p style=line-height:1.3>Create a command for denoising tomograms or 3D volumes.<br><br>
+		  <strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
+		  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
+		  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
+		  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7>
+		  </p>
+		  <hr width="20%">
+		  <br><table style="height:7.2em">
+		  <tr title="Input volumes for denoising (type: string; full path to either a single .mrc/.rec file or multiple .mrc/.rec files using the wildcard *; i.e. *.mrc)"><td><hl2><span><font size="3" color="white">Input volumes</font></span></hl2></td><td><input id="input11" class="denoise_volumes_inputs" style="width:30em" value="/path/to/input/volumes/*.mrc"></td></tr>
+		  <tr title="Output directory. Different from the input firectory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output11" class="denoise_volumes_inputs" style="width:30em" value="/path/to/output/folder/"></td></tr>
+		  <tr title="Denoising model to use on 3D volumes (type: string; use one of these {unet-3d-10a, unet-3d-20a} to use the pretrained models or a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pretrained models were trained on 32 cellular/reconstituted cryoET tomograms of K2 binned by 2 or 4 tilt-series. The unet-3d-10a model was trained on binned by 2 tomograms with an average pixelsize of 10 angstroms, while the unet-3d-20a model was trained on the same tomograms binned by 4 with an average pixelsize of 20 angstroms."><td><hl4><span><font size="3" color="white">Model</font></span></hl4></td><td><input id="model11" class="denoise_volumes_inputs" style="width:30em" value="unet-3d-10a"></td></tr>
+		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. -2 corresponds to multi-GPU denoising. -1 corresponds to CPU denoising (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device11" class="denoise_volumes_inputs" style="width:3em" value="-2"></td></tr>
+		  </table>
+		  <br><section><details><summary class="collapsibleoptions2" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
+			<div class="content">
+			  <table style="height:3.7em">
+			  <tr title="Patch size (type: integer)&#013;&#013;This will break the volumes up in 3D patches where each patch will be denoised seperately and then stitched back together with overlap defined by Patch Padding. A negative value means that this option is ignored."><td><hl8><span><font size="3" color="white">Patch size</font></span></hl8></td><td><input id="patchsize11" class="denoise_volumes_inputs" style="width:3em" value="96"></td></tr>
+			  <tr title="Padding around each patch to remove edge artifacts (type: integer)"><td><hl8><span><font size="3" color="white">Patch padding</font></span></hl8></td><td><input id="patchpadding11" class="denoise_volumes_inputs" style="width:3em" value="48"></td></tr>
+			  </table>
+			</details></summary>
+			</span>
+		  <br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
+		  <code><div id="result11" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
+		  topaz denoise3d /path/to/input/volumes/*.mrc --model unet-3d-10a --device -2 --patch-size 96 --patch-padding 48 --output /path/to/output/folder/
+		  </div></span></code>
+		</div></br>
+	  </details></summary>
+	  
+	 <section><details><summary class="collapsibletools2"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Train New 3D Denoising Model</summary>
+		<div class="content">
+		  <p style=line-height:1.3>
+	      <span class="tab0"><p style=line-height:1.3>Create a command for training a 3D Topaz-Denoise model.<br><br>
+		  <strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
+		  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
+		  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
+		  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7>
+		  </p>
+		  <hr width="20%">
+		  <br><table style="height:10.8em">
+		  <tr title="First input directory for training. Must contain only .mrc files. The files in the first and second input directory for training must have the same number of files with the same filenames. Each pair of files should be a different volume of the same 3D field of view. There are several ways to obtain such volumes in cryoET, e.g. split tilt images by even/odd frames or split tilt-series by even/odd tilt images (type: string; full directory path)"><td><hl2><span><font size="3" color="white">Input folder #1</font></span></hl2></td><td><input id="a12" class="denoise_3dtraining_inputs" style="width:30em" value="/path/to/input/volumes/half1/"></td></tr>
+		  <tr title="Second input directory for training. Must contain only .mrc files. The files in the first and second input directory for training must have the same number of files with the same filenames. Each pair of files should be a different volume of the same 3D field of view. There are several ways to obtain such volumes in cryoET, e.g. split tilt images by even/odd frames or split tilt-series by even/odd tilt images (type: string; full directory path)"><td><hl2><span><font size="3" color="white">Input folder #2</font></span></hl2></td><td><input id="b12" class="denoise_3dtraining_inputs" style="width:30em" value="/path/to/input/volumes/half2/"></td></tr>
+		  <tr title="Output folder and files (type: string; full file path for output)"><td><hl2><span><font size="3" color="white">Output files</font></span></hl2></td><td><input id="output12" class="denoise_3dtraining_inputs" style="width:30em" value="/path/to/output/folder/and/files"></td></tr>
+		  <tr title="Training criteria (type: string; options are L1 (median-seeking) or L2 (mean-seeking))"><td><hl4><span><font size="3" color="white">Training criteria</font></span></hl4></td><td><input id="criteria12" class="denoise_3dtraining_inputs" style="width:3em" value="L2"></td></tr>
+		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. -2 corresponds to multi-GPU denoising. -1 corresponds to CPU denoising (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device12" class="denoise_3dtraining_inputs" style="width:3em" value="-2"></td></tr>
+		  <tr title="Number of CPU cores to use in parallel (type: integer)"><td><hl4><span><font size="3" color="white">Number of CPUs</font></span></hl4></td><td><input id="numworkers12" class="denoise_3dtraining_inputs" style="width:3em" value="1"></td></tr>
+		  </table>
+		  <br><section><details><summary class="collapsibleoptions2" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
+			<div class="content">
+			  <table style="height:18em">
+			  <tr title="L2 regularizer on the generative network (type: float)"><td><hl8><span><font size="3" color="white">Weight decay</font></span></hl8></td><td><input id="weightdecay12" class="denoise_3dtraining_inputs" style="width:3em" value="0"></td></tr>
+			  <tr title="Momentum parameter for SGD optimizer (type: float)"><td><hl8><span><font size="3" color="white">Momentum</font></span></hl8></td><td><input id="momentum12" class="denoise_3dtraining_inputs" style="width:3em" value="0.8"></td></tr>
+			  <tr title="Number of train points per tomogram (type: integer)"><td><hl8><span><font size="3" color="white"># of train points</font></span></hl8></td><td><input id="ntrain12" class="denoise_3dtraining_inputs" style="width:3em" value="1000"></td></tr>
+			  <tr title="Number of test points per tomogram (type: integer)"><td><hl8><span><font size="3" color="white"># of test points</font></span></hl8></td><td><input id="ntest12" class="denoise_3dtraining_inputs" style="width:3em" value="200"></td></tr>
+			  <tr title="Optimizer (type: string; options are adam, adagrad, or sgd)"><td><hl8><span><font size="3" color="white">Optimizer</font></span></hl8></td><td><input id="optim12" class="denoise_3dtraining_inputs" style="width:6em" value="adagrad"></td></tr>
+			  <tr title="Learning rate for the optimizer (type: float)"><td><hl8><span><font size="3" color="white">Learning rate</font></span></hl8></td><td><input id="lr12" class="denoise_3dtraining_inputs" style="width:3em" value="0.001"></td></tr>
+			  <tr title="Training tile size (type: integer)"><td><hl8><span><font size="3" color="white">Crop size</font></span></hl8></td><td><input id="crop12" class="denoise_3dtraining_inputs" style="width:3em" value="96"></td></tr>
+			  <tr title="Training batch size (type: integer)"><td><hl8><span><font size="3" color="white">Minibatch size</font></span></hl8></td><td><input id="batchsize12" class="denoise_3dtraining_inputs" style="width:3em" value="10"></td></tr>
+			  <tr title="Number of epochs during training (type: integer)"><td><hl8><span><font size="3" color="white">Number of epochs</font></span></hl8></td><td><input id="numepochs12" class="denoise_3dtraining_inputs" style="width:3em" value="100"></td></tr>
+			  <tr title="Save interval (type: integer)"><td><hl8><span><font size="3" color="white">Save interval</font></span></hl8></td><td><input id="saveinterval12" class="denoise_3dtraining_inputs" style="width:3em" value="5"></td></tr>
+			  </table>
+			</details></summary>
+			</span>
+		  <br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
+		  <code><div id="result12" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
+		  topaz denoise3d -a /path/to/input/volumes/half1/ -b /path/to/input/volumes/half2/ --optim adagrad --lr 0.001 --criteria L2 --crop 96 --batch-size 10 --weight_decay 0 --momentum 0.8 --N-train 1000 --N-test 200 --num-epochs 100 --save-interval 5 --device -2 --num-workers 1 --save-prefix /path/to/output/folder/and/files
 		  </div></span></code>
 		</div></br>
 	  </details></summary><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;"	unselectable="on" onselectstart="return false;" onmousedown="return false;"></br></br></span>
@@ -1076,7 +1205,7 @@
       </div> <!-- endof #top_panel -->
 	  <span class="tab1"><table><tr><td><span class="preprocessing_logo"></span></td><td><h2>&nbsp&nbsp&nbsp&nbsp&nbsp&nbspTopaz Image Pre-processing Command Generator</h2></td></tr></table></span>
 	  <span class="tab2"><p style=line-height:1.3>Create a command for pre-processing images (downsampling and normalization) for use in this Topaz GUI and in Topaz training.
-	  <br><br><br><br><strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
+	  <br><br><br><strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
 	  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
 	  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
 	  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7></p>
@@ -1715,7 +1844,7 @@ POSSIBILITY OF SUCH DAMAGE.
       </div> <!-- endof #top_panel -->
 	  <span class="tab1"><table><tr><td><span class="training_logo"></span></td><td><h2>&nbsp&nbsp&nbsp&nbspTopaz Training Command Generator</h2></td></tr></table></span>
 	  <span class="tab2"><p style=line-height:1.3>Create a command for training a model using particle picks.
-	  <br><br><br><br><strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
+	  <br><br><br><strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
 	  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
 	  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
 	  <hl5><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Optimizable</font></span></hl5> 
@@ -1798,7 +1927,7 @@ POSSIBILITY OF SUCH DAMAGE.
       </div> <!-- endof #top_panel -->
 	  <span class="tab1"><table><tr><td><span class="extracting_logo"></span></td><td><h2>&nbsp&nbsp&nbspTopaz Picks Extraction Command Generator</h2></td></tr></table></span>
 	  <span class="tab2"><p style=line-height:1.3>Create commands for extracting and converting particle coordinates.
-	  <br><br><br><br><strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
+	  <br><br><br><strong>Parameters:&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</strong>
 	  <hl1><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Must modify</font></span></hl1> 
 	  <hl3><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Might modify</font></span></hl3> 
 	  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7></p>
