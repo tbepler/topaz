@@ -30,7 +30,7 @@ def add_arguments(parser):
     parser.add_argument('volumes', nargs='*', help='volumes to denoise')
     parser.add_argument('-o', '--output', help='directory to save denoised volumes')
 
-    parser.add_argument('-m', '--model', default='unet-3d', help='use pretrained denoising model. accepts path to a previously saved model or one of the provided pretrained models. pretrained model options are: unet-3d (default: unet-3d)')
+    parser.add_argument('-m', '--model', default='unet-3d', help='use pretrained denoising model. accepts path to a previously saved model or one of the provided pretrained models. pretrained model options are: unet-3d, unet-3d-10a, unet-3d-20a (default: unet-3d)')
 
     ## training parameters
     parser.add_argument('-a', '--even-train-path', help='path to even training data')
@@ -535,10 +535,22 @@ def load_model(path, device, base_kernel_width=11):
     log = sys.stderr
 
     # load the model
+    pretrained = False
     if path == 'unet-3d': # load the pretrained unet model
-        name = 'unet-3d-v0.2.4.sav'
-        print('# loading pretrained model:', name, file=log)
+        name = 'unet-3d-10a-v0.2.4.sav'
         model = UDenoiseNet3D(base_width=7)
+        pretrained = True
+    elif path == 'unet-3d-10a':
+        name = 'unet-3d-10a-v0.2.4.sav'
+        model = UDenoiseNet3D(base_width=7)
+        pretrained = True
+    elif path == 'unet-3d-20a':
+        name = 'unet-3d-20a-v0.2.4.sav'
+        model = UDenoiseNet3D(base_width=7)
+        pretrained = True
+    
+    if pretrained:
+        print('# loading pretrained model:', name, file=log)
 
         import pkg_resources
         pkg = __name__
@@ -547,6 +559,7 @@ def load_model(path, device, base_kernel_width=11):
         state_dict = torch.load(f) # load the parameters
 
         model.load_state_dict(state_dict)
+
     else:
         model = torch.load(path)
         if type(model) is OrderedDict:
