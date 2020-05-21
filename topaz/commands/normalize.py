@@ -31,7 +31,7 @@ def add_arguments(parser):
     parser.add_argument('--metadata', action='store_true', help='if set, save parameter metadata for each micrograph')
 
     parser.add_argument('-d', '--device', default=-1, type=int, help='which device to use, set to -1 to force CPU. >=0 specifies GPU number (default: -1)')
-    parser.add_argument('-t', '--num-workers', type=int, default=0, help='number of parallel processes to use, 0 specifies main thread only (default: 0)')
+    parser.add_argument('-t', '--num-workers', type=int, default=0, help='number of parallel processes to use, 0 specifies main process only (default: 0)')
 
     parser.add_argument('-o', '--destdir', help='output directory')
 
