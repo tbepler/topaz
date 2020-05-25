@@ -37,6 +37,7 @@ def add_arguments(parser):
     parser.add_argument('-x', '--up-scale', type=float, default=1, help='UP-scale coordinates by this factor. output coordinates will be coord_out = (x/s)*coord. (default: 1)')
 
     parser.add_argument('--num-workers', type=int, default=0, help='number of processes to use for extracting in parallel, 0 uses main process, -1 uses all CPUs (default: 0)')
+    parser.add_argument('-j', '--num-threads', type=int, default=0, help='number of threads for pytorch, 0 uses pytorch defaults, <0 uses all cores (default: 0)')
     parser.add_argument('--batch-size', type=int, default=1, help='batch size for scoring micrographs with model (default: 1)')
 
 
@@ -196,6 +197,10 @@ def score_images(model, paths, device=-1, batch_size=1):
 
 
 def main(args):
+    # set the number of threads
+    num_threads = args.num_threads
+    from topaz.torch import set_num_threads
+    set_num_threads(num_threads)
 
     # score the images lazily with a generator
     model = args.model

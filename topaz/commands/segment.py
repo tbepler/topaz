@@ -24,6 +24,7 @@ def add_arguments(parser):
     parser.add_argument('-o', '--destdir', help='output directory')
 
     parser.add_argument('-d', '--device', default=0, type=int, help='which device to use, <0 corresponds to CPU (default: GPU if available)')
+    parser.add_argument('-j', '--num-threads', type=int, default=0, help='number of threads for pytorch, 0 uses pytorch defaults, <0 uses all cores (default: 0)')
 
     parser.add_argument('-v', '--verbose', action='store_true', help='verbose mode')
 
@@ -32,6 +33,11 @@ def add_arguments(parser):
 
 def main(args):
     verbose = args.verbose
+
+    # set the number of threads
+    num_threads = args.num_threads
+    from topaz.torch import set_num_threads
+    set_num_threads(num_threads)
 
     ## set the device
     use_cuda = topaz.cuda.set_device(args.device)

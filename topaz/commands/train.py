@@ -30,6 +30,7 @@ def add_arguments(parser):
     # set GPU and number of worker threads
     parser.add_argument('-d', '--device', default=0, type=int, help='which device to use, set to -1 to force CPU (default: 0)')
     parser.add_argument('--num-workers', default=0, type=int, help='number of worker processes for data augmentation, if set to <0, automatically uses all CPUs available (default: 0)')
+    parser.add_argument('-j', '--num-threads', type=int, default=0, help='number of threads for pytorch, 0 uses pytorch defaults, <0 uses all cores (default: 0)')
 
     # group arguments into sections
 
@@ -595,6 +596,11 @@ def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator,
 
 
 def main(args):
+    # set the number of threads
+    num_threads = args.num_threads
+    from topaz.torch import set_num_threads
+    set_num_threads(num_threads)
+
     ## initialize the model
     classifier = make_model(args)
 

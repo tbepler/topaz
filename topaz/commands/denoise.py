@@ -69,6 +69,7 @@ def add_arguments(parser):
     parser.add_argument('--num-epochs', default=100, type=int, help='number of training epochs (default: 100)') 
 
     parser.add_argument('--num-workers', default=16, type=int, help='number of threads to use for loading data during training (default: 16)')
+    parser.add_argument('-j', '--num-threads', type=int, default=0, help='number of threads for pytorch, 0 uses pytorch defaults, <0 uses all cores (default: 0)')
 
     return parser
 
@@ -305,6 +306,11 @@ def denoise_image(mic, models, lowpass=1, cutoff=0, gaus=None, inv_gaus=None, de
 
 
 def main(args):
+
+    # set the number of threads
+    num_threads = args.num_threads
+    from topaz.torch import set_num_threads
+    set_num_threads(num_threads)
 
     ## set the device
     use_cuda = topaz.cuda.set_device(args.device)

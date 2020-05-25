@@ -55,6 +55,7 @@ def add_arguments(parser):
     parser.add_argument('--save-prefix', help='path prefix to save denoising model')
 
     parser.add_argument('--num-workers', type=int, default=1, help='number of workers for dataloader (default: 1)')
+    parser.add_argument('-j', '--num-threads', type=int, default=0, help='number of threads for pytorch, 0 uses pytorch defaults, <0 uses all cores (default: 0)')
 
 
     ## denoising parameters
@@ -720,6 +721,12 @@ def denoise(model, path, outdir, patch_size=128, padding=128, batch_size=1
 
 
 def main(args):
+    # set the number of threads
+    num_threads = args.num_threads
+    from topaz.torch import set_num_threads
+    set_num_threads(num_threads)
+
+    # do denoising
     model = None
     do_train = (args.even_train_path is not None) or (args.odd_train_path is not None)
     if do_train:
