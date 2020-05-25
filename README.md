@@ -2,8 +2,9 @@
 A pipeline for particle detection in cryo-electron microscopy images using convolutional neural networks trained from positive and unlabeled examples. Topaz also includes methods for micrograph denoising using deep denoising models.
 
 ## New in v0.2.4
-- Added 3d denoising with __topaz denoise3d__
+- Added 3d denoising with __topaz denoise3d__ and two pretrained 3D denoising models
 - Added argument for setting number of threads to multithreaded commands
+- Topaz GUI update
 - Various bug fixes
 
 ## New in v0.2.3
