@@ -3,7 +3,7 @@ FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu16.04
 RUN apt-get update && apt-get install -y --no-install-recommends \ 
         build-essential \
         git \
-        curl \
+        wget \
         ca-certificates \
         && \
      rm -rf /var/lib/apt/lists/*
