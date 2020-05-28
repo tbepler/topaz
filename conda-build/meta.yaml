@@ -14,6 +14,7 @@ requirements:
         - setuptools
     run:
         - python
+        - future
         - argparse #[py26]
         - numpy>=0.11
         - pandas
