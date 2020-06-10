@@ -1,12 +1,10 @@
-{% set data = load_setup_py_data() %}
-
 package:
     name: "topaz"
-    version: {{ data.get('version') }}
+    version: {{ GIT_DESCRIBE_TAG }}
 
 source:
     git_url: https://github.com/tbepler/topaz.git
-    git_tag: master
+    git_tag: v0.2.4
 
 requirements:
     build:
@@ -19,7 +17,6 @@ requirements:
         - numpy>=0.11
         - pandas
         - scikit-learn>=0.19.0
-        - scipy>=0.17.0
         - pillow
         - pytorch>=1.0.0
         - torchvision
