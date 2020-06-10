@@ -7,6 +7,7 @@ import pandas as pd
 
 import topaz.mrc as mrc
 import topaz.utils.star as star
+from topaz.utils.image import downsample
 
 name = 'particle_stack'
 help = 'extract mrc particle stack given coordinates table'
@@ -18,7 +19,7 @@ def add_arguments(parser):
 
     parser.add_argument('--size', type=int, help='size of particle stack images')
     parser.add_argument('--threshold', type=float, default=-np.inf, help='only take particles with scores >= this value (default: -inf)')
-    parser.add_argument('--resize', default=-1, type=int, help='rescaled particle stack size (default: off)')
+    parser.add_argument('--resize', default=-1, type=int, help='rescaled particle stack size. downsamples particle images from size to resize pixels. (default: off)')
 
     parser.add_argument('--image-ext', default='.mrc', help='image file extension (default=.mrc)')
 
@@ -156,7 +157,7 @@ def main(args):
             micrograph_metadata = star.parse_star(f)
         metadata = pd.merge(metadata, micrograph_metadata, on='MicrographName', how='left')
 
-    if resize != size:
+    if resize != size and 'DetectorPixelSize' in metadata:
         # rescale the detector pixel size
         pix = metadata['DetectorPixelSize'].values.astype(float)
         metadata['DetectorPixelSize'] = pix*(size/resize)
