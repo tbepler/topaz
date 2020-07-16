@@ -1,8 +1,8 @@
 # Topaz
-A pipeline for particle detection in cryo-electron microscopy images using convolutional neural networks trained from positive and unlabeled examples. Topaz also includes methods for micrograph denoising using deep denoising models.
+A pipeline for particle detection in cryo-electron microscopy images using convolutional neural networks trained from positive and unlabeled examples. Topaz also includes methods for micrograph and tomogram denoising using deep denoising models.
 
 ## New in v0.2.4
-- Added 3d denoising with __topaz denoise3d__ and two pretrained 3D denoising models
+- Added 3D denoising with __topaz denoise3d__ and two pretrained 3D denoising models
 - Added argument for setting number of threads to multithreaded commands
 - Topaz GUI update
 - Various bug fixes
@@ -12,10 +12,10 @@ A pipeline for particle detection in cryo-electron microscopy images using convo
 - Topaz now includes pretrained particle picking models
 - Updated tutorials
 - Updated GUI to include denoising commands
-- Denoising paper preprint is available [here](https://www.biorxiv.org/content/10.1101/838920v1)
+- Denoising paper preprint is available [here](https://doi.org/10.1101/838920)
 
 ## New in v0.2.2
-- The topaz publication is out [here](https://doi.org/10.1038/s41592-019-0575-8)
+- The Topaz publication is out [here](https://doi.org/10.1038/s41592-019-0575-8)
 - Bug fixes and GUI update
 
 ## New in v0.2.0
@@ -473,14 +473,30 @@ This sets how many pixels around each particle coordinate are treated as positiv
 
 </p></details>
 
-A user guide is also built into the Topaz GUI.
+A user guide is also built into the [Topaz GUI](https://emgweb.nysbc.org/topaz.html).
 
-# Reference
+# Integration
 
-Bepler, T., Morin, A., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2019). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs. 
-Nature Methods. https://doi.org/10.1038/s41592-019-0575-8
+Topaz has been integrated into RELION, CryoSPARC, Scipion, and Appion. You can find information and tutorials here:
 
-### Bibtex
+RELION: https://github.com/tbepler/topaz/tree/master/relion_run_topaz
+
+CryoSPARC: https://guide.cryosparc.com/processing-data/all-job-types-in-cryosparc/deep-picking/deep-picking
+
+Scipion: https://github.com/scipion-em/scipion-em-topaz
+
+# References
+
+### Topaz
+
+Bepler, T., Morin, A., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2019). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs. Nature Methods. https://doi.org/10.1038/s41592-019-0575-8
+
+### Topaz-Denoise
+
+Bepler, T., Kelley, K., Noble, A.J., Berger, B. (2020). Topaz-Denoise: general deep denoising models for cryoEM and cryoET. bioRxiv. https://doi.org/10.1101/838920
+
+<details><summary>Bibtex</summary><p>
+
 ```
 @Article{Bepler2019,
 author={Bepler, Tristan
@@ -497,15 +513,9 @@ issn={1548-7105},
 doi={10.1038/s41592-019-0575-8},
 url={https://doi.org/10.1038/s41592-019-0575-8}
 }
-
-
 ```
 
-
-### Topaz denoise
-
-Bepler, T., Noble, A.J., Berger, B. (2019). Topaz-Denoise: general deep denoising models for cryoEM. bioRxiv. https://www.biorxiv.org/content/10.1101/838920v1
-
+</p></details>
 
 # Authors
 
