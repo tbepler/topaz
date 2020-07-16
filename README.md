@@ -477,7 +477,7 @@ A user guide is also built into the [Topaz GUI](https://emgweb.nysbc.org/topaz.h
 
 # Integration
 
-Topaz has been integrated into RELION, CryoSPARC, Scipion, and Appion. You can find information and tutorials here:
+Topaz also integrates with RELION, CryoSPARC, Scipion, and Appion. You can find information and tutorials here:
 
 RELION: https://github.com/tbepler/topaz/tree/master/relion_run_topaz
 
