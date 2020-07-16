@@ -671,11 +671,27 @@
 	    font-size: 22px;
 	  }
 
+	  .collapsibletools3 {
+	    background-color: #fafafa;
+	    cursor: pointer;
+	    transition: 0.1s;
+	    padding: 16px;
+	    width: 35%;
+	    border: none;
+	    text-align: left;
+	    outline: none;
+	    font-size: 22px;
+	  }
+
 	  .active, .collapsibletools:hover {
 	    background-color: #f2f2f2;
 	  }
 
 	  .active, .collapsibletools2:hover {
+	    background-color: #f2f2f2;
+	  }
+
+	  .active, .collapsibletools3:hover {
 	    background-color: #f2f2f2;
 	  }
 
@@ -985,7 +1001,7 @@
 	  <table style="text-align:center; width:50%; margin: 0px auto; ">
 	  <tr><div style="display:block; margin: 0px auto;"><a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo" style="display:block; margin: 0px auto;"></span></a></div></tr><br>
 	  <tr><div style="text-align:center; margin: 0px auto;"><h2>Welcome!</h2></div></tr>
-	  <tr><p style="line-height:1.3; text-align:center; margin: 0px auto;">This GUI will allow you to pick training particles and make Topaz commands. Here is the general workflow:</p></tr>
+	  <tr><p style="line-height:1.3; text-align:center; margin: 0px auto;">This GUI allows you to pick particles & make Topaz commands (<a href="https://www.youtube.com/watch?v=FnCnsT3GIC4" target="_blank">watch Topaz presentation</a>). General workflow:</p></tr>
 		<tr><td><div class="workflow"><button class="tablinks" onclick="openTab(event, 'Denoise')">Denoise</button></div></td><td></td>
 		<td><div class="workflow"><button class="tablinks" onclick="openTab(event, 'Preprocessing')">Pre-process</button></div></td><td></td>
 		<td><div class="workflow"><button class="tablinks" onclick="openTab(event, 'Picking')">Pick | Analyze</button></div></td><td></td>
@@ -1010,7 +1026,7 @@
 	  </table>
 	  <div style="line-height:1.3; width: 55%; margin: 0px auto;">
 	  <br><center><p><i><strong>Citations: </strong>Bepler, T., Morin, A., Rapp, M., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2019). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs.<a href="https://doi.org/10.1038/s41592-019-0575-8" target="_blank"> Nature Methods</a>
-	  <br><br>Bepler, T., Kelley, K., Noble, A.J., Berger, B. (2020). Topaz-Denoise: general deep denoising models for cryoEM.<a href="https://doi.org/10.1101/838920" target="_blank"> bioRxiv</a></i></center>
+	  <br><br>Bepler, T., Kelley, K., Noble, A.J., Berger, B. (2020). Topaz-Denoise: general deep denoising models for cryoEM and cryoET.<a href="https://doi.org/10.1101/838920" target="_blank"> bioRxiv</a></i></center>
 	  </div>
 	</div>
 
@@ -1039,7 +1055,7 @@
 		  <br><table style="height:9.1em">
 		  <tr title="Input micrographs for denoising (type: string; full path 𝘸𝘪𝘵𝘩 𝘸𝘪𝘭𝘥𝘤𝘢𝘳𝘥 for *.mrc files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input7" class="denoise_micrographs_inputs" style="width:30em" value="/path/to/input/images/*.mrc"></td></tr>
 		  <tr title="Output directory. Different from the input firectory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output7" class="denoise_micrographs_inputs" style="width:30em" value="/path/to/output/folder/"></td></tr>
-		  <tr title="Denoising model to use on micrographs (type: string; use one of these {unet, unet-small, fcnn, affine, unet-v0.2.1} to use the pretrained models or a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pretrained models were trained on hundreds of datasets of K2 micrograph frame sums of various particles."><td><hl4><span><font size="3" color="white">Model</font></span></hl4></td><td><input id="model7" class="denoise_micrographs_inputs" style="width:30em" value="unet"></td></tr>
+		  <tr title="Denoising model(s) to use on micrographs. You can use multiple models by typing their names with spaces between; images will be denoised with each model, then averaged together (type: string; use one or more of these {unet, unet-small, fcnn, affine, unet-v0.2.1} to use the pretrained models or a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pretrained models were trained on hundreds of datasets of K2 micrograph frame sums of various particles."><td><hl4><span><font size="3" color="white">Model(s)</font></span></hl4></td><td><input id="model7" class="denoise_micrographs_inputs" style="width:30em" value="unet"></td></tr>
 		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU denoising (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device7" class="denoise_micrographs_inputs" style="width:3em" value="0"></td></tr>
 		  <tr title="Output format of denoised images (type: string; options: mrc, png, tiff, jpg)"><td><hl4><span><font size="3" color="white">Format</font></span></hl4></td><td><input id="format7" class="denoise_micrographs_inputs" style="width:3em" value="mrc"></td></tr>
 		  </table>
@@ -1071,7 +1087,7 @@
 		  <br><table style="height:9.1em">
 		  <tr title="Input micrographs for denoising (type: string; full path to a single mrc/mrcs stack)"><td><hl2><span><font size="3" color="white">Input stack</font></span></hl2></td><td><input id="input8" class="denoise_stack_inputs" style="width:30em" value="/path/to/particle/stack.mrcs"></td></tr>
 		  <tr title="Output stack (type: string; full path)"><td><hl2><span><font size="3" color="white">Output stack</font></span></hl2></td><td><input id="output8" class="denoise_stack_inputs" style="width:30em" value="/path/to/denoised/stack.mrcs"></td></tr>
-		  <tr title="Denoising model to use on the particle stack (type: string; use one of these {unet, unet-small, fcnn, affine, unet-v0.2.1} to use the pretrained models or a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pretrained models were trained on hundreds of datasets of K2 micrograph frames of various particles."><td><hl4><span><font size="3" color="white">Model</font></span></hl4></td><td><input id="model8" class="denoise_stack_inputs" style="width:30em" value="unet"></td></tr>
+		  <tr title="Denoising model(s) to use on the particle stack. You can use multiple models by typing their names with spaces between; images will be denoised with each model, then averaged together (type: string; use one or more of these {unet, unet-small, fcnn, affine, unet-v0.2.1} to use the pretrained models or a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pretrained models were trained on hundreds of datasets of K2 micrograph frames of various particles."><td><hl4><span><font size="3" color="white">Model(s)</font></span></hl4></td><td><input id="model8" class="denoise_stack_inputs" style="width:30em" value="unet"></td></tr>
 		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU denoising (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device8" class="denoise_stack_inputs" style="width:3em" value="0"></td></tr>
 		  <tr title="Output format of denoised images in stack (type: string; options: mrc, png, tiff, jpg. mrc is highly recommended)"><td><hl8><span><font size="3" color="white">Format</font></span></hl8></td><td><input id="format8" class="denoise_stack_inputs" style="width:3em" value="mrc"></td></tr>
 		  </table></span>
@@ -1755,7 +1771,7 @@
           <div style="text-align:center">
              <table style="font-family:mono; font-size:0.8em;text-align:center;">
 			 <tr><td><a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo_medium"></span></a></td><td>&nbsp&nbsp&nbsp&nbsp<a href="http://www.robots.ox.ac.uk/~vgg/software/via/" target="_blank"><span class="via_logo"></span></a></td></tr>
-			 <tr><td><a href="https://github.com/tbepler/topaz#topaz" target="_blank">Topaz Version 0.2.4</a></td><td><a href="https://gitlab.com/vgg/via/blob/master/CHANGELOG" target="_blank">VIA Version 2.0.7 (modified)</a></td></tr>
+			 <tr><td><a href="https://github.com/tbepler/topaz#topaz" target="_blank">Topaz Version 0.2.5</a></td><td><a href="https://gitlab.com/vgg/via/blob/master/CHANGELOG" target="_blank">VIA Version 2.0.7 (modified)</a></td></tr>
 			 </table>
           </div>
 
@@ -2084,7 +2100,15 @@ POSSIBILITY OF SUCH DAMAGE.
 		  <code><div id="result6" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
 		  topaz particle_stack /path/to/Topaz/coordinate/file.txt --image-root /path/to/full/micrographs/ --size 192 --threshold -9999 --resize -1 --image-ext .mrc --output /path/to/output/particles.mrcs
 		  </div></span></code>
-		</div>
+		</div></br>
+	  </details></summary>
+	  
+	  <section><details><summary class="collapsibletools3"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Topaz in RELION, CryoSPARC, & Scipion</summary>
+		<div class="content">
+		  <p style=line-height:1.3>
+	      <span class="tab0"><p style=line-height:1.3>Topaz picking and denoising is integrated into both RELION, CryoSPARC, and Scipion!<br><br><li>RELION-Topaz tutorial is here: <a href="https://github.com/tbepler/topaz/tree/master/relion_run_topaz" target="_blank">https://github.com/tbepler/topaz/tree/master/relion_run_topaz</a></li><br><br><li>CryoSPARC-Topaz tutorial is here: <a href="https://guide.cryosparc.com/processing-data/all-job-types-in-cryosparc/deep-picking/deep-picking" target="_blank">https://guide.cryosparc.com/processing-data/all-job-types-in-cryosparc/deep-picking/deep-picking</a></li><br><br><li>Scipion-Topaz information is here: <a href="https://github.com/scipion-em/scipion-em-topaz" target="_blank">https://github.com/scipion-em/scipion-em-topaz</a></li>
+		  </span>
+		</div></br>
 	  </details></summary><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;"	unselectable="on" onselectstart="return false;" onmousedown="return false;"></br></br></span>
 	</div>
 
