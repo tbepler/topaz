@@ -38,7 +38,7 @@ setup(
         'pandas',
         'scikit-learn>=0.19.0',
         'scipy>=0.17.0',
-        'pillow>=4.2.1',
+        'pillow>=6.2.0',
         'future',
     ],
 )

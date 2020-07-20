@@ -157,7 +157,7 @@ Tested with python 3.6 and 2.7
 
 - pytorch (>= 1.0.0)
 - torchvision
-- pillow (>= 4.2.1)
+- pillow (>= 6.2.0)
 - numpy (>= 1.11)
 - pandas (>= 0.20.3) 
 - scipy (>= 0.19.1)
