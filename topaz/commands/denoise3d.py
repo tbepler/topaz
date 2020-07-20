@@ -197,6 +197,7 @@ class TrainingDataset3D(torch.utils.data.Dataset):
         with open(path, 'rb') as f:
             content = f.read()
         tomo,_,_ = mrc.parse(content)
+        tomo = tomo.astype(np.float32)
         return tomo
     
     def get_train_test_idxs(self,dim):
@@ -660,6 +661,7 @@ def denoise(model, path, outdir, patch_size=128, padding=128, batch_size=1
     with open(path, 'rb') as f:
         content = f.read()
     tomo,header,_ = mrc.parse(content)
+    tomo = tomo.astype(np.float32)
     name = os.path.basename(path)
 
     mu = tomo.mean()
