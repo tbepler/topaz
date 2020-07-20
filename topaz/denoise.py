@@ -179,6 +179,14 @@ def gaussian_filter(sigma, s=11):
     return f
 
 
+def gaussian_filter_3d(sigma, s=11):
+    dim = s//2
+    xx,yy,zz = np.meshgrid(np.arange(-dim, dim+1), np.arange(-dim, dim+1), np.arange(-dim,dim+1))
+    d = xx**2 + yy**2 + zz**2
+    f = np.exp(-0.5*d/sigma**2)
+    return f
+
+
 def inverse_filter(w):
     F = np.fft.rfft2(np.fft.ifftshift(w))
     F = np.fft.fftshift(np.fft.irfft2(1/F, s=w.shape))
@@ -318,6 +326,21 @@ class GaussianDenoise(nn.Module):
         f /= f.sum()
 
         self.filter = nn.Conv2d(1, 1, width, padding=width//2)
+        self.filter.weight.data[:] = torch.from_numpy(f).float()
+        self.filter.bias.data.zero_()
+
+    def forward(self, x):
+        return self.filter(x)
+
+
+class GaussianDenoise3d(nn.Module):
+    def __init__(self, sigma, scale=5):
+        super(GaussianDenoise3d, self).__init__()
+        width = 1 + 2*int(np.ceil(sigma*scale))
+        f = gaussian_filter_3d(sigma, s=width)
+        f /= f.sum()
+
+        self.filter = nn.Conv3d(1, 1, width, padding=width//2)
         self.filter.weight.data[:] = torch.from_numpy(f).float()
         self.filter.bias.data.zero_()
 
@@ -1355,6 +1378,23 @@ def gaussian(x, sigma=1, scale=5, use_cuda=False):
     """
 
     f = GaussianDenoise(sigma, scale=scale)
+    if use_cuda:
+        f.cuda()
+
+    with torch.no_grad():
+        x = torch.from_numpy(x).unsqueeze(0).unsqueeze(0)
+        if use_cuda:
+            x = x.cuda()
+        y = f(x).squeeze().cpu().numpy()
+    return y
+
+
+def gaussian3d(x, sigma=1, scale=5, use_cuda=False):
+    """
+    Apply Gaussian filter with sigma to volume. Truncates the kernel at scale times sigma pixels
+    """
+
+    f = GaussianDenoise3d(sigma, scale=scale)
     if use_cuda:
         f.cuda()
 
