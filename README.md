@@ -1,6 +1,13 @@
 # Topaz
 A pipeline for particle detection in cryo-electron microscopy images using convolutional neural networks trained from positive and unlabeled examples. Topaz also includes methods for micrograph and tomogram denoising using deep denoising models.
 
+## New in v0.2.5
+- Added Relion integration scripts
+- Added Gaussian filter option for after 3D denoising
+- Added info on Topaz Workshops
+- Topaz GUI update
+- Various bug fixes
+
 ## New in v0.2.4
 - Added 3D denoising with __topaz denoise3d__ and two pretrained 3D denoising models
 - Added argument for setting number of threads to multithreaded commands
@@ -530,6 +537,12 @@ url={https://doi.org/10.1038/s41592-019-0575-8}
   <img src="images/anoble.png" width="120">
   
 </p></details>
+
+# Topaz Workshop
+
+To request a Topaz Workshop for academic or non-academic purposes, send a request to:
+
+*<alexjnoble [at] gmail [dot] com>* & *<tbepler [at] gmail [dot] com>*
 
 # License
 
