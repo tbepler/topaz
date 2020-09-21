@@ -147,7 +147,7 @@
 		$('.extracting_inputs').each(function() {
 			$(this).on('keyup', function() {
 				var input4 = $('#input4').val() == '' ? '/path/to/preprocessed/images/*.mrc' : $('#input4').val();
-				var model4 = $('#model4').val() == '' ? '/path/to/model_epoch##.sav' : $('#model4').val();
+				var model4 = $('#model4').val() == '' ? 'resnet16_u64' : $('#model4').val();
 				var radius4 = $('#radius4').val() == '' ? '8' : $('#radius4').val();
 				var threshold4 = $('#threshold4').val() == '' ? '-6' : $('#threshold4').val();
 				var upscale4 = $('#upscale4').val() == '' ? '1' : $('#upscale4').val();
@@ -676,7 +676,7 @@
 	    cursor: pointer;
 	    transition: 0.1s;
 	    padding: 16px;
-	    width: 35%;
+	    width: 40%;
 	    border: none;
 	    text-align: left;
 	    outline: none;
@@ -998,7 +998,7 @@
 		</ul>
         </div> <!-- end of menubar -->
       </div> <!-- endof #top_panel -->
-	  <table style="text-align:center; width:50%; margin: 0px auto; ">
+	  <table style="text-align:center; width:53%; margin: 0px auto; ">
 	  <tr><div style="display:block; margin: 0px auto;"><a href="https://github.com/tbepler/topaz/" target="_blank"><span class="topaz_logo" style="display:block; margin: 0px auto;"></span></a></div></tr><br>
 	  <tr><div style="text-align:center; margin: 0px auto;"><h2>Welcome!</h2></div></tr>
 	  <tr><p style="line-height:1.3; text-align:center; margin: 0px auto;">This GUI allows you to pick particles & make Topaz commands (<a href="https://www.youtube.com/watch?v=FnCnsT3GIC4" target="_blank">watch Topaz presentation</a>). General workflow:</p></tr>
@@ -1024,8 +1024,9 @@
 		<td><font size="4px">Extract particle<br>coordinates</font></td></td><td>
 		</tr>
 	  </table>
-	  <div style="line-height:1.3; width: 55%; margin: 0px auto;">
-	  <br><center><p><i><strong>Citations: </strong>Bepler, T., Morin, A., Rapp, M., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2019). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs.<a href="https://doi.org/10.1038/s41592-019-0575-8" target="_blank"> Nature Methods</a>
+	  <div style="line-height:1.3; width: 62%; margin: 0px auto;">
+	  <br><center><strong>Note: </strong>To used pre-trained picking models, first Pre-process then Extract using a pre-trained model (don't Pick or Train).</center>
+	  <center><p><i><strong>Citations: </strong>Bepler, T., Morin, A., Rapp, M., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2019). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs.<a href="https://doi.org/10.1038/s41592-019-0575-8" target="_blank"> Nature Methods</a>
 	  <br><br>Bepler, T., Kelley, K., Noble, A.J., Berger, B. (2020). Topaz-Denoise: general deep denoising models for cryoEM and cryoET.<a href="https://doi.org/10.1101/838920" target="_blank"> bioRxiv</a></i></center>
 	  </div>
 	</div>
@@ -1055,7 +1056,7 @@
 		  <br><table style="height:9.1em">
 		  <tr title="Input micrographs for denoising (type: string; full path 𝘸𝘪𝘵𝘩 𝘸𝘪𝘭𝘥𝘤𝘢𝘳𝘥 for *.mrc files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input7" class="denoise_micrographs_inputs" style="width:30em" value="/path/to/input/images/*.mrc"></td></tr>
 		  <tr title="Output directory. Different from the input firectory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output7" class="denoise_micrographs_inputs" style="width:30em" value="/path/to/output/folder/"></td></tr>
-		  <tr title="Denoising model(s) to use on micrographs. You can use multiple models by typing their names with spaces between; images will be denoised with each model, then averaged together (type: string; use one or more of these {unet, unet-small, fcnn, affine, unet-v0.2.1} to use the pretrained models or a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pretrained models were trained on hundreds of datasets of K2 micrograph frame sums of various particles."><td><hl4><span><font size="3" color="white">Model(s)</font></span></hl4></td><td><input id="model7" class="denoise_micrographs_inputs" style="width:30em" value="unet"></td></tr>
+		  <tr title="Denoising model(s) to use on micrographs. You can use multiple models by typing their names with spaces between; images will be denoised with each model, then averaged together (type: string; use one or more of these pre-trained models {unet, unet-small, fcnn, affine, unet-v0.2.1} or provide a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pre-trained models were trained on hundreds of datasets of K2 micrograph frame sums of various particles."><td><hl4><span><font size="3" color="white">Model(s)</font></span></hl4></td><td><input id="model7" class="denoise_micrographs_inputs" style="width:30em" value="unet"></td></tr>
 		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU denoising (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device7" class="denoise_micrographs_inputs" style="width:3em" value="0"></td></tr>
 		  <tr title="Output format of denoised images (type: string; options: mrc, png, tiff, jpg)"><td><hl4><span><font size="3" color="white">Format</font></span></hl4></td><td><input id="format7" class="denoise_micrographs_inputs" style="width:3em" value="mrc"></td></tr>
 		  </table>
@@ -1087,7 +1088,7 @@
 		  <br><table style="height:9.1em">
 		  <tr title="Input micrographs for denoising (type: string; full path to a single mrc/mrcs stack)"><td><hl2><span><font size="3" color="white">Input stack</font></span></hl2></td><td><input id="input8" class="denoise_stack_inputs" style="width:30em" value="/path/to/particle/stack.mrcs"></td></tr>
 		  <tr title="Output stack (type: string; full path)"><td><hl2><span><font size="3" color="white">Output stack</font></span></hl2></td><td><input id="output8" class="denoise_stack_inputs" style="width:30em" value="/path/to/denoised/stack.mrcs"></td></tr>
-		  <tr title="Denoising model(s) to use on the particle stack. You can use multiple models by typing their names with spaces between; images will be denoised with each model, then averaged together (type: string; use one or more of these {unet, unet-small, fcnn, affine, unet-v0.2.1} to use the pretrained models or a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pretrained models were trained on hundreds of datasets of K2 micrograph frames of various particles."><td><hl4><span><font size="3" color="white">Model(s)</font></span></hl4></td><td><input id="model8" class="denoise_stack_inputs" style="width:30em" value="unet"></td></tr>
+		  <tr title="Denoising model(s) to use on the particle stack. You can use multiple models by typing their names with spaces between; images will be denoised with each model, then averaged together (type: string; use one or more of these pre-trained models {unet, unet-small, fcnn, affine, unet-v0.2.1} or provide a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pre-trained models were trained on hundreds of datasets of K2 micrograph frames of various particles."><td><hl4><span><font size="3" color="white">Model(s)</font></span></hl4></td><td><input id="model8" class="denoise_stack_inputs" style="width:30em" value="unet"></td></tr>
 		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. Negative numbers correspond to CPU denoising (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device8" class="denoise_stack_inputs" style="width:3em" value="0"></td></tr>
 		  <tr title="Output format of denoised images in stack (type: string; options: mrc, png, tiff, jpg. mrc is highly recommended)"><td><hl8><span><font size="3" color="white">Format</font></span></hl8></td><td><input id="format8" class="denoise_stack_inputs" style="width:3em" value="mrc"></td></tr>
 		  </table></span>
@@ -1151,7 +1152,7 @@
 		  <br><table style="height:7.2em">
 		  <tr title="Input volumes for denoising (type: string; full path to either a single .mrc/.rec file or multiple .mrc/.rec files using the wildcard *; i.e. *.mrc)"><td><hl2><span><font size="3" color="white">Input volumes</font></span></hl2></td><td><input id="input11" class="denoise_volumes_inputs" style="width:30em" value="/path/to/input/volumes/*.mrc"></td></tr>
 		  <tr title="Output directory. Different from the input firectory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output11" class="denoise_volumes_inputs" style="width:30em" value="/path/to/output/folder/"></td></tr>
-		  <tr title="Denoising model to use on 3D volumes (type: string; use one of these {unet-3d-10a, unet-3d-20a} to use the pretrained models or a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pretrained models were trained on 32 cellular/reconstituted cryoET tomograms of K2 binned by 2 or 4 tilt-series. The unet-3d-10a model was trained on binned by 2 tomograms with an average pixelsize of 10 angstroms, while the unet-3d-20a model was trained on the same tomograms binned by 4 with an average pixelsize of 20 angstroms."><td><hl4><span><font size="3" color="white">Model</font></span></hl4></td><td><input id="model11" class="denoise_volumes_inputs" style="width:30em" value="unet-3d-10a"></td></tr>
+		  <tr title="Denoising model to use on 3D volumes (type: string; use one of these pre-trained models {unet-3d-10a, unet-3d-20a} or provide a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pre-trained models were trained on 32 cellular/reconstituted cryoET tomograms of K2 binned by 2 or 4 tilt-series. The unet-3d-10a model was trained on binned by 2 tomograms with an average pixelsize of 10 angstroms, while the unet-3d-20a model was trained on the same tomograms binned by 4 with an average pixelsize of 20 angstroms."><td><hl4><span><font size="3" color="white">Model</font></span></hl4></td><td><input id="model11" class="denoise_volumes_inputs" style="width:30em" value="unet-3d-10a"></td></tr>
 		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. -2 corresponds to multi-GPU denoising. -1 corresponds to CPU denoising (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device11" class="denoise_volumes_inputs" style="width:3em" value="-2"></td></tr>
 		  </table>
 		  <br><section><details><summary class="collapsibleoptions2" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
@@ -1180,8 +1181,8 @@
 		  </p>
 		  <hr width="20%">
 		  <br><table style="height:10.8em">
-		  <tr title="First input directory for training. Must contain only .mrc files. The files in the first and second input directory for training must have the same number of files with the same filenames. Each pair of files should be a different volume of the same 3D field of view. There are several ways to obtain such volumes in cryoET, e.g. split tilt images by even/odd frames or split tilt-series by even/odd tilt images (type: string; full directory path)"><td><hl2><span><font size="3" color="white">Input folder #1</font></span></hl2></td><td><input id="a12" class="denoise_3dtraining_inputs" style="width:30em" value="/path/to/input/volumes/half1/"></td></tr>
-		  <tr title="Second input directory for training. Must contain only .mrc files. The files in the first and second input directory for training must have the same number of files with the same filenames. Each pair of files should be a different volume of the same 3D field of view. There are several ways to obtain such volumes in cryoET, e.g. split tilt images by even/odd frames or split tilt-series by even/odd tilt images (type: string; full directory path)"><td><hl2><span><font size="3" color="white">Input folder #2</font></span></hl2></td><td><input id="b12" class="denoise_3dtraining_inputs" style="width:30em" value="/path/to/input/volumes/half2/"></td></tr>
+		  <tr title="First input directory for training. Must contain only .mrc files. The files in the first and second input directory for training must have the same number of files with the same filenames. Each pair of files should be a different volume of the same 3D field of view. (type: string; full directory path)&#013;&#013;There are several ways to obtain such volumes in cryoET, e.g. split tilt images by even/odd frames or split tilt-series by even/odd tilt images.&#013;&#013;&#013;You can also train a EM map denoising model by first training on even/odd maps generated during refinement, then denoising the final, unsharpened map."><td><hl2><span><font size="3" color="white">Input folder #1</font></span></hl2></td><td><input id="a12" class="denoise_3dtraining_inputs" style="width:30em" value="/path/to/input/volumes/half1/"></td></tr>
+		  <tr title="Second input directory for training. Must contain only .mrc files. The files in the first and second input directory for training must have the same number of files with the same filenames. Each pair of files should be a different volume of the same 3D field of view. (type: string; full directory path)&#013;&#013;There are several ways to obtain such volumes in cryoET, e.g. split tilt images by even/odd frames or split tilt-series by even/odd tilt images.&#013;&#013;&#013;You can also train a EM map denoising model by first training on even/odd maps generated during refinement, then denoising the final, unsharpened map."><td><hl2><span><font size="3" color="white">Input folder #2</font></span></hl2></td><td><input id="b12" class="denoise_3dtraining_inputs" style="width:30em" value="/path/to/input/volumes/half2/"></td></tr>
 		  <tr title="Output folder and files (type: string; full file path for output)"><td><hl2><span><font size="3" color="white">Output files</font></span></hl2></td><td><input id="output12" class="denoise_3dtraining_inputs" style="width:30em" value="/path/to/output/folder/and/files"></td></tr>
 		  <tr title="Training criteria (type: string; options are L1 (median-seeking) or L2 (mean-seeking))"><td><hl4><span><font size="3" color="white">Training criteria</font></span></hl4></td><td><input id="criteria12" class="denoise_3dtraining_inputs" style="width:3em" value="L2"></td></tr>
 		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. -2 corresponds to multi-GPU denoising. -1 corresponds to CPU denoising (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device12" class="denoise_3dtraining_inputs" style="width:3em" value="-2"></td></tr>
@@ -1734,7 +1735,7 @@
                     <li>To zoom in/out, either press Ctrl and scroll your mouse wheel on an image or press <span class="key">+</span> or <span class="key">-</span> (equal <span class="key">=</span> will reset the zoom).</li>
                     <li>To delete a misplaced point, click the point again and press <span class="key">d</span>.</li>
                     <li>To adjust a point's location, click the point again and either use the arrow keys on your keyboard or click-and-drag to move it.</li>
-                    <li><b>Note</b>: Topaz works best if you identify 500+ particles representing all orientations of the particle and if you pick across several images. More training particles and views means more accurate Topaz-trained picks.</li>
+                    <li><b>Note</b>: Topaz works best if you identify 500+ particles representing all orientations of the particle and if you pick across several representative micrographs. More training particles and views means more accurate Topaz-trained picks.</li>
                     <li><b>Note</b>: The radius of the displayed pick is 5 pixels in un-zoomed images.</li>
                   </ul>
                 </li>
@@ -1779,7 +1780,7 @@
           <p>Topaz GUI uses VGG Image Annotator (VIA), which is an image annotation tool that can be used to define regions in an image and create textual descriptions of those regions. VIA is an <a href="https://gitlab.com/vgg/via/" target="_blank">open source project</a> developed at the <a href="http://www.robots.ox.ac.uk/~vgg/" target="_blank">Visual Geometry Group</a> and released under the BSD-2 clause <a href="https://gitlab.com/vgg/via/blob/master/LICENSE" target="_blank">license</a>.</p>
           <p>Here is a list of some salient features of the Topaz GUI version of VIA:
             <ul>
-              <li>based solely on HTML, CSS and Javascript</li>
+              <li>based solely on HTML, CSS, and Javascript</li>
               <li>can be used off-line (full application in a single HTML file that is &lt; 0.5MB)</li>
               <li>only requires a modern web browser (tested on Chrome, Firefox, Edge, and Safari; Note: Some features look/work differently in different browsers; Chrome is recommended)</li>
               <li>import/export particle picks in csv file format</li>
@@ -1950,7 +1951,7 @@ POSSIBILITY OF SUCH DAMAGE.
 	  <hr width="20%">
 	  <br><table style="height:12.7em">
 	  <tr title="Input micrographs for extracting (type: string; full path 𝘸𝘪𝘵𝘩 𝘸𝘪𝘭𝘥𝘤𝘢𝘳𝘥 for *.mrc/*.tiff/*.png files)"><td><hl2><span><font size="3" color="white">Input micrographs</font></span></hl2></td><td><input id="input4" class="extracting_inputs" style="width:30em" value="/path/to/preprocessed/images/*.mrc"></td></tr>
-	  <tr title="Path to network model from training (type: string; full path)"><td><hl2><span><font size="3" color="white">Model</font></span></hl2></td><td><input id="model4" class="extracting_inputs" style="width:30em" value="/path/to/model_epoch##.sav"></td></tr>
+	  <tr title="Picking model to use on micrographs (type: string; use one of these pre-trained models {resnet8_u32, resnet8_u64, resnet16_u32, resnet16_u64} or provide a full path to a trained .sav file)"><td><hl2><span><font size="3" color="white">Model</font></span></hl2></td><td><input id="model4" class="extracting_inputs" style="width:30em" value="resnet16_u64"></td></tr>
 	  <tr title="Basename for output files. A .star, Topaz GUI .csv, and a Topaz .txt file will be written (type: string; full file path without extension)"><td><hl2><span><font size="3" color="white">Output filenames</font></span></hl2></td><td><input id="output4" class="extracting_inputs" style="width:30em" value="/path/to/extracted/particles"></td></tr>
 	  <tr title="Pixel radius of the region to extract (type: integer)&#013;&#013;This will prevent extracting particle coordinates closer than the value of two particle radii."><td><hl4><span><font size="3" color="white">Particle radius</font></span></hl4></td><td><input id="radius4" class="extracting_inputs" style="width:3em" value="8"></td></tr>
 	  <tr title="Upscale the pick coordinates by this factor. '1' means no scaling (type: integer)"><td><hl4><span><font size="3" color="white">Upscale picks</font></span></hl4></td><td><input id="upscale4" class="extracting_inputs" style="width:3em" value="1"></td></tr>
@@ -1970,7 +1971,7 @@ POSSIBILITY OF SUCH DAMAGE.
 		</span>
 	  <br/><br/><strong>Commands:</strong><br/><hr width="20%"><br>
 	  <code><span class="tab0"><div id="result4" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
-	  topaz extract /path/to/preprocessed/images/*.mrc --model /path/to/model_epoch##.sav --radius 8 --threshold -6 --up-scale 1 --batch-size 1 --min-radius 5 --max-radius 100 --step-radius 5 --num-workers -1 --device 0 --output /path/to/extracted/particles.txt<br><br>
+	  topaz extract /path/to/preprocessed/images/*.mrc --model resnet16_u64 --radius 8 --threshold -6 --up-scale 1 --batch-size 1 --min-radius 5 --max-radius 100 --step-radius 5 --num-workers -1 --device 0 --output /path/to/extracted/particles.txt<br><br>
 	  topaz convert /path/to/extracted/particles.txt --verbose 1 --output /path/to/extracted/particles.star<br><br>
 	  topaz convert /path/to/extracted/particles.txt --verbose 1 --output /path/to/extracted/particles.csv
 	  </div></span></code><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;"	unselectable="on" onselectstart="return false;" onmousedown="return false;"></br></br></br></span>
@@ -2103,10 +2104,18 @@ POSSIBILITY OF SUCH DAMAGE.
 		</div></br>
 	  </details></summary>
 	  
-	  <section><details><summary class="collapsibletools3"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Topaz in RELION, CryoSPARC, & Scipion</summary>
+	  <section><details><summary class="collapsibletools3"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Topaz in RELION, CryoSPARC, Scipion, & Appion</summary>
 		<div class="content">
 		  <p style=line-height:1.3>
-	      <span class="tab0"><p style=line-height:1.3>Topaz picking and denoising is integrated into both RELION, CryoSPARC, and Scipion!<br><br><li>RELION-Topaz tutorial is here: <a href="https://github.com/tbepler/topaz/tree/master/relion_run_topaz" target="_blank">https://github.com/tbepler/topaz/tree/master/relion_run_topaz</a></li><br><br><li>CryoSPARC-Topaz tutorial is here: <a href="https://guide.cryosparc.com/processing-data/all-job-types-in-cryosparc/deep-picking/deep-picking" target="_blank">https://guide.cryosparc.com/processing-data/all-job-types-in-cryosparc/deep-picking/deep-picking</a></li><br><br><li>Scipion-Topaz information is here: <a href="https://github.com/scipion-em/scipion-em-topaz" target="_blank">https://github.com/scipion-em/scipion-em-topaz</a></li>
+	      <span class="tab0"><p style=line-height:1.3>Topaz picking and denoising is integrated into RELION, CryoSPARC, Scipion, and Appion!<br><br><li>RELION-Topaz tutorial is here: <a href="https://github.com/tbepler/topaz/tree/master/relion_run_topaz" target="_blank">https://github.com/tbepler/topaz/tree/master/relion_run_topaz</a></li><br><br><li>CryoSPARC-Topaz tutorial is here: <a href="https://guide.cryosparc.com/processing-data/all-job-types-in-cryosparc/deep-picking/deep-picking" target="_blank">https://guide.cryosparc.com/processing-data/all-job-types-in-cryosparc/deep-picking/deep-picking</a></li><br><br><li>Scipion-Topaz information is here: <a href="https://github.com/scipion-em/scipion-em-topaz" target="_blank">https://github.com/scipion-em/scipion-em-topaz</a></li>
+		  </span>
+		</div></br>
+	  </details></summary>
+	  	  
+	  <section><details><summary class="collapsibletools"  style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 	unselectable="on" onselectstart="return false;" onmousedown="return false;">Topaz Workshop</summary>
+		<div class="content">
+		  <p style=line-height:1.3>
+	      <span class="tab0"><p style=line-height:1.3>To request a Topaz Workshop for academic or non-academic purposes, send a request to <i>&lt;alexjnoble [at] gmail [dot] com&gt;</i> and <i>&lt;tbepler [at] gmail [dot] com&gt;</i>.
 		  </span>
 		</div></br>
 	  </details></summary><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;"	unselectable="on" onselectstart="return false;" onmousedown="return false;"></br></br></span>
