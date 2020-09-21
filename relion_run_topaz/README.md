@@ -1,6 +1,6 @@
 # relion_run_topaz
 
-These scripts allow you to run TOPAZ particle picker (https://github.com/tbepler/topaz) from the RELION (https://github.com/3dem/relion) gui as an External job type, allowing to:
+These scripts allow you to run TOPAZ particle picker and denoiser (https://github.com/tbepler/topaz) from the RELION (https://github.com/3dem/relion) gui as an External job type, allowing to:
 
  - Keep track of jobs in the RELION pipeline
  - Provide different selection of micrographs for training and/or created from the GUI (subset_selection)
@@ -10,7 +10,7 @@ These scripts allow you to run TOPAZ particle picker (https://github.com/tbepler
   
 # Installation
 
-Download the scripts.
+Download the scripts. Install Relion 3.1+ and Topaz 0.2.4+.
 
 You need a working python environment for TOPAZ. Please follow the instructions from the developers at: https://github.com/tbepler/topaz
 
@@ -26,23 +26,30 @@ Run any of the included scripts from Relion's GUI as External job:
 *This script will pick micrographs using a pre-trained Topaz model or your own Topaz model.*
  - Provide executable in the gui: `run_topaz_pick.py`
  - Provide a `micrograph.star`
- - Provide a trained model for picking in the parameters tab as `trained_model`
- - Provide extra parameters in the parameters tab:
-   - `number_of_particles`: expected number of particles (topaz parameter)
-   - `scale_factor`: binning factor for image pre-processing (topaz parameter)
-   - `trained_model`: trained model to be used  (full Relion path! - e.g. `External/job123/model_epoch10.sav`)
-   - `pick_threshold`: threshold to be used during picking (topaz parameter)
-   - `select_threshold`: threshold to be used during particle export (topaz parameter)
-   - `radius`: particle radius (topaz parameter)
-   - `skip_pick`: when this is set to true, the script will only export particles. This allows to test different select_threshold values without re-running the picking step as a **CONTINUE** job. Leave empty when picking!
+ - Provide a trained model for picking in the parameters tab as `model` or use a pre-trained model
+ - Optional parameters:
+   - `number_of_particles`: Expected number of particles (Topaz parameter)
+   - `scalefactor`: Micrograph binning factor for image pre-processing (Topaz parameter)
+   - `model`: Trained or pre-trained model to be used (full Relion path! - e.g. `External/job123/model_epoch10.sav` or a pre-trained model (options:resnet8_u32, resnet8_u64, resnet16_u32, resnet16_u64)
+   - `device`: GPU/CPU processing device (if 0 or greater this is GPU ID, if negative then use CPUs)
+   - `pickthreshold`: Particle extraction threshold during picking (larger number means less particles are picked) (Topaz parameter)
+   - `selectthreshold`: Particle selection threshold. First check the picks at the pick_threshold and determine what the selection threshold should be by looking at several micrographs with picks (Topaz parameter)
+   - `radius`: Extraction particle radius. Increase this to decrease overlapping/double particle picks (Topaz parameter)
+   - `skip_pick`: When this is set to True, the script will only export particles. This allows to test different selectthreshold values without re-running the picking step as a **CONTINUE** job. Leave empty when initially picking!
+   - `skip_preprocess`: When this is set to True, the script will skip the preprocessing step. You probably want to use the skip_pick option instead.
+ - After picking, look at the picks on several micrographs, then set `skip_pick` to True and adjust the `selectthreshold` (larger number means less particles are picked) until your micrographs are picked well.
 
 ### run_topaz_train.py
 *This script will train a new Topaz picking model from your micrographs and picks.*
  - Provide executable in the gui: `run_topaz_train.py`
  - Input `micrographs.star` and either `particle.star` or a `coords_suffix.star`
- - Parameters:
-   - `number_of_particles`: Expected number of particles in each micrograph on average.
-   - `scale_factor`: Binning factor for image pre-processing.
+ - Optional parameters:
+   - `numberofparticles`: Expected number of particles in each micrograph on average.
+   - `scalefactor`: Micrograph binning factor for image pre-processing.
+   - `autoencoder`: Number of epochs for training.
+   - `device`: GPU/CPU processing device (if 0 or greater this is GPU ID, if negative then use CPUs)
+   - `cnn_model`: CNN model type to fit (options: resnet8, conv31, conv63, conv127). Your particle must have a diameter (longest dimension) after downsampling of: 70 pixels or less for resnet8; 30 pixels or less for conv31; 62 pixels or less for conv63; 126 pixels or less for conv127.
+   - `radius`: Radius of area to consider a particle around each pick, in pixels. Usually a value of 3, 2, 1, or 0 works best.
    - `epochs`: Number of epochs for training.
 
 ## Denoising scripts:
