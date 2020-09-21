@@ -538,6 +538,10 @@ url={https://doi.org/10.1038/s41592-019-0575-8}
   
 </p></details>
 
+# Topaz Workshop
+
+To request a Topaz Workshop for academic or non-academic purposes, send a request to *<alexjnoble [at] gmail [dot] com>* and *<tbepler [at] gmail [dot] com>*.
+
 # License
 
 Topaz is open source software released under the [GNU General Public License, Version 3](https://github.com/tbepler/topaz/blob/master/LICENSE).
