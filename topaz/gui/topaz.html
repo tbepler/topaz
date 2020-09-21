@@ -250,10 +250,11 @@
 				var input11 = $('#input11').val() == '' ? '/path/to/input/volumes/*.mrc' : $('#input11').val();
 				var model11 = $('#model11').val() == '' ? 'unet-3d-10a' : $('#model11').val();
 				var device11 = $('#device11').val() == '' ? '-2' : $('#device11').val();
+				var gaussian11 = $('#gaussian11').val() == '' ? '0' : $('#gaussian11').val();
 				var patchsize11 = $('#patchsize11').val() == '' ? '96' : $('#patchsize11').val();
 				var patchpadding11 = $('#patchpadding11').val() == '' ? '48' : $('#patchpadding11').val();
 				var output11 = $('#output11').val() == '' ? '/path/to/output/folder/' : $('#output11').val();
-				$('#result11').html("topaz denoise3d " + input11 + " --model " + model11 + " --device " + device11 + " --patch-size " + patchsize11 + " --patch-padding " + patchpadding11 + " --output " + output11);
+				$('#result11').html("topaz denoise3d " + input11 + " --model " + model11 + " --device " + device11 + " --gaussian " + gaussian11 + " --patch-size " + patchsize11 + " --patch-padding " + patchpadding11 + " --output " + output11);
 			});
 		});
 	});
@@ -1149,10 +1150,11 @@
 		  <hl7><span style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;"><font size="2.25" color="white">Rarely modify</font></span></hl7>
 		  </p>
 		  <hr width="20%">
-		  <br><table style="height:7.2em">
+		  <br><table style="height:8.9em">
 		  <tr title="Input volumes for denoising (type: string; full path to either a single .mrc/.rec file or multiple .mrc/.rec files using the wildcard *; i.e. *.mrc)"><td><hl2><span><font size="3" color="white">Input volumes</font></span></hl2></td><td><input id="input11" class="denoise_volumes_inputs" style="width:30em" value="/path/to/input/volumes/*.mrc"></td></tr>
 		  <tr title="Output directory. Different from the input firectory (type: string; full path)"><td><hl2><span><font size="3" color="white">Output folder</font></span></hl2></td><td><input id="output11" class="denoise_volumes_inputs" style="width:30em" value="/path/to/output/folder/"></td></tr>
 		  <tr title="Denoising model to use on 3D volumes (type: string; use one of these pre-trained models {unet-3d-10a, unet-3d-20a} or provide a full path to a trained .sav file)&#013;&#013;𝗡𝗼𝘁𝗲: The pre-trained models were trained on 32 cellular/reconstituted cryoET tomograms of K2 binned by 2 or 4 tilt-series. The unet-3d-10a model was trained on binned by 2 tomograms with an average pixelsize of 10 angstroms, while the unet-3d-20a model was trained on the same tomograms binned by 4 with an average pixelsize of 20 angstroms."><td><hl4><span><font size="3" color="white">Model</font></span></hl4></td><td><input id="model11" class="denoise_volumes_inputs" style="width:30em" value="unet-3d-10a"></td></tr>
+		  <tr title="Standard deviation of Gaussian filter that will be applied after denoising. 0 means no Gaussian filter (type: float)"><td><hl4><span><font size="3" color="white">Gaussian filter</font></span></hl4></td><td><input id="gaussian11" class="denoise_volumes_inputs" style="width:3em" value="0"></td></tr>
 		  <tr title="Device to use for processing. Non-negative numbers correspond to GPU IDs. -2 corresponds to multi-GPU denoising. -1 corresponds to CPU denoising (type: integer)"><td><hl4><span><font size="3" color="white">GPU/CPU device</font></span></hl4></td><td><input id="device11" class="denoise_volumes_inputs" style="width:3em" value="-2"></td></tr>
 		  </table>
 		  <br><section><details><summary class="collapsibleoptions2" style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" unselectable="on" onselectstart="return false;" onmousedown="return false;">Advanced options</summary></br>
@@ -1165,7 +1167,7 @@
 			</span>
 		  <br/><br/><span class="tab0"><strong>Command:</strong><br/><hr width="20%"><br>
 		  <code><div id="result11" style="display: inline-block; border: none; max-width: 90%; background-color: white; padding: 6px; border-radius: 10px;">
-		  topaz denoise3d /path/to/input/volumes/*.mrc --model unet-3d-10a --device -2 --patch-size 96 --patch-padding 48 --output /path/to/output/folder/
+		  topaz denoise3d /path/to/input/volumes/*.mrc --model unet-3d-10a --device -2 --gaussian 0 --patch-size 96 --patch-padding 48 --output /path/to/output/folder/
 		  </div></span></code>
 		</div></br>
 	  </details></summary>
