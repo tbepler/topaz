@@ -1,5 +1,7 @@
 from __future__ import print_function,division
 
+import topaz.utils.star as star
+
 import numpy as np
 import pandas as pd
 
@@ -66,4 +68,25 @@ def coordinates_to_eman2_json(coords, shape=None, invert_y=False, tag='manual'):
         entries.append([int(x_coords[i]), int(y_coords[i]), tag])
     return entries
 
+
+def coordinates_to_star(table, image_ext=''):
+    # fix column names to be star format
+    d = {'score': star.SCORE_COLUMN_NAME,
+            'image_name': 'MicrographName',
+            'x_coord': star.X_COLUMN_NAME,
+            'y_coord': star.Y_COLUMN_NAME,
+            'voltage': star.VOLTAGE,
+            'detector_pixel_size': star.DETECTOR_PIXEL_SIZE,
+            'magnification': star.MAGNIFICATION,
+            'amplitude_contrast': star.AMPLITUDE_CONTRAST,
+            }
+    table = table.copy()
+    for k,v in d.items():
+        if k in table.columns:
+            table[v] = table[k]
+            table = table.drop(k, axis=1)
+    # append image extension
+    table['MicrographName'] = table['MicrographName'].apply(lambda x: x + image_ext)
+
+    return table
 

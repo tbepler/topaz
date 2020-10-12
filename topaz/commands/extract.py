@@ -13,6 +13,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from topaz.utils.data.loader import load_image
+import topaz.utils.files as file_utils
 from topaz.algorithms import non_maximum_suppression, match_coordinates
 from topaz.metrics import average_precision
 import topaz.predict
@@ -23,7 +24,7 @@ help = 'extract particles from segmented images or segment and extract in one st
 
 def add_arguments(parser):
 
-    parser.add_argument('paths', nargs='+', help='paths to image files for processing')
+    parser.add_argument('paths', nargs='*', help='paths to image files for processing, can also be streamed from stdin')
 
     parser.add_argument('-m', '--model', default='resnet16', help='path to trained subimage classifier. uses the pretrained resnet16 model by default. if micrographs have already been segmented (transformed to log-likelihood ratio maps), then this should be set to "none" (default: resnet16)')
 
@@ -54,6 +55,11 @@ def add_arguments(parser):
     parser.add_argument('-d', '--device', default=0, type=int, help='which device to use, <0 corresponds to CPU')
 
     parser.add_argument('-o', '--output', help='file path to write')
+    parser.add_argument('--per-micrograph', action='store_true', help='write one particle file per micrograph at the location of the micrograph')
+    parser.add_argument('--suffix', default='', help='optional suffix to add to particle file paths when using the --per-micrograph flag.')
+    parser.add_argument('--format', choices=['coord', 'csv', 'star', 'json', 'box'], default='coord'
+                    , help='file format of the OUTPUT files (default: coord)')
+
 
     return parser
 
@@ -191,9 +197,14 @@ def score_images(model, paths, device=-1, batch_size=1):
     else: # load scores directly
         scores = stream_images(paths)
     for path,score in zip(paths, scores):
-        basename = os.path.basename(path)
-        image_name = os.path.splitext(basename)[0]
-        yield image_name, score
+        yield path, score
+
+
+def stream_inputs(f):
+    for line in f:
+        line = line.strip()
+        if len(line) > 0:
+            yield line
 
 
 def main(args):
@@ -207,6 +218,9 @@ def main(args):
     device = args.device
     paths = args.paths
     batch_size = args.batch_size
+
+    if len(paths) == 0: # no paths specified, so we read them from stdin
+        paths = stream_inputs(sys.stdin)
 
     stream = score_images(model, paths, device=device, batch_size=batch_size)
 
@@ -258,21 +272,35 @@ def main(args):
 
     # now, extract all particles from scored images
     if not args.only_validate:
+        per_micrograph = args.per_micrograph # store one file per micrograph rather than combining all files together
+        suffix = args.suffix # optional suffix to add to particle file paths
+        out_format = args.format
 
         f = sys.stdout
-        if args.output is not None:
+        if args.output is not None and not per_micrograph:
             f = open(args.output, 'w')
 
         scale = args.up_scale/args.down_scale
 
-        print('image_name\tx_coord\ty_coord\tscore', file=f)
+        if not per_micrograph:
+            print('image_name\tx_coord\ty_coord\tscore', file=f)
         ## extract coordinates using radius 
-        for name,score,coords in nms_iterator(stream, radius, threshold, pool=pool):
+        for path,score,coords in nms_iterator(stream, radius, threshold, pool=pool):
+            basename = os.path.basename(path)
+            name = os.path.splitext(basename)[0]
             ## scale the coordinates
             if scale != 1:
                 coords = np.round(coords*scale).astype(int)
-            for i in range(len(score)):
-                print(name + '\t' + str(coords[i,0]) + '\t' + str(coords[i,1]) + '\t' + str(score[i]), file=f)
+
+            if per_micrograph:
+                table = pd.DataFrame({'image_name': name, 'x_coord': coords[:,0], 'y_coord': coords[:,1], 'score': score})
+                out_path,ext = os.path.splitext(path)
+                out_path = out_path + suffix + '.' + out_format
+                with open(out_path, 'w') as f:
+                    file_utils.write_table(f, table, format=out_format, image_ext=ext)
+            else:
+                for i in range(len(score)):
+                    print(name + '\t' + str(coords[i,0]) + '\t' + str(coords[i,1]) + '\t' + str(score[i]), file=f)
 
 
 
