@@ -3,6 +3,7 @@ A pipeline for particle detection in cryo-electron microscopy images using convo
 
 ## New in v0.2.5
 - Added Relion integration scripts
+- Topaz extract can now write particle coordinates to one file per input micrograph
 - Added Gaussian filter option for after 3D denoising
 - Added info on Topaz Workshops
 - Topaz GUI update
