@@ -497,11 +497,7 @@ Scipion: https://github.com/scipion-em/scipion-em-topaz
 
 ### Topaz
 
-Bepler, T., Morin, A., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2019). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs. Nature Methods. https://doi.org/10.1038/s41592-019-0575-8
-
-### Topaz-Denoise
-
-Bepler, T., Kelley, K., Noble, A.J., Berger, B. (2020). Topaz-Denoise: general deep denoising models for cryoEM and cryoET. bioRxiv. https://doi.org/10.1101/838920
+Bepler, T., Morin, A., Rapp, M., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs. Nat Methods 16, 1153–1160 (2019). https://doi.org/10.1038/s41592-019-0575-8
 
 <details><summary>Bibtex</summary><p>
 
@@ -520,6 +516,28 @@ year={2019},
 issn={1548-7105},
 doi={10.1038/s41592-019-0575-8},
 url={https://doi.org/10.1038/s41592-019-0575-8}
+}
+```
+</p></details>
+
+### Topaz-Denoise
+
+Bepler, T., Kelley, K., Noble, A.J., Berger, B. Topaz-Denoise: general deep denoising models for cryoEM and cryoET. Nat Commun 11, 5208 (2020). https://doi.org/10.1038/s41467-020-18952-1
+
+<details><summary>Bibtex</summary><p>
+
+```
+@Article{Bepler2020_topazdenoise,
+author={Bepler, Tristan
+and Kelley, Kotaro
+and Noble, Alex J.
+and Berger, Bonnie},
+title={Topaz-Denoise: general deep denoising models for cryoEM and cryoET},
+journal={Nature Communications},
+year={2020},
+issn={2041-1723},
+doi={10.1038/s41467-020-18952-1},
+url={https://doi.org/10.1038/s41467-020-18952-1}
 }
 ```
 
