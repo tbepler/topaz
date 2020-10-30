@@ -29,6 +29,7 @@ def add_arguments(parser):
 
     parser.add_argument('volumes', nargs='*', help='volumes to denoise')
     parser.add_argument('-o', '--output', help='directory to save denoised volumes')
+    parser.add_argument('--suffix', help='optional suffix to append to file paths. if not output is specfied, denoised volumes are written to the same location as the input with the suffix appended to the name (default .denoised)')
 
     parser.add_argument('-m', '--model', default='unet-3d', help='use pretrained denoising model. accepts path to a previously saved model or one of the provided pretrained models. pretrained model options are: unet-3d, unet-3d-10a, unet-3d-20a (default: unet-3d)')
 
@@ -634,11 +635,11 @@ class PatchDataset:
         return np.array((i,j,k), dtype=int),x
 
 
-def denoise(model, path, outdir, patch_size=128, padding=128, batch_size=1
+def denoise(model, path, outdir, suffix, patch_size=128, padding=128, batch_size=1
            , volume_num=1, total_volumes=1):
     with open(path, 'rb') as f:
         content = f.read()
-    tomo,header,_ = mrc.parse(content)
+    tomo,header,extended_header = mrc.parse(content)
     tomo = tomo.astype(np.float32)
     name = os.path.basename(path)
 
@@ -670,6 +671,9 @@ def denoise(model, path, outdir, patch_size=128, padding=128, batch_size=1
                 x = model(x)
                 x = x.squeeze(1).cpu().numpy()
 
+                # restore original statistics
+                x = std*x + mu
+
                 # stitch into denoised volume
                 for b in range(len(x)):
                     i,j,k = index[b]
@@ -688,7 +692,17 @@ def denoise(model, path, outdir, patch_size=128, padding=128, batch_size=1
 
 
     ## save the denoised tomogram
-    outpath = outdir + os.sep + name
+    if outdir is None:
+        # write denoised tomogram to same location as input, but add the suffix
+        if suffix is None: # use default
+            suffix = '.denoised'
+        no_ext,ext = os.path.splitext(path)
+        outpath = no_ext + suffix + ext
+    else:
+        if suffix is None:
+            suffix = ''
+        no_ext,ext = os.path.splitext(name)
+        outpath = outdir + os.sep + no_ext + suffix + ext
 
     # use the read header except for a few fields
     header = header._replace(mode=2) # 32-bit real
@@ -697,7 +711,7 @@ def denoise(model, path, outdir, patch_size=128, padding=128, batch_size=1
     header = header._replace(amean=denoised.mean())
 
     with open(outpath, 'wb') as f:
-        mrc.write(f, denoised, header=header)
+        mrc.write(f, denoised, header=header, extended_header=extended_header)
 
 
 def main(args):
@@ -751,7 +765,7 @@ def main(args):
         count = 0
         for path in args.volumes:
             count += 1
-            denoise(model, path, args.output
+            denoise(model, path, args.output, args.suffix
                    , patch_size=patch_size
                    , padding=padding
                    , batch_size=batch_size

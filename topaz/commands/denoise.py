@@ -29,7 +29,7 @@ def add_arguments(parser):
     parser.add_argument('micrographs', nargs='*', help='micrographs to denoise')
 
     parser.add_argument('-o', '--output', help='directory to save denoised micrographs')
-    parser.add_argument('--suffix', default='', help='add this suffix to each output file name (default: none)')
+    parser.add_argument('--suffix', default='', help='add this suffix to each output file name. if no output directory is specified, denoised micrographs are written to the same location as the input with a default suffix of ".denoised" (default: none)')
     parser.add_argument('--format', dest='format_', default='mrc', help='output format for the images (default: mrc)')
     parser.add_argument('--normalize', action='store_true', help='normalize the micrographs')
 
@@ -548,7 +548,14 @@ def main(args):
                                )
 
             # write the micrograph
-            outpath = args.output + os.sep + name + suffix + '.' + format_
+            if not args.output:
+                if suffix == '' or suffix is None:
+                    suffix = '.denoised'
+                # write the file to the same location as input
+                no_ext,ext = os.path.splitext(path)
+                outpath = no_ext + suffix + '.' + format_
+            else:
+                outpath = args.output + os.sep + name + suffix + '.' + format_
             save_image(mic, outpath) #, mi=None, ma=None)
 
             count += 1
