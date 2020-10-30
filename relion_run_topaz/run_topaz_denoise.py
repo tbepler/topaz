@@ -5,7 +5,7 @@
 # Rafael Fernandez-Leiro 2020 - CNIO - rfleiro@cnio.es
 # Alex J. Noble 2020 - NYSBC - anoble@nysbc.org
 
-# Run with relion external job
+# Run with Relion external job
 # Provide executable in the gui: run_topaz_denoise.py
 # Input micrographs.star
 
@@ -22,7 +22,7 @@ print('This wrapper runs TOPAZ\nPlease provide a micrograph.star as input.\nIf y
 """VARIABLES >>>"""
 print('running ...')
 parser = argparse.ArgumentParser()
-parser.add_argument("-t", "-tpath", "--topaz_path" , type=str, default='/usr/local/bin/topaz', help = "Topaz path. Input either a direct path to a topaz executable or a directory path where topaz exists.")
+parser.add_argument("-t", "-tpath", "--topaz_path", type=str, default='/usr/local/bin/topaz', help = "Topaz path. Input either a direct path to a topaz executable or a directory path where topaz exists.")
 parser.add_argument("-i", "--input", "--in_mics", help = "Input micrographs")
 parser.add_argument("-o", "--output", help = "Output folder (full path)")
 parser.add_argument("-m", "--model", default='unet', type=str, help = "Pre-trained model or user-trained model. Pretrained model options are: unet, unet-small, fcnn, affine, unet-v0.2.1")
@@ -56,7 +56,7 @@ os.system(cmd)
 """<<< denoising"""
 
 """make star file >>>"""
-print('making star file')
+print('Making star file')
 os.system(str('''head -n `grep -n -m 2 loop_ ''')+inargs+str(''' | awk -F":" 'END{print $1}'` ''')+inargs+str(''' > ''')+outargsStar)
 os.system(str('echo "_rlnMicrographName\n_rlnOpticsGroup" >> ')+outargsStar)
 os.system(str('''ls ''')+outargsDenoised+str(''' | awk '{print "''')+outargsDenoised+('''/"$1, "1"}' >> ''')+outargsStar) #Adding optics group 1 default to avoid crashing in ManualPick job, but not keeping original opticsgroup number!
@@ -73,3 +73,4 @@ f.close()
 print('All done!')
 print('Check results with a manual picking job!')
 """<<< Finishing up"""
+

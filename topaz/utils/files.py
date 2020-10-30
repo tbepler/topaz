@@ -8,7 +8,7 @@ import os
 import sys
 
 import topaz.utils.star as star
-from topaz.utils.conversions import boxes_to_coordinates, coordinates_to_boxes, coordinates_to_eman2_json
+from topaz.utils.conversions import boxes_to_coordinates, coordinates_to_boxes, coordinates_to_eman2_json, coordinates_to_star
 
 particle_format_map = {
     '.star': 'star',
@@ -189,24 +189,7 @@ def write_coordinates(path, table, format='auto', boxsize=0, image_ext='.mrc', s
                     json.dump({'boxes': boxes}, f, indent=0)
 
     elif format == 'star':
-        # fix column names to be star format
-        d = {'score': star.SCORE_COLUMN_NAME,
-             'image_name': 'MicrographName',
-             'x_coord': star.X_COLUMN_NAME,
-             'y_coord': star.Y_COLUMN_NAME,
-             'voltage': star.VOLTAGE,
-             'detector_pixel_size': star.DETECTOR_PIXEL_SIZE,
-             'magnification': star.MAGNIFICATION,
-             'amplitude_contrast': star.AMPLITUDE_CONTRAST,
-             }
-        table = table.copy()
-        for k,v in d.items():
-            if k in table.columns:
-                table[v] = table[k]
-                table = table.drop(k, axis=1)
-        # append image extension
-        table['MicrographName'] = table['MicrographName'].apply(lambda x: x + image_ext)
-        
+        table = coordinates_to_star(table, image_ext=image_ext)
         star.write(table, path)
 
     elif format == 'csv':
@@ -222,7 +205,34 @@ def write_coordinates(path, table, format='auto', boxsize=0, image_ext='.mrc', s
         table.to_csv(path, sep='\t', index=False)
     
 
+def write_table(f, table, format='auto', boxsize=0, image_ext=''):
+    if format == 'box' or format == 'json':
+        if format == 'box':
+            xy = table[['x_coord', 'y_coord']].values.astype(np.int32)
+            boxes = coordinates_to_boxes(xy, boxsize, boxsize)
+            boxes = pd.DataFrame(boxes)
+            boxes.to_csv(f, sep='\t', header=False, index=False)
+        else: # json format
+            xy = table[['x_coord','y_coord']].values.astype(int)
+            boxes = coordinates_to_eman2_json(xy)
+            json.dump({'boxes': boxes}, f, indent=0)
 
+    elif format == 'star':
+        table = coordinates_to_star(table, image_ext=image_ext)
+        star.write(table, f)
+
+    elif format == 'csv':
+        # write as VIA CSV
+        write_via_csv(f, table)
+
+    else: # write default coordinates format
+        # filter columns to only include image name, x, y, score (if score is present)
+        columns = ['image_name', 'x_coord', 'y_coord']
+        if 'score' in table.columns:
+            columns.append('score')
+        table = table[columns]
+        table.to_csv(f, sep='\t', index=False)
+    
 
 
 

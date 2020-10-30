@@ -1,6 +1,14 @@
 # Topaz
 A pipeline for particle detection in cryo-electron microscopy images using convolutional neural networks trained from positive and unlabeled examples. Topaz also includes methods for micrograph and tomogram denoising using deep denoising models.
 
+## New in v0.2.5
+- Added Relion integration scripts
+- Topaz extract can now write particle coordinates to one file per input micrograph
+- Added Gaussian filter option for after 3D denoising
+- Added info on Topaz Workshops
+- Topaz GUI update
+- Various bug fixes
+
 ## New in v0.2.4
 - Added 3D denoising with __topaz denoise3d__ and two pretrained 3D denoising models
 - Added argument for setting number of threads to multithreaded commands
@@ -489,11 +497,7 @@ Scipion: https://github.com/scipion-em/scipion-em-topaz
 
 ### Topaz
 
-Bepler, T., Morin, A., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. (2019). Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs. Nature Methods. https://doi.org/10.1038/s41592-019-0575-8
-
-### Topaz-Denoise
-
-Bepler, T., Kelley, K., Noble, A.J., Berger, B. (2020). Topaz-Denoise: general deep denoising models for cryoEM and cryoET. bioRxiv. https://doi.org/10.1101/838920
+Bepler, T., Morin, A., Rapp, M., Brasch, J., Shapiro, L., Noble, A.J., Berger, B. Positive-unlabeled convolutional neural networks for particle picking in cryo-electron micrographs. Nat Methods 16, 1153–1160 (2019). https://doi.org/10.1038/s41592-019-0575-8
 
 <details><summary>Bibtex</summary><p>
 
@@ -514,6 +518,28 @@ doi={10.1038/s41592-019-0575-8},
 url={https://doi.org/10.1038/s41592-019-0575-8}
 }
 ```
+</p></details>
+
+### Topaz-Denoise
+
+Bepler, T., Kelley, K., Noble, A.J., Berger, B. Topaz-Denoise: general deep denoising models for cryoEM and cryoET. Nat Commun 11, 5208 (2020). https://doi.org/10.1038/s41467-020-18952-1
+
+<details><summary>Bibtex</summary><p>
+
+```
+@Article{Bepler2020_topazdenoise,
+author={Bepler, Tristan
+and Kelley, Kotaro
+and Noble, Alex J.
+and Berger, Bonnie},
+title={Topaz-Denoise: general deep denoising models for cryoEM and cryoET},
+journal={Nature Communications},
+year={2020},
+issn={2041-1723},
+doi={10.1038/s41467-020-18952-1},
+url={https://doi.org/10.1038/s41467-020-18952-1}
+}
+```
 
 </p></details>
 
@@ -530,6 +556,12 @@ url={https://doi.org/10.1038/s41592-019-0575-8}
   <img src="images/anoble.png" width="120">
   
 </p></details>
+
+# Topaz Workshop
+
+To request a Topaz Workshop for academic or non-academic purposes, send a request to:
+
+*<alexjnoble [at] gmail [dot] com>* & *<tbepler [at] gmail [dot] com>*
 
 # License
 

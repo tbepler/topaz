@@ -23,7 +23,7 @@ print('This wrapper runs TOPAZ\nPlease provide a movies.star as input.\nIf your 
 print('running ...')
 parser = argparse.ArgumentParser()
 parser.add_argument("-t", "-tpath", "--topaz_path" , type=str, default='/usr/local/bin/topaz', help = "Topaz path. Input either a direct path to a topaz executable or a directory path where topaz exists.")
-parser.add_argument("-i", "--input", "--in_movies", help = "Input movies") 
+parser.add_argument("-i", "--input", "--in_movies", help = "Input movies")
 parser.add_argument("-o", "--output", help = "Output folder (full path)")
 parser.add_argument("-g", "--gain", help = "Gain image. Flip/rotate if needed!")
 parser.add_argument("-e", "--epochs", type=int, default=100, help = "Number of epochs")
