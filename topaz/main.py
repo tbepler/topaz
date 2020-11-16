@@ -1,4 +1,4 @@
-from __future__ import print_function,division
+from __future__ import absolute_import, print_function, division
 
 def generate_description(module_groups, linewidth=78, indent='  ', delim='  '):
 
