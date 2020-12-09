@@ -1,6 +1,8 @@
 # Topaz
 A pipeline for particle detection in cryo-electron microscopy images using convolutional neural networks trained from positive and unlabeled examples. Topaz also includes methods for micrograph and tomogram denoising using deep denoising models.
 
+**Check out our [Discussion](https://github.com/tbepler/topaz/discussions) section for general help, suggestions, and tips on using Topaz.**
+
 ## New in v0.2.5
 - Added Relion integration scripts
 - Topaz extract can now write particle coordinates to one file per input micrograph
@@ -569,4 +571,6 @@ Topaz is open source software released under the [GNU General Public License, Ve
 
 # Bugs & Suggestions
 
-Please report any bugs, problems, suggestions, or requests as a [Github issue](https://github.com/tbepler/topaz/issues).
+Please report bugs and make specific feature requests and suggestions for improvements as a [Github issue](https://github.com/tbepler/topaz/issues).
+
+For general help, questions, suggestions, tips, and installation/setup assistance, please take a look at our new [Discussion](https://github.com/tbepler/topaz/discussions) section.
