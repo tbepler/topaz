@@ -14,6 +14,8 @@
 """Import >>>"""
 import argparse
 import os
+import subprocess
+import re
 """<<< Import"""
 
 """USAGE >>>"""
@@ -93,10 +95,15 @@ os.system(cmd)
 """make star files >>>"""
 #make star files in the right folder
 print('Making star files...')
-os.system(str('''relion_star_printtable ''')+inargsMics+str(''' data_micrographs _rlnMicrographName | awk -F"/" 'NR==1{print $(NF-1)}' > ''')+tmpfile)
-tmpdf=open(tmpfile).readline().rstrip('\n')
+file_path = subprocess.check_output(' '.join(['relion_star_printtable', inargsMics, 'data_micrographs _rlnMicrographName | head -n 1']), shell=True, encoding='utf-8').strip()
+job_pattern = re.compile('/job[0-9]{3}/(?P<suffix>.*$)')
+match = job_pattern.search(file_path)
+if match:
+    tmpdf = os.path.dirname(match['suffix'])
+else:
+    tmpdf = os.path.basename(os.path.dirname(file_path))
 outopaz_path=outargsPath+tmpdf+'/'
-os.system(str('mkdir ')+outopaz_path+str(';rm ')+tmpfile)
+os.system(str('mkdir -p ')+outopaz_path)
 mic_filenames=list(set([x.split('\t')[0] for x in open(outargsResults2).readlines()[1:]]))
 topaz_picks=[x.split('\t') for x in open(outargsResults2).readlines()[1:]]
 for name in mic_filenames:
