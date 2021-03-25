@@ -17,7 +17,7 @@ import os
 """<<< Import"""
 
 """USAGE >>>"""
-print('This wrapper runs TOPAZ\nPlease provide a micrograph.star as input and a model for picking.\nIf your TOPAZ installation is not /usr/local/bin/topaz, then add the parameter: topaz_path\nAdditionally, these parameters may be changed: number_of_particles, scalefactor, radius, trained_model, pick_threshold, select_threshold, \nIf other parameters might be useful and should be included please let us know.')
+print('This wrapper runs TOPAZ\nPlease provide a micrograph.star as input and a model for picking.\nIf your TOPAZ installation is not /usr/local/bin/topaz, then add the parameter: topaz_path\nAdditionally, these parameters may be changed: scalefactor, radius, trained_model, pick_threshold, select_threshold, \nIf other parameters might be useful and should be included please let us know.')
 print('If you want to re-run the job to just select particles with a different threshold, set the parameter --skip_pick to True and continue the job.')
 
 """<<< USAGE"""
