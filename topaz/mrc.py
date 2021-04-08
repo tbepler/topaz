@@ -130,6 +130,8 @@ def parse(content):
         dtype = np.uint16
     elif header.mode == 16:
         dtype = '3B' # RGB values
+    elif header.mode == 12:
+        dtype = np.float16
     else:
         raise Exception('Unknown dtype mode:' + str(header.model))
 
