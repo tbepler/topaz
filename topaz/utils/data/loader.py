@@ -49,6 +49,8 @@ def load_mrc(path, standardize=False):
     with open(path, 'rb') as f:
         content = f.read()
     image, header, extended_header = mrc.parse(content)
+    if image.dtype == np.float16:
+        image = image.astype(np.float32)
     if standardize:
         image = image - header.amean
         image /= header.rms
