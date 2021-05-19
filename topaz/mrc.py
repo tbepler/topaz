@@ -133,7 +133,7 @@ def parse(content):
     elif header.mode == 12:
         dtype = np.float16
     else:
-        raise Exception('Unknown dtype mode:' + str(header.model))
+        raise Exception('Unknown dtype mode:' + str(header.mode))
 
     array = np.frombuffer(content, dtype=dtype) 
     # clip array to first nz*ny*nx elements
