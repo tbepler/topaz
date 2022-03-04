@@ -1,3 +1,7 @@
+[![Python package](https://github.com/tbepler/topaz/actions/workflows/ci.yml/badge.svg)](https://github.com/tbepler/topaz/actions/workflows/ci.yml)
+
+
+
 # Topaz
 A pipeline for particle detection in cryo-electron microscopy images using convolutional neural networks trained from positive and unlabeled examples. Topaz also includes methods for micrograph and tomogram denoising using deep denoising models.
 
