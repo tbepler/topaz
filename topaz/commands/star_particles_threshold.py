@@ -44,7 +44,7 @@ def main(args):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser('Script for thresholding particles in a star file')
-    add_argument(parser)
+    add_arguments(parser)
     args = parser.parse_args()
     main(args)
 

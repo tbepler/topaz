@@ -8,6 +8,7 @@ import pandas as pd
 import topaz.mrc as mrc
 import topaz.utils.star as star
 from topaz.utils.image import downsample
+from topaz.utils.data.loader import load_mrc, load_pil
 
 name = 'particle_stack'
 help = 'extract mrc particle stack given coordinates table'
@@ -173,7 +174,7 @@ def main(args):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser('Script for extracting mrc stack from particle coordinates')
-    add_argument(parser)
+    add_arguments(parser)
     args = parser.parse_args()
     main(args)
 

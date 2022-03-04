@@ -70,7 +70,7 @@ def main(args):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser('Script to ' + help)
-    add_argument(parser)
+    add_arguments(parser)
     args = parser.parse_args()
     main(args)
 

@@ -9,6 +9,7 @@ import numpy as np
 import topaz.utils.star as star
 import topaz.utils.files as file_utils
 from topaz.utils.conversions import mirror_y_axis
+from topaz.utils.data.loader import load_image
 
 
 name = 'convert'
@@ -219,7 +220,7 @@ def main(args):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser('Script to ' + help)
-    add_argument(parser)
+    add_arguments(parser)
     args = parser.parse_args()
     main(args)
 

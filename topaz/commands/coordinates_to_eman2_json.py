@@ -9,6 +9,7 @@ from PIL import Image
 import glob
 
 from topaz.utils.conversions import coordinates_to_eman2_json
+from topaz.utils.data.loader import load_image
 
 
 name = 'coordinates_to_eman2_json'
@@ -25,9 +26,6 @@ def add_arguments(parser):
 
     return parser
 
-
-if __name__ == '__main__':
-    args = parse_args()
 
 def main(args):
     dfs = []
@@ -62,5 +60,9 @@ def main(args):
             json.dump({'boxes': boxes}, f, indent=0)
 
 
-
-
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(help)
+    add_arguments(parser)
+    args = parser.parse_args()
+    main(args)

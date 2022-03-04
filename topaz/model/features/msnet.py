@@ -291,6 +291,31 @@ class PyramidNet(nn.Module):
         return h
         
 
+class DenseBlock(nn.Module):
+    def __init__(self, nin, ng):
+        super(DenseBlock, self).__init__()
+
+        self.nin = nin
+        self.nout = nin + 3*ng
+
+        self.relu = nn.ReLU(inplace=True)
+        self.conv1 = nn.Conv2d(nin, ng, 3, padding=1)
+        self.conv2 = nn.Conv2d(nin+ng, ng, 3, dilation=2, padding=2)
+        self.conv3 = nn.Conv2d(nin+2*ng, ng, 3, dilation=4, padding=4)
+
+    def forward(self, x):
+
+        h = self.relu(self.conv1(x))
+        h = torch.cat([x, h], 1)
+
+        h2 = self.relu(self.conv2(h))
+        h = torch.cat([h, h2], 1)
+
+        h2 = self.relu(self.conv3(h))
+        h = torch.cat([h, h2], 1)
+
+        return h
+
 
 class MultiscaleDenseNet(nn.Module):
     def __init__(self, base_units=64, ng=48, num_blocks=4):

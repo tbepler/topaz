@@ -145,7 +145,7 @@ def make_trainiterator(dataset, minibatch_size, epoch_size, balance=0.5, num_wor
 
     labels = dataset.labels
     sampler = StratifiedCoordinateSampler(labels, size=epoch_size, balance=balance)
-    loader = DataLoader(dataset, batch_size=minibatchsize, sampler=sampler
+    loader = DataLoader(dataset, batch_size=minibatch_size, sampler=sampler
                        , num_workers=num_workers)
 
     return loader
@@ -699,7 +699,7 @@ def main(args):
 
 if __name__ == '__main__':
     import argparse
-    parser = ArgumentParser(help)
+    parser = argparse.ArgumentParser(help)
     add_arguments(parser)
     args = parser.parse_args()
     main(args)
