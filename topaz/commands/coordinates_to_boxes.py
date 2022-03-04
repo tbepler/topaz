@@ -5,8 +5,10 @@ import os
 import numpy as np
 import pandas as pd
 from PIL import Image
+import glob
 
 from topaz.utils.conversions import coordinates_to_boxes
+from topaz.utils.data.loader import load_image
 
 
 name = 'coordinates_to_boxes'
@@ -61,7 +63,7 @@ def main(args):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser('Script for converting coordinates for images in one file to multiple files')
-    add_argument(parser)
+    add_arguments(parser)
     args = parser.parse_args()
     main(args)
 
