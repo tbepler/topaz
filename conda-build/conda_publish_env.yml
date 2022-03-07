@@ -2,7 +2,6 @@ name: conda-publish-env
 dependencies: 
   - python
   - setuptools
-run:
   - python
   - future
   - argparse #[py26]
