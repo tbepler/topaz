@@ -4,7 +4,6 @@ dependencies:
   - setuptools
   - python
   - future
-  - argparse #[py26]
   - numpy>=0.11
   - pandas
   - scikit-learn>=0.19.0
