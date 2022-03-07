@@ -1,0 +1,15 @@
+name: conda-publish-env
+dependencies: 
+  - python
+  - setuptools
+run:
+  - python
+  - future
+  - argparse #[py26]
+  - numpy>=0.11
+  - pandas
+  - scikit-learn>=0.19.0
+  - scipy>=0.17.0
+  - pillow>=6.2.0
+  - pytorch>=1.0.0
+  - torchvision
