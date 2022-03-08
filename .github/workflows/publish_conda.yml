@@ -12,7 +12,7 @@ jobs:
     steps:
     - name: Install dependencies
       run: |
-        sudo apt install git-all
+        sudo apt install git
 
     - uses: actions/checkout@v2
     - name: publish-to-conda
