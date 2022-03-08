@@ -5,14 +5,16 @@ on:
     types: [published]
     
 jobs:
-  name: Install dependencies
-  run: |
-    python -m pip install --upgrade pip
-    pip install git
 
   publish:
     runs-on: ubuntu-latest
+
     steps:
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install git
+
     - uses: actions/checkout@v2
     - name: publish-to-conda
       uses: fcakyon/conda-publish-action@v1.3
