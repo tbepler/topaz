@@ -1,44 +1,17 @@
-name: Build and upload conda packages
+name: publish_conda
 
 on:
   release:
     types: [published]
-
-# workflow_dispatch:        # Un comment line if you also want to trigger action manually
-
+    
 jobs:
-  conda_deployment_with_new_tag:
-    name: Conda deployment of package with Python ${{ matrix.python-version }}
+  publish:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.7, 3.8, 3.9]
     steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: Conda environment creation and activation
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-          environment-file: conda-build/conda_publish_env.yaml    # Path to the build conda environment
-          auto-update-conda: false
-          auto-activate-base: false
-          show-channel-urls: true
-          
-      - name: Install build dependencies
-        run: |
-          conda install conda-build -y
-
-      - name: Build and upload the conda packages
-        uses: uibcdf/action-build-and-upload-conda-packages@v1.1-beta.1
-        with:
-          meta_yaml_dir: conda-build
-          python-version: ${{ matrix.python-version }}
-          platform_linux-64: true
-          platform_osx-64: true
-          platform_win-64: true
-          user: tbepler
-          label: auto
-          token: ${{ secrets.CONDAAPITOKEN }}
+    - uses: actions/checkout@v2
+    - name: publish-to-conda
+      uses: fcakyon/conda-publish-action@v1.3
+      with:
+        subdir: 'conda-build'
+        anacondatoken: ${{ secrets.CONDAAPITOKEN }}
+        platforms: 'win osx linux'
