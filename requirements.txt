@@ -1,0 +1,8 @@
+torch >= 1.0.0
+torchvision
+numpy >= 1.11
+pandas
+scikit-learn >= 0.19.0
+scipy >= 0.17.0
+pillow >= 6.2.0
+future
