@@ -6,8 +6,7 @@
 # Welcome to Topaz's documentation!
 
 
-```{include} ../../README.md
-:relative-images:
+```{include} ./description.md
 ```
 
 
@@ -15,4 +14,12 @@
 ```{toctree}
 :caption: 'Contents:'
 :maxdepth: 2
+
+installation
+tutorial
+commands
+relion
+cryosparc
+models
+scripts
 ```

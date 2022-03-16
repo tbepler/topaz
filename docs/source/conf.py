@@ -33,6 +33,8 @@ release = '0.2.5'
 # ones.
 extensions = [
 	"myst_parser",
+	"nbsphinx",
+	"sphinx.ext.autodoc"
 ]
 
 # Add any paths that contain templates here, relative to this directory.

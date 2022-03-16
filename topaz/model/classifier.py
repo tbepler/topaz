@@ -6,6 +6,15 @@ import torch.nn.functional as F
 
 class LinearClassifier(nn.Module):
     def __init__(self, features):
+        '''
+        A simple convolutional layer with no non-linear activation.
+
+        Args:
+            features (:obj:): the sizes associated with the layer
+
+        Attributes:
+            features (:obj:)
+        '''
         super(LinearClassifier, self).__init__()
         self.features = features
         self.classifier = nn.Conv2d(features.latent_dim, 1, 1)
