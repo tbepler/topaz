@@ -11,11 +11,6 @@ sphinx:
 python:
   install:
     - method: pip
-      path: .
-      extra_requirements:
-        - docs
-        - nbsphinx
-        - sphinx_rtd_theme
-        - sphinx-autobuild
-        - rst-to-myst
-        - myst-parser
+    - requirements: docs/requirements.txt
+    - extra-requirements:
+      - doc 
