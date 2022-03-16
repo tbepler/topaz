@@ -8,6 +8,6 @@
 # future
 sphinx==4.4.0
 sphinx_rtd_theme
-rst-to-myst==0.3.2
-myst-parser==0.17.0
-nbsphinx==0.8.8
+rst-to-myst
+myst-parser
+nbsphinx
