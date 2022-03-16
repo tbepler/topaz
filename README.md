@@ -1,5 +1,5 @@
 [![Python package](https://github.com/tbepler/topaz/actions/workflows/ci.yml/badge.svg)](https://github.com/tbepler/topaz/actions/workflows/ci.yml)
-
+[![Documentation Status](https://readthedocs.org/projects/topaz-em/badge/?version=latest)](https://topaz-em.readthedocs.io/en/latest/?badge=latest)
 
 
 # Topaz
