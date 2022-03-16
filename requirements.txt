@@ -6,3 +6,8 @@ scikit-learn >= 0.19.0
 scipy >= 0.17.0
 pillow >= 6.2.0
 future
+sphinx==4.4.0
+sphinx_rtd_theme
+rst-to-myst==0.3.2
+myst-parser==0.17.0
+nbsphinx==0.8.8

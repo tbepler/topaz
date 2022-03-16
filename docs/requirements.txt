@@ -6,10 +6,8 @@
 # scipy >= 0.17.0
 # pillow >= 6.2.0
 # future
-
-sphinx
+sphinx==4.4.0
 sphinx_rtd_theme
-sphinx-autobuild
-rst-to-myst
-myst-parser
-nbsphinx
+rst-to-myst==0.3.2
+myst-parser==0.17.0
+nbsphinx==0.8.8
