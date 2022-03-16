@@ -11,7 +11,8 @@ sphinx:
 python:
   install:
     - method: pip
-    - path: .
-    - requirements: docs/requirements.txt
-    - extra-requirements:
+      path: .
+      requirements: docs/requirements.txt
+      requirements: requirements.txt
+      extra-requirements:
       - doc 
