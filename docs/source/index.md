@@ -18,8 +18,14 @@
 installation
 tutorial
 commands
+algorithms
+denoising
+methods
+metrics_stats
+models
+transforms
+utils
+scripts
 relion
 cryosparc
-models
-scripts
 ```

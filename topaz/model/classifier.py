@@ -5,10 +5,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class LinearClassifier(nn.Module):
+    '''A simple convolutional layer without non-linear activation.'''
+
     def __init__(self, features):
         '''
-        A simple convolutional layer with no non-linear activation.
-
         Args:
             features (:obj:): the sizes associated with the layer
 
@@ -34,6 +34,14 @@ class LinearClassifier(nn.Module):
         self.features.unfill()
 
     def forward(self, x):
+        '''Applies the classifier to an input.
+
+        Args:
+            x (np.ndarray): the image from which features are extracted and classified
+
+        Returns:
+            z (np.ndarray): output of the classifer
+        '''
         z = self.features(x)
         y = self.classifier(z)
         return y

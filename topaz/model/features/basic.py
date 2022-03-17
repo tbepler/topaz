@@ -10,6 +10,8 @@ from torch.autograd import Variable
 from topaz.model.utils import insize_from_outsize
 
 class BasicConv(nn.Module):
+    '''A generic convolutional neural network scaffold.'''
+
     def __init__(self, layers, units, unit_scaling=1, dropout=0, bn=True
                 , pooling=None, activation=nn.PReLU):
         super(BasicConv, self).__init__()
