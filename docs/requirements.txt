@@ -11,3 +11,4 @@ sphinx_rtd_theme
 rst-to-myst
 myst-parser
 nbsphinx
+sphinx-argparse

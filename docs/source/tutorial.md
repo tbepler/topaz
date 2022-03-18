@@ -1,4 +1,7 @@
-# Tutorial
+# Tutorials (coming soon)
+
+Tutorial pages here are a work-in-progress. For the time being, please refer to the tutorial notebooks in topaz/tutorial.
+
 <!-- 
 ```{include}../../tutorial/01_quick_start_guide.ipynb
 ```

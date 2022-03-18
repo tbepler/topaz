@@ -1,15 +1,13 @@
-# Topaz Commands
+# Topaz Commands (work in progress)
 
-## downsample
 
-## normalize
+```{toctree}
+:caption: 'Commands'
+:maxdepth: 2
 
-## preprocess
+commands/particle_picking
+commands/image_processing
+commands/file_utilities
 
-## train
-
-## segment
-
-## extract
-
-## precision_recall_curve
+commands/gui
+```

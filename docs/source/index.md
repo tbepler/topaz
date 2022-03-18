@@ -13,7 +13,7 @@
 
 ```{toctree}
 :caption: 'Contents:'
-:maxdepth: 2
+:maxdepth: 3
 
 installation
 tutorial

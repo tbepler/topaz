@@ -7,6 +7,7 @@ import numpy as np
 import multiprocessing as mp
 
 import torch
+import argparse
 
 from topaz.stats import normalize
 from topaz.utils.data.loader import load_image
@@ -16,7 +17,9 @@ import topaz.cuda
 name = 'normalize'
 help = 'normalize a set of images using the 2-component Gaussian mixture model'
 
-def add_arguments(parser):
+def add_arguments():
+    parser = argparse.ArgumentParser('Script for normalizing a list of images using 2-component Gaussian mixture model')
+
     parser.add_argument('files', nargs='+')
 
     parser.add_argument('-s', '--scale', default=1, type=int, help='downsample images by this factor (default: 1)')
@@ -138,8 +141,8 @@ def main(args):
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser('Script for normalizing a list of images using 2-component Gaussian mixture model')
-    add_arguments(parser)
+    # parser = argparse.ArgumentParser('Script for normalizing a list of images using 2-component Gaussian mixture model')
+    parser = add_arguments()
     args = parser.parse_args()
     main(args)
 
