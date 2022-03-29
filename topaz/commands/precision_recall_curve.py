@@ -9,6 +9,7 @@ sys.path.insert(0, root)
 
 import numpy as np
 import pandas as pd
+import argparse
 
 from topaz.metrics import precision_recall_curve
 from topaz.algorithms import match_coordinates
@@ -18,7 +19,9 @@ name = 'precision_recall_curve'
 help = 'calculate the precision-recall curve for a set of predicted particle coordinates with scores and a set of target coordinates'
 
 
-def add_arguments(parser):
+def add_arguments():
+    parser = argparse.ArgumentParser('Script for calculating the precision-recall curve for a set of predicted particle coordinates and a set of target coordinates.')
+
     parser.add_argument('--predicted', help='path to file containing predicted particle coordinates with scores')
     parser.add_argument('--targets', help='path to file specifying target particle coordinates') 
 
@@ -91,23 +94,6 @@ def main(args):
 
 
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser('Script for calculating the precision-recall curve for a set of predicted particle coordinates and a set of target coordinates.')
-    add_arguments(parser)
+    parser = add_arguments()
     args = parser.parse_args()
     main(args)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -3,6 +3,7 @@ from __future__ import print_function
 import sys
 import numpy as np
 from PIL import Image # for saving images
+import argparse
 
 from topaz.utils.data.loader import load_image
 from topaz.utils.image import downsample
@@ -10,7 +11,9 @@ from topaz.utils.image import downsample
 name = 'downsample'
 help = 'downsample micrographs with truncated DFT'
 
-def add_arguments(parser):
+def add_arguments():
+    parser = argparse.ArgumentParser()
+
     parser.add_argument('file')
     parser.add_argument('-s', '--scale', default=4, type=int, help='downsampling factor (default: 4)')
     parser.add_argument('-o', '--output', help='output file')
@@ -41,9 +44,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser()
-    add_arguments(parser)
+    parser = add_arguments()
     args = parser.parse_args()
     main(args)
 

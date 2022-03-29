@@ -10,6 +10,7 @@ import multiprocessing as mp
 
 import numpy as np
 import pandas as pd
+import argparse
 
 import torch
 import torch.nn as nn
@@ -25,7 +26,8 @@ from topaz.denoise import UDenoiseNet3D, GaussianDenoise3d
 name = 'denoise3d'
 help = 'denoise 3D volumes with various denoising algorithms'
 
-def add_arguments(parser):
+def add_arguments():
+    parser = argparse.ArgumentParser(help)
 
     parser.add_argument('volumes', nargs='*', help='volumes to denoise')
     parser.add_argument('-o', '--output', help='directory to save denoised volumes')
@@ -775,3 +777,7 @@ def main(args):
 
 
 
+if __name__ == '__main__':
+    parser = add_arguments()
+    args = parser.parse_args()
+    main(args)

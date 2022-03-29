@@ -7,6 +7,7 @@ import glob
 
 import numpy as np
 import pandas as pd
+import argparse
 
 import torch
 import torch.nn as nn
@@ -20,7 +21,8 @@ import topaz.cuda
 name = 'denoise'
 help = 'denoise micrographs with various denoising algorithms'
 
-def add_arguments(parser):
+def add_arguments():
+    parser = argparse.ArgumentParser(help)
 
     ## only describe the model
     # set GPU and number of worker threads
@@ -565,13 +567,6 @@ def main(args):
 
 
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser(help)
-    add_arguments(parser)
+    parser = add_arguments()
     args = parser.parse_args()
     main(args)
-
-
-
-
-

@@ -4,6 +4,7 @@ import sys
 import os
 import numpy as np
 import pandas as pd
+import argparse
 
 import topaz.mrc as mrc
 import topaz.utils.star as star
@@ -13,7 +14,9 @@ from topaz.utils.data.loader import load_mrc, load_pil
 name = 'particle_stack'
 help = 'extract mrc particle stack given coordinates table'
 
-def add_arguments(parser):
+def add_arguments():
+    parser = argparse.ArgumentParser('Script for extracting mrc stack from particle coordinates')
+
     parser.add_argument('file', help='path to input coordinates file')
     parser.add_argument('--image-root', help='root directory of the micrograph files')
     parser.add_argument('-o', '--output', help='path to write particle stack file')
@@ -172,9 +175,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser('Script for extracting mrc stack from particle coordinates')
-    add_arguments(parser)
+    parser = add_arguments()
     args = parser.parse_args()
     main(args)
 

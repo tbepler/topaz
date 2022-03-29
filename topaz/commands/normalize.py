@@ -140,7 +140,6 @@ def main(args):
 
 
 if __name__ == '__main__':
-    import argparse
     # parser = argparse.ArgumentParser('Script for normalizing a list of images using 2-component Gaussian mixture model')
     parser = add_arguments()
     args = parser.parse_args()

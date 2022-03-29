@@ -5,6 +5,7 @@ import os
 import glob
 import pandas as pd
 import numpy as np
+import argparse
 
 import topaz.utils.star as star
 import topaz.utils.files as file_utils
@@ -16,7 +17,9 @@ name = 'convert'
 help = 'convert particle coordinate files between various formats automatically. also allows filtering particles by score threshold and UP- and DOWN-scaling coordinates.'
 
 
-def add_arguments(parser):
+def add_arguments():
+    parser = argparse.ArgumentParser('Script to ' + help)
+
     parser.add_argument('files', nargs='+', help='path to input particle file(s). when multiple input files are given, they are concatentated into a single output file.')
     parser.add_argument('-o', '--output', help='path to output particle file (default: stdout)')
 
@@ -218,9 +221,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser('Script to ' + help)
-    add_arguments(parser)
+    parser = add_arguments()
     args = parser.parse_args()
     main(args)
 

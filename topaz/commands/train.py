@@ -8,6 +8,7 @@ import glob
 import numpy as np
 import pandas as pd
 import multiprocessing as mp
+import argparse
 
 import torch
 import torch.nn as nn
@@ -24,6 +25,7 @@ name = 'train'
 help = 'train region classifier from images with labeled coordinates'
 
 def add_arguments(parser):
+    parser = argparse.ArgumentParser(help)
 
     ## only describe the model
     parser.add_argument('--describe', action='store_true', help='only prints a description of the model, does not train')
@@ -698,13 +700,6 @@ def main(args):
 
 
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser(help)
-    add_arguments(parser)
+    parser = add_arguments()
     args = parser.parse_args()
     main(args)
-
-
-
-
-

@@ -5,6 +5,7 @@ import os
 import glob
 import pandas as pd
 import numpy as np
+import argparse
 
 import topaz.utils.files as file_utils
 
@@ -12,7 +13,9 @@ name = 'train_test_split'
 help = 'split micrographs with labeled particles into train/test sets'
 
 
-def add_arguments(parser):
+def add_arguments():
+    parser = argparse.ArgumentParser('Script to ' + help)
+    
     parser.add_argument('file', help='path to particle file')
     parser.add_argument('--image-dir', help='path to images directory')
     parser.add_argument('--image-ext', default='*', help='extension of images (default: auto detect)')
@@ -153,9 +156,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser('Script to ' + help)
-    add_arguments(parser)
+    parser = add_arguments()
     args = parser.parse_args()
     main(args)
 

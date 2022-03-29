@@ -4,6 +4,7 @@ import sys
 import os
 import pandas as pd
 import numpy as np
+import argparse
 
 import topaz.utils.star as star
 import topaz.utils.files as file_utils
@@ -12,7 +13,9 @@ name = 'split'
 help = 'split particle file containing coordinates for multiple micrographs into one file per micrograph'
 
 
-def add_arguments(parser):
+def add_arguments():
+    parser = argparse.ArgumentParser('Script to ' + help)
+
     parser.add_argument('file', help='path to input particle file')
     parser.add_argument('-o', '--output', help='path to output directory')
 
@@ -68,9 +71,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser('Script to ' + help)
-    add_arguments(parser)
+    parser = add_arguments()
     args = parser.parse_args()
     main(args)
 

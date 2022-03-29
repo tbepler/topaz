@@ -7,6 +7,7 @@ import sys
 import numpy as np
 import pandas as pd
 from PIL import Image
+import argparse
 
 import torch
 
@@ -16,7 +17,8 @@ import topaz.cuda
 name = 'segment'
 help = 'segment images using a trained region classifier'
 
-def add_arguments(parser):
+def add_arguments():
+    parser = argparse.ArgumentParser('Script for segmenting images using a trained model.')
 
     parser.add_argument('paths', nargs='+', help='paths to image files for processing')
 
@@ -78,28 +80,6 @@ def main(args):
 
 
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser('Script for segmenting images using a trained model.')
-    add_arguments(parser)
+    parser = add_arguments()
     args = parser.parse_args()
     main(args)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
