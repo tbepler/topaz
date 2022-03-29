@@ -2,12 +2,14 @@ from __future__ import print_function
 
 import os
 import sys
+import argparse
 
 name = 'gui'
 help = 'opens the topaz GUI in a web browser'
 
 
-def add_arguments(parser):
+def add_arguments():
+    parser = argparse.ArgumentParser('Opens the topaz GUI in a web browser.')
     return parser
 
 
@@ -26,9 +28,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser('Opens the topaz GUI in a web browser.')
-    add_arguments(parser)
+    parser = add_arguments()
     args = parser.parse_args()
     main(args)
 
