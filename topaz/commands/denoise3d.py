@@ -69,6 +69,7 @@ def add_arguments():
     ## other parameters
     parser.add_argument('-d', '--device', type=int, default=-2, help='compute device/s to use (default: -2, multi gpu), set to >= 0 for single gpu, set to -1 for cpu')
 
+    return parser
 
 def train_epoch(iterator, model, cost_func, optim, epoch=1, num_epochs=1, N=1, use_cuda=False):
     

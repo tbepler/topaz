@@ -18,7 +18,8 @@ help = 'convert particle coordinate files between various formats automatically.
 
 
 def add_arguments():
-    parser = argparse.ArgumentParser('Script to ' + help)
+    # parser = argparse.ArgumentParser('Script to ' + help)
+    parser = argparse.ArgumentParser(help)
 
     parser.add_argument('files', nargs='+', help='path to input particle file(s). when multiple input files are given, they are concatentated into a single output file.')
     parser.add_argument('-o', '--output', help='path to output particle file (default: stdout)')
@@ -224,4 +225,4 @@ if __name__ == '__main__':
     parser = add_arguments()
     args = parser.parse_args()
     main(args)
-
+    

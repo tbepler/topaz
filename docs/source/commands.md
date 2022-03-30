@@ -1,4 +1,4 @@
-# Topaz Commands (work in progress)
+# Topaz Commands
 
 
 ```{toctree}

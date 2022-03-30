@@ -24,7 +24,7 @@ import topaz.cuda
 name = 'train'
 help = 'train region classifier from images with labeled coordinates'
 
-def add_arguments(parser):
+def add_arguments():
     parser = argparse.ArgumentParser(help)
 
     ## only describe the model

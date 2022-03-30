@@ -12,5 +12,3 @@ if __name__ == '__main__':
     parser.prog = 'Script for performing image downsampling and normalization in one step'
     args = parser.parse_args()
     main(args)
-
-
