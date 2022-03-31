@@ -1,4 +1,3 @@
-from msilib.schema import Class
 import numpy as np
 from topaz.transform import ScaledGaussianMixture
 
