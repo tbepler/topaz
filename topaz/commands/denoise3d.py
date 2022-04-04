@@ -21,7 +21,8 @@ from topaz.utils.image import downsample
 import topaz.mrc as mrc
 import topaz.cuda
 
-from topaz.denoise import UDenoiseNet3D, GaussianDenoise3d
+from topaz.denoise import UDenoiseNet3D
+from topaz.filters import GaussianDenoise
 
 name = 'denoise3d'
 help = 'denoise 3D volumes with various denoising algorithms'
@@ -751,7 +752,7 @@ def main(args):
         gaussian_sigma = args.gaussian
         if gaussian_sigma > 0:
             print('# apply Gaussian filter postprocessing with sigma={}'.format(gaussian_sigma), file=sys.stderr)
-            model = nn.Sequential(model, GaussianDenoise3d(gaussian_sigma))
+            model = nn.Sequential(model, GaussianDenoise(gaussian_sigma, dims=3))
         model.eval()
         
         model, use_cuda, num_devices = set_device(model, args.device)

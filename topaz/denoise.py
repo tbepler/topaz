@@ -10,6 +10,7 @@ import torch.utils.data
 
 
 from topaz.utils.data.loader import load_image
+from topaz.filters import AffineFilter, AffineDenoise, GaussianDenoise, gaussian_filter, inverse_filter
 
 
 def load_model(name):
@@ -171,28 +172,6 @@ def spatial_covariance_old(x, n=11, s=11):
     return cov[i,i]
 
 
-def gaussian_filter(sigma, s=11):
-    dim = s//2
-    xx,yy = np.meshgrid(np.arange(-dim, dim+1), np.arange(-dim, dim+1))
-    d = xx**2 + yy**2
-    f = np.exp(-0.5*d/sigma**2)
-    return f
-
-
-def gaussian_filter_3d(sigma, s=11):
-    dim = s//2
-    xx,yy,zz = np.meshgrid(np.arange(-dim, dim+1), np.arange(-dim, dim+1), np.arange(-dim,dim+1))
-    d = xx**2 + yy**2 + zz**2
-    f = np.exp(-0.5*d/sigma**2)
-    return f
-
-
-def inverse_filter(w):
-    F = np.fft.rfft2(np.fft.ifftshift(w))
-    F = np.fft.fftshift(np.fft.irfft2(1/F, s=w.shape))
-    return F
-
-
 def estimate_unblur_filter(x, width=11, s=11):
     """
     Estimate parameters of the affine filter that would give
@@ -317,76 +296,6 @@ def correct_spatial_covariance(x, width=11, s=11, patch=1):
 
     return y
 
-
-class GaussianDenoise(nn.Module):
-    def __init__(self, sigma, scale=5):
-        super(GaussianDenoise, self).__init__()
-        width = 1 + 2*int(np.ceil(sigma*scale))
-        f = gaussian_filter(sigma, s=width)
-        f /= f.sum()
-
-        self.filter = nn.Conv2d(1, 1, width, padding=width//2)
-        self.filter.weight.data[:] = torch.from_numpy(f).float()
-        self.filter.bias.data.zero_()
-
-    def forward(self, x):
-        return self.filter(x)
-
-
-class GaussianDenoise3d(nn.Module):
-    def __init__(self, sigma, scale=5):
-        super(GaussianDenoise3d, self).__init__()
-        width = 1 + 2*int(np.ceil(sigma*scale))
-        f = gaussian_filter_3d(sigma, s=width)
-        f /= f.sum()
-
-        self.filter = nn.Conv3d(1, 1, width, padding=width//2)
-        self.filter.weight.data[:] = torch.from_numpy(f).float()
-        self.filter.bias.data.zero_()
-
-    def forward(self, x):
-        return self.filter(x)
-
-
-class InvGaussianFilter(nn.Module):
-    def __init__(self, sigma, scale=5):
-        super(InvGaussianFilter, self).__init__()
-        width = 1 + 2*int(np.ceil(sigma*scale))
-        f = gaussian_filter(sigma, s=width)
-        f /= f.sum()
-
-        # now, invert the filter
-        F = inverse_filter(f)
-
-        self.filter = nn.Conv2d(1, 1, width, padding=width//2)
-        self.filter.weight.data[:] = torch.from_numpy(F).float()
-        self.filter.bias.data.zero_()
-
-    def forward(self, x):
-        return self.filter(x)
-
-
-class AffineFilter(nn.Module):
-    def __init__(self, weights):
-        super(AffineFilter, self).__init__()
-        n = weights.shape[0]
-        self.filter = nn.Conv2d(1, 1, n, padding=n//2)
-        self.filter.weight.data[:] = torch.from_numpy(weights).float()
-        self.filter.bias.data.zero_()
-
-    def forward(self, x):
-        return self.filter(x)
-
-
-class AffineDenoise(nn.Module):
-    def __init__(self, max_size=31):
-        super(AffineDenoise, self).__init__()
-        self.filter = nn.Conv2d(1, 1, max_size, padding=max_size//2)
-        self.filter.weight.data.zero_()
-        self.filter.bias.data.zero_()
-
-    def forward(self, x):
-        return self.filter(x)
 
 
 class DenoiseNet(nn.Module):
@@ -1331,37 +1240,22 @@ def train_mask_denoise(model, dataset, p=0.01, lr=0.001, optim='adagrad', batch_
             yield epoch, loss_accum
 
 
-def lowpass(x, factor=1):
+def lowpass(x, factor=1, dims=2):
     """ low pass filter with FFT """
 
-    freq0 = np.fft.fftfreq(x.shape[-2])
-    freq1 = np.fft.rfftfreq(x.shape[-1])
-    freq = np.meshgrid(freq0, freq1, indexing='ij')
-    freq = np.stack(freq, 2)
+    if dims == 2:
+        freq0 = np.fft.fftfreq(x.shape[-2])
+        freq1 = np.fft.rfftfreq(x.shape[-1])
+    elif dims == 3:
+        freq0 = np.fft.fftfreq(x.shape[-3])
+        freq1 = np.fft.fftfreq(x.shape[-2])
+        freq2 = np.fft.rfftfreq(x.shape[-1])
+
+    freq = np.meshgrid(freq0, freq1, indexing='ij') if dims ==2 else np.meshgrid(freq0, freq1, freq2, indexing='ij')
+    freq = np.stack(freq, dims)
 
     r = np.abs(freq)
-    mask = np.any((r > 0.5/factor), 2) 
-
-    F = np.fft.rfft2(x)
-    F[...,mask] = 0
-
-    f = np.fft.irfft2(F, s=x.shape)
-    f = f.astype(x.dtype)
-
-    return f
-
-
-def lowpass3d(x, factor=1):
-    """ low pass filter with FFT """
-
-    freq0 = np.fft.fftfreq(x.shape[-3])
-    freq1 = np.fft.fftfreq(x.shape[-2])
-    freq2 = np.fft.rfftfreq(x.shape[-1])
-    freq = np.meshgrid(freq0, freq1, freq2, indexing='ij')
-    freq = np.stack(freq, 3)
-
-    r = np.abs(freq)
-    mask = np.any((r > 0.5/factor), 3) 
+    mask = np.any((r > 0.5/factor), dims) 
 
     F = np.fft.rfftn(x)
     F[...,mask] = 0
@@ -1372,12 +1266,12 @@ def lowpass3d(x, factor=1):
     return f
 
 
-def gaussian(x, sigma=1, scale=5, use_cuda=False):
+def gaussian(x, sigma=1, scale=5, use_cuda=False, dims=2):
     """
     Apply Gaussian filter with sigma to image. Truncates the kernel at scale times sigma pixels
     """
 
-    f = GaussianDenoise(sigma, scale=scale)
+    f = GaussianDenoise(sigma, scale=scale, dims=dims)
     if use_cuda:
         f.cuda()
 
@@ -1387,24 +1281,3 @@ def gaussian(x, sigma=1, scale=5, use_cuda=False):
             x = x.cuda()
         y = f(x).squeeze().cpu().numpy()
     return y
-
-
-def gaussian3d(x, sigma=1, scale=5, use_cuda=False):
-    """
-    Apply Gaussian filter with sigma to volume. Truncates the kernel at scale times sigma pixels
-    """
-
-    f = GaussianDenoise3d(sigma, scale=scale)
-    if use_cuda:
-        f.cuda()
-
-    with torch.no_grad():
-        x = torch.from_numpy(x).unsqueeze(0).unsqueeze(0)
-        if use_cuda:
-            x = x.cuda()
-        y = f(x).squeeze().cpu().numpy()
-    return y
-
-    
-
-
