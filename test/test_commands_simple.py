@@ -1,6 +1,11 @@
 #test that commands can be imported and arguments parsed
 
 
+def test_main():
+    from topaz import main
+    main.main()
+
+
 def test_train():
     from topaz.commands import train
     parser = train.add_arguments()
