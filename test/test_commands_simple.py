@@ -3,8 +3,11 @@
 
 def test_main():
     from topaz import main
-    main.main()
-
+    try:
+        main.main()
+    except SystemExit:
+        #no commands are passed, so we call sys.exit
+        pass
 
 def test_train():
     from topaz.commands import train

@@ -11,8 +11,9 @@ from topaz.utils.image import downsample
 name = 'downsample'
 help = 'downsample micrographs with truncated DFT'
 
-def add_arguments():
-    parser = argparse.ArgumentParser()
+def add_arguments(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser()
 
     parser.add_argument('file')
     parser.add_argument('-s', '--scale', default=4, type=int, help='downsampling factor (default: 4)')

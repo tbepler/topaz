@@ -8,8 +8,9 @@ name = 'gui'
 help = 'opens the topaz GUI in a web browser'
 
 
-def add_arguments():
-    parser = argparse.ArgumentParser('Opens the topaz GUI in a web browser.')
+def add_arguments(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser('Opens the topaz GUI in a web browser.')
     return parser
 
 

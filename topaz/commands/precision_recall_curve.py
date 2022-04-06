@@ -19,8 +19,9 @@ name = 'precision_recall_curve'
 help = 'calculate the precision-recall curve for a set of predicted particle coordinates with scores and a set of target coordinates'
 
 
-def add_arguments():
-    parser = argparse.ArgumentParser('Script for calculating the precision-recall curve for a set of predicted particle coordinates and a set of target coordinates.')
+def add_arguments(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser('Script for calculating the precision-recall curve for a set of predicted particle coordinates and a set of target coordinates.')
 
     parser.add_argument('--predicted', help='path to file containing predicted particle coordinates with scores')
     parser.add_argument('--targets', help='path to file specifying target particle coordinates') 

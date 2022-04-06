@@ -21,8 +21,9 @@ import topaz.cuda
 name = 'denoise'
 help = 'denoise micrographs with various denoising algorithms'
 
-def add_arguments():
-    parser = argparse.ArgumentParser(help)
+def add_arguments(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser(help)
 
     ## only describe the model
     # set GPU and number of worker threads

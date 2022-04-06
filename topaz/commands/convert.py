@@ -17,9 +17,10 @@ name = 'convert'
 help = 'convert particle coordinate files between various formats automatically. also allows filtering particles by score threshold and UP- and DOWN-scaling coordinates.'
 
 
-def add_arguments():
+def add_arguments(parser=None):
     # parser = argparse.ArgumentParser('Script to ' + help)
-    parser = argparse.ArgumentParser(help)
+    if parser is None:
+        parser = argparse.ArgumentParser(help)
 
     parser.add_argument('files', nargs='+', help='path to input particle file(s). when multiple input files are given, they are concatentated into a single output file.')
     parser.add_argument('-o', '--output', help='path to output particle file (default: stdout)')

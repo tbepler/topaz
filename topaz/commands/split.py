@@ -13,8 +13,9 @@ name = 'split'
 help = 'split particle file containing coordinates for multiple micrographs into one file per micrograph'
 
 
-def add_arguments():
-    parser = argparse.ArgumentParser('Script to ' + help)
+def add_arguments(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser('Script to ' + help)
 
     parser.add_argument('file', help='path to input particle file')
     parser.add_argument('-o', '--output', help='path to output directory')

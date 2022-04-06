@@ -27,8 +27,9 @@ from topaz.filters import GaussianDenoise
 name = 'denoise3d'
 help = 'denoise 3D volumes with various denoising algorithms'
 
-def add_arguments():
-    parser = argparse.ArgumentParser(help)
+def add_arguments(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser(help)
 
     parser.add_argument('volumes', nargs='*', help='volumes to denoise')
     parser.add_argument('-o', '--output', help='directory to save denoised volumes')

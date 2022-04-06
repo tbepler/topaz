@@ -17,8 +17,9 @@ import topaz.cuda
 name = 'segment'
 help = 'segment images using a trained region classifier'
 
-def add_arguments():
-    parser = argparse.ArgumentParser('Script for segmenting images using a trained model.')
+def add_arguments(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser('Script for segmenting images using a trained model.')
 
     parser.add_argument('paths', nargs='+', help='paths to image files for processing')
 

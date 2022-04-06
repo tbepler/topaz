@@ -23,8 +23,9 @@ import topaz.cuda
 name = 'extract'
 help = 'extract particles from segmented images or segment and extract in one step with a trained classifier'
 
-def add_arguments():
-    parser = argparse.ArgumentParser('Script for extracting particles from segmented images or images processed with a trained model. Uses a non maximum suppression algorithm.')
+def add_arguments(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser('Script for extracting particles from segmented images or images processed with a trained model. Uses a non maximum suppression algorithm.')
 
     parser.add_argument('paths', nargs='*', help='paths to image files for processing, can also be streamed from stdin')
 

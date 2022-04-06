@@ -13,8 +13,9 @@ name = 'train_test_split'
 help = 'split micrographs with labeled particles into train/test sets'
 
 
-def add_arguments():
-    parser = argparse.ArgumentParser('Script to ' + help)
+def add_arguments(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser('Script to ' + help)
     
     parser.add_argument('file', help='path to particle file')
     parser.add_argument('--image-dir', help='path to images directory')

@@ -17,8 +17,9 @@ import topaz.cuda
 name = 'normalize'
 help = 'normalize a set of images using the 2-component Gaussian mixture model'
 
-def add_arguments():
-    parser = argparse.ArgumentParser('Script for normalizing a list of images using 2-component Gaussian mixture model')
+def add_arguments(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser('Script for normalizing a list of images using 2-component Gaussian mixture model')
 
     parser.add_argument('files', nargs='+')
 

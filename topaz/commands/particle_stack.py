@@ -14,8 +14,9 @@ from topaz.utils.data.loader import load_mrc, load_pil
 name = 'particle_stack'
 help = 'extract mrc particle stack given coordinates table'
 
-def add_arguments():
-    parser = argparse.ArgumentParser('Script for extracting mrc stack from particle coordinates')
+def add_arguments(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser('Script for extracting mrc stack from particle coordinates')
 
     parser.add_argument('file', help='path to input coordinates file')
     parser.add_argument('--image-root', help='root directory of the micrograph files')

@@ -24,8 +24,9 @@ import topaz.cuda
 name = 'train'
 help = 'train region classifier from images with labeled coordinates'
 
-def add_arguments():
-    parser = argparse.ArgumentParser(help)
+def add_arguments(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser(help)
 
     ## only describe the model
     parser.add_argument('--describe', action='store_true', help='only prints a description of the model, does not train')
