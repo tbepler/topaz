@@ -1,6 +1,7 @@
 from __future__ import print_function,division
 
 import pandas as pd
+import sys
 
 X_COLUMN_NAME = 'CoordinateX'
 Y_COLUMN_NAME = 'CoordinateY'
@@ -97,4 +98,16 @@ def write(table, f):
     table.to_csv(f, sep='\t', index=False, header=False)
 
 
+def threshold_star_particles(input_file, threshold, output_file=None):
+    with open(input_file, 'r') as f:
+        particles = parse_star(f)
+    n = len(particles)
+    particles['ParticleScore'] = [float(s) for s in particles['ParticleScore']]
+    particles = particles.loc[particles['ParticleScore'] >= threshold]
+    print('# filtered', n, 'particles to', len(particles), 'with treshold of', threshold, file=sys.stderr)
 
+    ## write the star file
+    f = sys.stdout if output_file is None else open(output_file, 'w')
+    write(particles, f)
+    if output_file is not None: 
+        f.close() 
