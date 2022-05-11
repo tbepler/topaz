@@ -1,4 +1,5 @@
 from __future__ import print_function,division
+from posixpath import split
 
 import sys
 import os
@@ -7,7 +8,7 @@ import numpy as np
 import argparse
 
 import topaz.utils.star as star
-import topaz.utils.files as file_utils
+from topaz.utils.files import split_particle_file
 
 name = 'split'
 help = 'split particle file containing coordinates for multiple micrographs into one file per micrograph'
@@ -30,45 +31,9 @@ def add_arguments(parser=None):
 
     return parser
 
+
 def main(args):
-
-    fmt = args._from
-
-    # detect the input file formats
-    path = args.file
-    if fmt == 'auto':
-        try:
-            fmt = file_utils.detect_format(path)
-        except file_utils.UnknownFormatError as e:
-            print('Error: unrecognized input coordinates file extension ('+e.ext+')', file=sys.stderr)
-            sys.exit(1)
-    _,ext = os.path.splitext(path)
-    
-    suffix = args.suffix
-
-    t = args.threshold
-    base = args.output
-    if fmt == 'star':
-        with open(path, 'r') as f:
-            table = star.parse(f)
-        # apply score threshold
-        if star.SCORE_COLUMN_NAME in table.columns:
-            table = table.loc[table[star.SCORE_COLUMN_NAME] >= t]
-
-        # write per micrograph files
-        for image_name,group in table.groupby('MicrographName'):
-            image_name,_ = os.path.splitext(image_name)
-            path = base + '/' + image_name + suffix + ext
-            with open(path, 'w') as f:
-                star.write(group, f)
-    else: # format is coordinate table
-        table = pd.read_csv(path, sep='\t')
-        if 'score' in table.columns:
-            table = table.loc[table['score'] >= t]
-        # write per micrograph files
-        for image_name,group in table.groupby('image_name'):
-            path = base + '/' + image_name + suffix + ext
-            group.to_csv(path, sep='\t', index=False)
+    split_particle_file(args.file, args._from, args.suffix, args.threshold, args.output)
 
 
 if __name__ == '__main__':

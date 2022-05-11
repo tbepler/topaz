@@ -2,6 +2,7 @@ from __future__ import print_function,division
 import glob
 
 import json
+from traceback import format_tb
 import pandas as pd
 import numpy as np
 import csv
@@ -10,6 +11,8 @@ import sys
 
 import topaz.utils.star as star
 from topaz.utils.conversions import boxes_to_coordinates, coordinates_to_boxes, coordinates_to_eman2_json, coordinates_to_star
+from topaz.utils.files import detect_format, UnknownFormatError
+
 
 particle_format_map = {
     '.star': 'star',
@@ -20,9 +23,11 @@ particle_format_map = {
     '.tab': 'coord',
 }
 
+
 class UnknownFormatError(Exception):
     def __init__(self, ext):
         self.ext = ext
+
 
 def detect_format(path):
     _,ext = os.path.splitext(path)
@@ -30,9 +35,11 @@ def detect_format(path):
         raise UnknownFormatError(ext)
     return particle_format_map[ext]
 
+
 def strip_ext(name):
     clean_name,ext = os.path.splitext(name)
     return clean_name
+
 
 def read_via_csv(path):
     # this is the VIA format CSV
@@ -76,6 +83,7 @@ def read_via_csv(path):
         table['score'] = scores
 
     return table
+
 
 def write_via_csv(path, table):
     # write the particles as VIA format CSV
@@ -259,3 +267,38 @@ def get_image_path(image_name, root, ext):
     path = os.path.abspath(path)
 
     return path
+
+
+def split_particle_file(input_file, format, suffix, threshold, output_dir):
+    # remove trailing slash from directory if user inputs
+    output_dir = output_dir[:-1] if output_dir[-1] == '/' else output_dir
+    
+    # detect the input file formats
+    if format == 'auto':
+        try:
+            format = detect_format(input_file)
+        except UnknownFormatError as e:
+            print('Error: unrecognized input coordinates file extension ('+e.ext+')', file=sys.stderr)
+            sys.exit(1)
+    _,ext = os.path.splitext(path)
+    
+    if format == 'star':
+        with open(path, 'r') as f:
+            table = star.parse(f)
+        # apply score threshold 
+        if star.SCORE_COLUMN_NAME in table.columns:
+            table = table.loc[table[star.SCORE_COLUMN_NAME] >= threshold]
+        # write per micrograph files
+        for image_name,group in table.groupby('MicrographName'):
+            image_name,_ = os.path.splitext(image_name)
+            path = output_dir + '/' + image_name + suffix + ext
+            with open(path, 'w') as f:
+                star.write(group, f)
+    else: # format is coordinate table
+        table = pd.read_csv(path, sep='\t')
+        if 'score' in table.columns:
+            table = table.loc[table['score'] >= threshold]
+        # write per micrograph files
+        for image_name,group in table.groupby('image_name'):
+            path = output_dir + '/' + image_name + suffix + ext
+            group.to_csv(path, sep='\t', index=False)
