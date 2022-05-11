@@ -6,6 +6,25 @@ import scipy.stats
 import torch
 
 
+def calculate_pi(expected_num_particles, num_micrographs, radius, total_regions):
+    # expected particles in training set rather than per micrograph
+    expected_num_particles *= num_micrographs
+    
+    # given the expected number of particles and the radius
+    # calculate what pi should be
+    # pi = pixels_per_particle*expected_number_of_particles/pixels_in_dataset
+    grid = np.linspace(-radius, radius, 2*radius+1)
+    xx = np.zeros((2*radius+1, 2*radius+1)) + grid[:,np.newaxis]
+    yy = np.zeros((2*radius+1, 2*radius+1)) + grid[np.newaxis]
+    d2 = xx**2 + yy**2
+    mask = (d2 <= radius**2).astype(int)
+    pixels_per_particle = mask.sum()
+
+    # total_regions is number of regions in the data
+    pi = pixels_per_particle*expected_num_particles/total_regions
+    return pi
+
+
 def normalize(x, alpha=900, beta=1, num_iters=100, sample=1
              , method='gmm', use_cuda=False, verbose=False):
     if method == 'affine':
