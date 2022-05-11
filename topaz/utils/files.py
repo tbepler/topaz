@@ -1,4 +1,5 @@
 from __future__ import print_function,division
+import glob
 
 import json
 import pandas as pd
@@ -234,5 +235,27 @@ def write_table(f, table, format='auto', boxsize=0, image_ext=''):
         table.to_csv(f, sep='\t', index=False)
     
 
+def get_image_path(image_name, root, ext):
+    tmp = root + os.sep + image_name + '.' + ext
+    paths = glob.glob(tmp) # candidates...
+    if len(paths) > 1:
+        print('WARNING: multiple images detected matching to image_name='+image_name, file=sys.stderr)
+        # resolve this by taking #1 .tiff, #2 .mrc, #3 .png
+        for path in paths:
+            found_matching = path.endswith('.tiff') or path.endswith('.mrc') or path.endswith('.png')
+        if not found_matching:
+            print('ERROR: unable to find .tiff, .mrc, or .png image matching to image_name='+image_name, file=sys.stderr)
+            sys.exit(1)
+ 
+    elif len(paths) == 1:
+        path = paths[0]
+        
+    else:
+        # no matches for the image name
+        print('WARNING: no micrograph found matching image name "' + image_name + '". Skipping it.', file=sys.stderr)
+        return None
 
+    ## make absolute path
+    path = os.path.abspath(path)
 
+    return path
