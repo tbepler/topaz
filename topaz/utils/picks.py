@@ -1,6 +1,10 @@
-from __future__ import print_function, division
+from __future__ import division, print_function
+
+import sys
 
 import numpy as np
+import pandas as pd
+
 
 def as_mask(shape, x_coord, y_coord, radii):
 
@@ -22,8 +26,19 @@ def as_mask(shape, x_coord, y_coord, radii):
     return mask
 
 
+def scale_coordinates(input_file:str, scale:float, output_file:str=None):
+    '''Scale pick coordinates for resized images
+    '''
+    ## load picks
+    df = pd.read_csv(input_file, sep='\t')
 
-
-
-
-
+    if 'diameter' in df:
+        df['diameter'] = np.ceil(df.diameter*scale).astype(np.int32)
+    df['x_coord'] = np.round(df.x_coord*scale).astype(np.int32)
+    df['y_coord'] = np.round(df.y_coord*scale).astype(np.int32)
+    
+    ## write the scaled df
+    out = sys.stdout if output_file is None else open(output_file, 'w')
+    df.to_csv(out, sep='\t', header=True, index=False)
+    if output_file is not None:
+        out.close()

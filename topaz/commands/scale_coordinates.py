@@ -3,6 +3,8 @@ from __future__ import print_function, division
 import sys
 import pandas as pd
 import numpy as np
+from sklearn.preprocessing import scale
+from topaz.utils.picks import scale_coordinates
 
 name = 'scale_coordinates'
 help = 'scale particle coordinates for resized images'
@@ -14,23 +16,7 @@ def add_arguments(parser):
     return parser
 
 def main(args):
-    ## load picks
-    df = pd.read_csv(args.file, sep='\t')
-
-    scale = args.scale
-
-    #scaled_x = df.x_coord/scale
-    #scaled_y = df.y_coord/scale
-
-    if 'diameter' in df:
-        df['diameter'] = np.ceil(df.diameter*scale).astype(np.int32)
-    df['x_coord'] = np.round(df.x_coord*scale).astype(np.int32)
-    df['y_coord'] = np.round(df.y_coord*scale).astype(np.int32)
-    ## write the scaled df
-    out = sys.stdout if args.output is None else open(args.output, 'w')
-    df.to_csv(out, sep='\t', header=True, index=False)
-    if args.output is not None:
-        out.close()
+    scale_coordinates(args.file, args.scale, args.output)
 
 
 if __name__ == '__main__':
