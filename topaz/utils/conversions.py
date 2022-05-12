@@ -1,15 +1,16 @@
 from __future__ import division, print_function
-from locale import strcoll
 
+import glob
+import json
 import os
 import sys
+from locale import strcoll
+from typing import List
 
 import numpy as np
 import pandas as pd
-import glob
 import topaz.utils.star as star
 from topaz.utils.data.loader import load_image
-from typing import List
 
 
 def mirror_y_axis(coords, n):
@@ -136,6 +137,37 @@ def coordinates_to_eman2_json(coords, shape=None, invert_y=False, tag='manual'):
     for i in range(len(x_coords)):
         entries.append([int(x_coords[i]), int(y_coords[i]), tag])
     return entries
+
+
+def file_coordinates_to_eman2_json(input_paths:List[str], destdir:str, invert_y:bool, image_dir:str, image_ext:str):
+    dfs = []
+    for path in input_paths:
+        coords = pd.read_csv(path, sep='\t')
+        dfs.append(coords)
+    coords = pd.concat(dfs, axis=0)
+
+    coords = coords.drop_duplicates()
+    print(len(coords))
+
+    if not os.path.exists(destdir):
+        os.makedirs(destdir)
+
+    for image_name,group in coords.groupby('image_name'):
+        path = destdir + '/' + image_name + '_info.json'
+
+        shape = None
+        if invert_y:
+            impath = os.path.join(image_dir, image_name) + '.' + image_ext
+            # use glob incase image_ext is '*'
+            impath = glob.glob(impath)[0]
+            im = load_image(impath)
+            shape = (im.height,im.width)
+        
+        xy = group[['x_coord','y_coord']].values.astype(int)
+        boxes = coordinates_to_eman2_json(xy, shape=shape, invert_y=invert_y)
+
+        with open(path, 'w') as f:
+            json.dump({'boxes': boxes}, f, indent=0)
 
 
 def coordinates_to_star(table, image_ext=''):
