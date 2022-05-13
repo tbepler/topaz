@@ -11,7 +11,6 @@ import sys
 
 import topaz.utils.star as star
 from topaz.utils.conversions import boxes_to_coordinates, coordinates_to_boxes, coordinates_to_eman2_json, coordinates_to_star
-from topaz.utils.files import detect_format, UnknownFormatError
 
 
 particle_format_map = {

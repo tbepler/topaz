@@ -8,7 +8,7 @@ from PIL import Image
 import torch
 
 import topaz.mrc as mrc
-from topaz.utils.image import unquantize
+
 
 class ImageDirectoryLoader:
     def __init__(self, rootdir, pathspec=os.path.join('{source}', '{image_name}'), format='tiff'
@@ -68,6 +68,7 @@ def load_tiff(path, standardize=False):
     return image
 
 def load_png(path, standardize=False):
+    from topaz.utils.image import unquantize
     image = Image.open(path)
     fp = image.fp
     image.load()
@@ -80,6 +81,7 @@ def load_png(path, standardize=False):
     return image
 
 def load_jpeg(path, standardize=False):
+    from topaz.utils.image import unquantize
     image = Image.open(path)
     fp = image.fp
     image.load()
