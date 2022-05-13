@@ -1,9 +1,17 @@
-from __future__ import absolute_import, print_function, division
+from __future__ import absolute_import, division, print_function
+
+import json
+import multiprocessing as mp
+import os
+import sys
+from typing import List
 
 import numpy as np
 import scipy.stats
 
 import torch
+from topaz.utils.data.loader import load_image
+from topaz.utils.image import downsample, save_image
 
 
 def calculate_pi(expected_num_particles, num_micrographs, radius, total_regions):
@@ -270,4 +278,70 @@ def gmm_fit_numpy(x, pi=0.5, alpha=0.5, beta=0.5, tol=1e-3, num_iters=50, verbos
         
     return logp, mu0, var, mu1, var, pi
 
-    
+
+class Normalize:
+    def __init__(self, dest, scale, affine, num_iters, alpha, beta
+                , sample, metadata, formats, use_cuda):
+        self.dest = dest
+        self.scale = scale
+        self.affine = affine
+        self.num_iters = num_iters
+        self.alpha = alpha
+        self.beta = beta
+        self.sample = sample
+        self.metadata = metadata
+        self.formats = formats
+        self.use_cuda = use_cuda
+
+    def __call__(self, path):
+        # load the image
+        x = np.array(load_image(path), copy=False).astype(np.float32)
+
+        if self.scale > 1:
+            x = downsample(x, self.scale)
+
+        # normalize it
+        method = 'gmm'
+        if self.affine:
+            method = 'affine'
+        x,metadata = normalize(x, alpha=self.alpha, beta=self.beta, num_iters=self.num_iters
+                              , method=method, sample=self.sample, use_cuda=self.use_cuda)
+
+        # save the image and the metadata
+        name,_ = os.path.splitext(os.path.basename(path))
+        base = os.path.join(self.dest, name)
+        for f in self.formats:
+            save_image(x, base, f=f)
+
+        if self.metadata:
+            # save the metadata in json format
+            mdpath = base + '.metadata.json'
+            if not self.affine:
+                metadata['mus'] = metadata['mus'].tolist()
+                metadata['stds'] = metadata['stds'].tolist()
+                metadata['pis'] = metadata['pis'].tolist()
+                metadata['logps'] = metadata['logps'].tolist()
+            with open(mdpath, 'w') as f:
+                json.dump(metadata, f, indent=4)
+
+        return name
+
+
+def normalize_images(paths:List[str], dest:str, num_workers:int, scale:int, affine:bool, niters:int, alpha:float, 
+                     beta:float, sample:int, metadata:bool, formats:List[str], use_cuda:bool, verbose:bool):
+    if not os.path.exists(dest):
+        os.makedirs(dest)
+
+    process = Normalize(dest, scale, affine, niters, alpha, beta,
+                        sample, metadata, formats, use_cuda)
+
+    if num_workers > 1:
+        pool = mp.Pool(num_workers)
+        for name in pool.imap_unordered(process, paths):
+            if verbose:
+                print('# processed:', name, file=sys.stderr)
+    else:
+        for path in paths:
+            name = process(path)
+            if verbose:
+                print('# processed:', name, file=sys.stderr)
