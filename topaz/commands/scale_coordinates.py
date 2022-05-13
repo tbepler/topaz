@@ -1,9 +1,5 @@
 from __future__ import print_function, division
 
-import sys
-import pandas as pd
-import numpy as np
-from sklearn.preprocessing import scale
 from topaz.utils.picks import scale_coordinates
 
 name = 'scale_coordinates'
