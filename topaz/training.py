@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import division, print_function
 
+import glob
 import multiprocessing as mp
 import os
 import sys
