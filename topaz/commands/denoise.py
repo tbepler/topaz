@@ -1,22 +1,22 @@
 #!/usr/bin/env python
-from __future__ import print_function, division
+from __future__ import division, print_function
 
+import argparse
+import glob
 import os
 import sys
-import glob
 
 import numpy as np
 import pandas as pd
-import argparse
-
+import topaz.cuda
+import topaz.denoise as dn
+from topaz.denoising.datasets import make_images_datasets, make_paired_images_datasets
+import topaz.mrc as mrc
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 from topaz.utils.data.loader import load_image
-from topaz.utils.image import downsample
-import topaz.mrc as mrc
-import topaz.cuda
+from topaz.utils.image import downsample, save_image
 
 name = 'denoise'
 help = 'denoise micrographs with various denoising algorithms'
@@ -47,7 +47,7 @@ def add_arguments(parser=None):
     parser.add_argument('--preload', action='store_true', help='preload micrographs into RAM')
     parser.add_argument('--holdout', type=float, default=0.1, help='fraction of training micrograph pairs to holdout for validation (default: 0.1)')
 
-    parser.add_argument('--lowpass', type=float, default=1, help='lowpass filter micrographs by this amount (in pixels) before applying the denoising filter. uses a hard lowpass filter (i.e. sinc) (default: no lowpass filtering)')
+    parser.add_argument('--lowpass', type=float, default=1, help='lowpass filter micrographs by this a0mount (in pixels) before applying the denoising filter. uses a hard lowpass filter (i.e. sinc) (default: no lowpass filtering)')
     parser.add_argument('--gaussian', type=float, default=0, help='Gaussian filter micrographs with this standard deviation (in pixels) before applying the denoising filter (default: 0)')
     parser.add_argument('--inv-gaussian', type=float, default=0, help='Inverse Gaussian filter micrographs with this standard deviation (in pixels) before applying the denoising filter (default: 0)')
 
@@ -76,236 +76,6 @@ def add_arguments(parser=None):
 
     return parser
 
-
-import topaz.denoise as dn
-from topaz.utils.image import save_image
-
-
-def make_paired_images_datasets(dir_a, dir_b, crop, random=np.random, holdout=0.1, preload=False, cutoff=0):
-    # train denoising model
-    # make the dataset
-    A = []
-    B = []
-    for path in glob.glob(dir_a + os.sep + '*.mrc'):
-        name = os.path.basename(path)
-        A.append(path)
-        B.append(dir_b + os.sep + name)
-
-    # randomly hold out some image pairs for validation
-    n = int(holdout*len(A))
-    order = random.permutation(len(A))
-
-    A_train = []
-    A_val = []
-    B_train = []
-    B_val = []
-    for i in range(n):
-        A_val.append(A[order[i]])
-        B_val.append(B[order[i]])
-    for i in range(n, len(A)):
-        A_train.append(A[order[i]])
-        B_train.append(B[order[i]])
-
-    print('# training with', len(A_train), 'image pairs', file=sys.stderr)
-    print('# validating on', len(A_val), 'image pairs', file=sys.stderr)
-
-    dataset_train = dn.PairedImages(A_train, B_train, crop=crop, xform=True, preload=preload, cutoff=cutoff)
-    dataset_val = dn.PairedImages(A_val, B_val, crop=crop, preload=preload, cutoff=cutoff)
-
-    return dataset_train, dataset_val
-
-
-def make_images_datasets(dir_a, dir_b, crop, random=np.random, holdout=0.1, cutoff=0):
-    # train denoising model
-    # make the dataset
-    paths = []
-    for path in glob.glob(dir_a + os.sep + '*.mrc'):
-        paths.append(path)
-
-    if dir_b is not None:
-        for path in glob.glob(dir_b + os.sep + '*.mrc'):
-            paths.append(path)
-
-    # randomly hold out some image pairs for validation
-    n = int(holdout*len(paths))
-    order = random.permutation(len(paths))
-
-    path_train = []
-    path_val = []
-    for i in range(n):
-        path_val.append(paths[order[i]])
-    for i in range(n, len(paths)):
-        path_train.append(paths[order[i]])
-
-    print('# training with', len(path_train), 'image pairs', file=sys.stderr)
-    print('# validating on', len(path_val), 'image pairs', file=sys.stderr)
-
-    dataset_train = dn.NoiseImages(path_train, crop=crop, xform=True, cutoff=cutoff)
-    dataset_val = dn.NoiseImages(path_val, crop=crop, cutoff=cutoff)
-
-    return dataset_train, dataset_val
-
-
-class HDFPairedDataset:
-    def __init__(self, dataset, start=0, end=None, xform=False, cutoff=0):
-        self.dataset = dataset
-        self.start = start
-        self.end = end
-        if end is None:
-            self.end = len(dataset)
-        self.n = (self.end - self.start)//2
-        self.xform = xform
-        self.cutoff = cutoff
-
-    def __len__(self):
-        return self.n
-
-    def __getitem__(self, i): # retrieve the i'th image pair
-        i = self.start + i*2
-        j = i + 1
-
-        x = self.dataset[i]
-        y = self.dataset[j]
-
-        # randomly flip
-        if self.xform:
-            if np.random.rand() > 0.5:
-                x = np.flip(x, 0)
-                y = np.flip(y, 0)
-            if np.random.rand() > 0.5:
-                x = np.flip(x, 1)
-                y = np.flip(y, 1)
-
-
-            k = np.random.randint(4)
-            x = np.rot90(x, k=k)
-            y = np.rot90(y, k=k)
-
-            # swap x and y
-            if np.random.rand() > 0.5:
-                t = x
-                x = y
-                y = t
-
-            x = np.ascontiguousarray(x)
-            y = np.ascontiguousarray(y)
-
-        if self.cutoff > 0:
-            x[(x < -self.cutoff) | (x > self.cutoff)] = 0
-            y[(y < -self.cutoff) | (y > self.cutoff)] = 0
-
-        return x,y
-
-
-class HDFDataset:
-    def __init__(self, dataset, start=0, end=None, xform=False, cutoff=0):
-        self.dataset = dataset
-        self.start = start
-        self.end = end
-        if end is None:
-            self.end = len(dataset)
-        self.n = self.end - self.start
-        self.xform = xform
-        self.cutoff = cutoff
-
-    def __len__(self):
-        return self.n
-
-    def __getitem__(self, i): # retrieve the i'th image pair
-        i = self.start + i
-        x = self.dataset[i]
-
-        # randomly flip
-        if self.xform:
-            if np.random.rand() > 0.5:
-                x = np.flip(x, 0)
-            if np.random.rand() > 0.5:
-                x = np.flip(x, 1)
-
-
-            k = np.random.randint(4)
-            x = np.rot90(x, k=k)
-
-            x = np.ascontiguousarray(x)
-
-        if self.cutoff > 0:
-            x[(x < -self.cutoff) | (x > self.cutoff)] = 0
-
-        return x
-
-
-def make_hdf5_datasets(path, paired=True, preload=False, holdout=0.1, cutoff=0):
-
-    # open the hdf5 dataset
-    import h5py
-    f = h5py.File(path, 'r')
-    dataset = f['images']
-    if preload:
-        dataset = dataset[:]
-
-    # split into train/validate
-    N = len(dataset) # number of image pairs
-    if paired:
-        N = N//2
-    n = int(holdout*N)
-    split = 2*(N-n)
-
-    if paired:
-        dataset_train = HDFPairedDataset(dataset, end=split, xform=True, cutoff=cutoff)
-        dataset_val = HDFPairedDataset(dataset, start=split, cutoff=cutoff)
-    else:
-        dataset_train = HDFDataset(dataset, end=split, xform=True, cutoff=cutoff)
-        dataset_val = HDFDataset(dataset, start=split, cutoff=cutoff)
-
-    print('# training with', len(dataset_train), 'image pairs', file=sys.stderr)
-    print('# validating on', len(dataset_val), 'image pairs', file=sys.stderr)
-
-    return dataset_train, dataset_val
-
-
-def denoise_image(mic, models, lowpass=1, cutoff=0, gaus=None, inv_gaus=None, deconvolve=False
-                 , deconv_patch=1, patch_size=-1, padding=0, normalize=False
-                 , use_cuda=False):
-    if lowpass > 1:
-        mic = dn.lowpass(mic, lowpass)
-
-    mic = torch.from_numpy(mic)
-    if use_cuda:
-        mic = mic.cuda()
-
-    # normalize and remove outliers
-    mu = mic.mean()
-    std = mic.std()
-    x = (mic - mu)/std
-    if cutoff > 0:
-        x[(x < -cutoff) | (x > cutoff)] = 0
-
-    # apply guassian/inverse gaussian filter
-    if gaus is not None:
-        x = dn.denoise(gaus, x)
-    elif inv_gaus is not None:
-        x = dn.denoise(inv_gaus, x)
-    elif deconvolve:
-        # estimate optimal filter and correct spatial correlation
-        x = dn.correct_spatial_covariance(x, patch=deconv_patch)
-
-    # denoise
-    mic = 0
-    for model in models:
-        mic += dn.denoise(model, x, patch_size=patch_size, padding=padding)
-    mic /= len(models)
-
-    # restore pixel scaling
-    if normalize:
-        mic = (mic - mic.mean())/mic.std()
-    else:
-        # add back std. dev. and mean
-        mic = std*mic + mu
-
-    # back to numpy/cpu
-    mic = mic.cpu().numpy()
-
-    return mic
 
 
 def main(args):

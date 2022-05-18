@@ -13,49 +13,6 @@ from topaz.utils.data.loader import load_image
 from topaz.filters import AffineFilter, AffineDenoise, GaussianDenoise, gaussian_filter, inverse_filter
 
 
-def load_model(name):
-
-    if name == 'none':
-        return Identity()
-
-    # set the name aliases
-    if name == 'unet':
-        name = 'unet_L2_v0.2.2.sav'
-    elif name == 'unet-small':
-        name = 'unet_small_L1_v0.2.2.sav'
-    elif name == 'fcnn':
-        name = 'fcnn_L1_v0.2.2.sav'
-    elif name == 'affine':
-        name = 'affine_L1_v0.2.2.sav'
-    elif name == 'unet-v0.2.1':
-        name = 'unet_L2_v0.2.1.sav'
-
-    # construct model and load the state
-    if name == 'unet_L2_v0.2.1.sav':
-        model = UDenoiseNet(base_width=7, top_width=3)
-    elif name == 'unet_L2_v0.2.2.sav':
-        model = UDenoiseNet(base_width=11, top_width=5)
-    elif name == 'unet_small_L1_v0.2.2.sav':
-        model = UDenoiseNetSmall(width=11, top_width=5)
-    elif name == 'fcnn_L1_v0.2.2.sav':
-        model = DenoiseNet2(64, width=11)
-    elif name == 'affine_L1_v0.2.2.sav':
-        model = AffineDenoise(max_size=31)
-    else:
-        # if not set to a pretrained model, try loading path directly
-        return torch.load(name)
-
-    # load the pretrained model parameters
-    import pkg_resources
-    pkg = __name__
-    path = 'pretrained/denoise/' + name
-    f = pkg_resources.resource_stream(pkg, path)
-    state_dict = torch.load(f) # load the parameters
-
-    model.load_state_dict(state_dict)
-
-    return model
-
 
 def denoise(model, x, patch_size=-1, padding=128):
 
@@ -73,6 +30,52 @@ def denoise(model, x, patch_size=-1, padding=128):
         y = model(x).squeeze()
 
     return y
+
+
+
+def denoise_image(mic, models, lowpass=1, cutoff=0, gaus=None, inv_gaus=None, deconvolve=False
+                 , deconv_patch=1, patch_size=-1, padding=0, normalize=False
+                 , use_cuda=False):
+    if lowpass > 1:
+        mic = dn.lowpass(mic, lowpass)
+
+    mic = torch.from_numpy(mic)
+    if use_cuda:
+        mic = mic.cuda()
+
+    # normalize and remove outliers
+    mu = mic.mean()
+    std = mic.std()
+    x = (mic - mu)/std
+    if cutoff > 0:
+        x[(x < -cutoff) | (x > cutoff)] = 0
+
+    # apply guassian/inverse gaussian filter
+    if gaus is not None:
+        x = dn.denoise(gaus, x)
+    elif inv_gaus is not None:
+        x = dn.denoise(inv_gaus, x)
+    elif deconvolve:
+        # estimate optimal filter and correct spatial correlation
+        x = dn.correct_spatial_covariance(x, patch=deconv_patch)
+
+    # denoise
+    mic = 0
+    for model in models:
+        mic += dn.denoise(model, x, patch_size=patch_size, padding=padding)
+    mic /= len(models)
+
+    # restore pixel scaling
+    if normalize:
+        mic = (mic - mic.mean())/mic.std()
+    else:
+        # add back std. dev. and mean
+        mic = std*mic + mu
+
+    # back to numpy/cpu
+    mic = mic.cpu().numpy()
+
+    return mic
 
 
 def denoise_patches(model, x, patch_size, padding=128):
@@ -171,7 +174,6 @@ def spatial_covariance_old(x, n=11, s=11):
     i = n//2
     return cov[i,i]
 
-
 def estimate_unblur_filter(x, width=11, s=11):
     """
     Estimate parameters of the affine filter that would give
@@ -196,7 +198,6 @@ def estimate_unblur_filter(x, width=11, s=11):
     w_inv = np.fft.fftshift(np.fft.ifft2(F)).real
 
     return AffineFilter(w_inv), cov
-
 
 def estimate_unblur_filter_gaussian(x, width=11, s=11):
     """
@@ -250,7 +251,6 @@ def estimate_unblur_filter_gaussian(x, width=11, s=11):
 
     return AffineFilter(w_inv), sigma, alpha, cov
 
-
 def correct_spatial_covariance(x, width=11, s=11, patch=1):
     """
     Estimates the spatial covariance in the micrograph, finds closest Guassian kernel
@@ -296,673 +296,6 @@ def correct_spatial_covariance(x, width=11, s=11, patch=1):
 
     return y
 
-
-
-class DenoiseNet(nn.Module):
-    def __init__(self, base_filters):
-        super(DenoiseNet, self).__init__()
-
-        self.base_filters = base_filters
-        nf = base_filters
-        self.net = nn.Sequential( nn.Conv2d(1, nf, 11, padding=5)
-                                , nn.LeakyReLU(0.1)
-                                , nn.MaxPool2d(3, stride=1, padding=1)
-                                , nn.Conv2d(nf, 2*nf, 3, padding=2, dilation=2)
-                                , nn.LeakyReLU(0.1)
-                                , nn.Conv2d(2*nf, 2*nf, 3, padding=4, dilation=4)
-                                , nn.LeakyReLU(0.1)
-                                , nn.Conv2d(2*nf, 3*nf, 3, padding=1)
-                                , nn.LeakyReLU(0.1)
-                                , nn.MaxPool2d(3, stride=1, padding=1)
-                                , nn.Conv2d(nf, 2*nf, 3, padding=2, dilation=2)
-                                , nn.LeakyReLU(0.1)
-                                , nn.Conv2d(3*nf, 3*nf, 3, padding=4, dilation=4)
-                                , nn.LeakyReLU(0.1)
-                                , nn.Conv2d(3*nf, 1, 7, padding=3)
-                                )
-
-    def forward(self, x):
-        return self.net(x)
-
-
-class DenoiseNet2(nn.Module):
-    def __init__(self, base_filters, width=11):
-        super(DenoiseNet2, self).__init__()
-
-        self.base_filters = base_filters
-        nf = base_filters
-        self.net = nn.Sequential( nn.Conv2d(1, nf, width, padding=width//2)
-                                , nn.LeakyReLU(0.1)
-                                , nn.Conv2d(nf, nf, width, padding=width//2)
-                                , nn.LeakyReLU(0.1)
-                                , nn.Conv2d(nf, 1, width, padding=width//2)
-                                )
-
-    def forward(self, x):
-        return self.net(x)
-
-
-class Identity(nn.Module):
-    def forward(self, x):
-        return x
-
-
-class UDenoiseNet(nn.Module):
-    # U-net from noise2noise paper
-    def __init__(self, nf=48, base_width=11, top_width=3):
-        super(UDenoiseNet, self).__init__()
-
-        self.enc1 = nn.Sequential( nn.Conv2d(1, nf, base_width, padding=base_width//2)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool2d(2)
-                                 )
-        self.enc2 = nn.Sequential( nn.Conv2d(nf, nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool2d(2)
-                                 )
-        self.enc3 = nn.Sequential( nn.Conv2d(nf, nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool2d(2)
-                                 )
-        self.enc4 = nn.Sequential( nn.Conv2d(nf, nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool2d(2)
-                                 )
-        self.enc5 = nn.Sequential( nn.Conv2d(nf, nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool2d(2)
-                                 )
-        self.enc6 = nn.Sequential( nn.Conv2d(nf, nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-
-        self.dec5 = nn.Sequential( nn.Conv2d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-        self.dec4 = nn.Sequential( nn.Conv2d(3*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-        self.dec3 = nn.Sequential( nn.Conv2d(3*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-        self.dec2 = nn.Sequential( nn.Conv2d(3*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-        self.dec1 = nn.Sequential( nn.Conv2d(2*nf+1, 64, top_width, padding=top_width//2)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(64, 32, top_width, padding=top_width//2)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(32, 1, top_width, padding=top_width//2)
-                                 )
-
-    def forward(self, x):
-        # downsampling
-        p1 = self.enc1(x)
-        p2 = self.enc2(p1)
-        p3 = self.enc3(p2)
-        p4 = self.enc4(p3)
-        p5 = self.enc5(p4)
-        h = self.enc6(p5)
-
-        # upsampling
-        n = p4.size(2)
-        m = p4.size(3)
-        h = F.interpolate(h, size=(n,m), mode='nearest')
-        h = torch.cat([h, p4], 1)
-
-        h = self.dec5(h)
-
-        n = p3.size(2)
-        m = p3.size(3)
-        h = F.interpolate(h, size=(n,m), mode='nearest')
-        h = torch.cat([h, p3], 1)
-
-        h = self.dec4(h)
-
-        n = p2.size(2)
-        m = p2.size(3)
-        h = F.interpolate(h, size=(n,m), mode='nearest')
-        h = torch.cat([h, p2], 1)
-
-        h = self.dec3(h)
-
-        n = p1.size(2)
-        m = p1.size(3)
-        h = F.interpolate(h, size=(n,m), mode='nearest')
-        h = torch.cat([h, p1], 1)
-
-        h = self.dec2(h)
-
-        n = x.size(2)
-        m = x.size(3)
-        h = F.interpolate(h, size=(n,m), mode='nearest')
-        h = torch.cat([h, x], 1)
-
-        y = self.dec1(h)
-
-        return y
-
-
-class UDenoiseNetSmall(nn.Module):
-    def __init__(self, nf=48, width=11, top_width=3):
-        super(UDenoiseNetSmall, self).__init__()
-
-        self.enc1 = nn.Sequential( nn.Conv2d(1, nf, width, padding=width//2)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool2d(2)
-                                 )
-        self.enc2 = nn.Sequential( nn.Conv2d(nf, nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool2d(2)
-                                 )
-        self.enc3 = nn.Sequential( nn.Conv2d(nf, nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool2d(2)
-                                 )
-        self.enc4 = nn.Sequential( nn.Conv2d(nf, nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-
-        self.dec3 = nn.Sequential( nn.Conv2d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-        self.dec2 = nn.Sequential( nn.Conv2d(3*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-        self.dec1 = nn.Sequential( nn.Conv2d(2*nf+1, 64, top_width, padding=top_width//2)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(64, 32, top_width, padding=top_width//2)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(32, 1, top_width, padding=top_width//2)
-                                 )
-
-    def forward(self, x):
-        # downsampling
-        p1 = self.enc1(x)
-        p2 = self.enc2(p1)
-        p3 = self.enc3(p2)
-        h = self.enc4(p3)
-
-        # upsampling with skip connections
-        n = p2.size(2)
-        m = p2.size(3)
-        h = F.interpolate(h, size=(n,m), mode='nearest')
-        h = torch.cat([h, p2], 1)
-
-        h = self.dec3(h)
-
-        n = p1.size(2)
-        m = p1.size(3)
-        h = F.interpolate(h, size=(n,m), mode='nearest')
-        h = torch.cat([h, p1], 1)
-
-        h = self.dec2(h)
-
-        n = x.size(2)
-        m = x.size(3)
-        h = F.interpolate(h, size=(n,m), mode='nearest')
-        h = torch.cat([h, x], 1)
-
-        y = self.dec1(h)
-
-        return y
-
-
-class UDenoiseNet2(nn.Module):
-    # modified U-net from noise2noise paper
-    def __init__(self, nf=48):
-        super(UDenoiseNet2, self).__init__()
-
-        self.enc1 = nn.Sequential( nn.Conv2d(1, nf, 7, padding=3)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool2d(2)
-                                 )
-        self.enc2 = nn.Sequential( nn.Conv2d(nf, nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool2d(2)
-                                 )
-        self.enc3 = nn.Sequential( nn.Conv2d(nf, nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool2d(2)
-                                 )
-        self.enc4 = nn.Sequential( nn.Conv2d(nf, nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool2d(2)
-                                 )
-        self.enc5 = nn.Sequential( nn.Conv2d(nf, nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool2d(2)
-                                 )
-        self.enc6 = nn.Sequential( nn.Conv2d(nf, nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-
-        self.dec5 = nn.Sequential( nn.Conv2d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-        self.dec4 = nn.Sequential( nn.Conv2d(3*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-        self.dec3 = nn.Sequential( nn.Conv2d(3*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-        self.dec2 = nn.Sequential( nn.Conv2d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-        self.dec1 = nn.Sequential( nn.Conv2d(2*nf, 64, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(64, 32, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(32, 1, 3, padding=1)
-                                 )
-
-    def forward(self, x):
-        # downsampling
-        p1 = self.enc1(x)
-        p2 = self.enc2(p1)
-        p3 = self.enc3(p2)
-        p4 = self.enc4(p3)
-        p5 = self.enc5(p4)
-        h = self.enc6(p5)
-
-        # upsampling
-        n = p4.size(2)
-        m = p4.size(3)
-        h = F.interpolate(h, size=(n,m), mode='nearest')
-        h = torch.cat([h, p4], 1)
-
-        h = self.dec5(h)
-
-        n = p3.size(2)
-        m = p3.size(3)
-        h = F.interpolate(h, size=(n,m), mode='nearest')
-        h = torch.cat([h, p3], 1)
-
-        h = self.dec4(h)
-
-        n = p2.size(2)
-        m = p2.size(3)
-        h = F.interpolate(h, size=(n,m), mode='nearest')
-        h = torch.cat([h, p2], 1)
-
-        h = self.dec3(h)
-
-        n = p1.size(2)
-        m = p1.size(3)
-        h = F.interpolate(h, size=(n,m), mode='nearest')
-
-        h = self.dec2(h)
-
-        n = x.size(2)
-        m = x.size(3)
-        h = F.interpolate(h, size=(n,m), mode='nearest')
-
-        y = self.dec1(h)
-
-        return y
-
-
-class UDenoiseNet3(nn.Module):
-    def __init__(self):
-        super(UDenoiseNet3, self).__init__()
-
-        self.enc1 = nn.Sequential( nn.Conv2d(1, 48, 7, padding=3)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool2d(2)
-                                 )
-        self.enc2 = nn.Sequential( nn.Conv2d(48, 48, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool2d(2)
-                                 )
-        self.enc3 = nn.Sequential( nn.Conv2d(48, 48, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool2d(2)
-                                 )
-        self.enc4 = nn.Sequential( nn.Conv2d(48, 48, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool2d(2)
-                                 )
-        self.enc5 = nn.Sequential( nn.Conv2d(48, 48, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool2d(2)
-                                 )
-        self.enc6 = nn.Sequential( nn.Conv2d(48, 48, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-
-        self.dec5 = nn.Sequential( nn.Conv2d(96, 96, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(96, 96, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-        self.dec4 = nn.Sequential( nn.Conv2d(144, 96, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(96, 96, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-        self.dec3 = nn.Sequential( nn.Conv2d(144, 96, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(96, 96, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-        self.dec2 = nn.Sequential( nn.Conv2d(144, 96, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(96, 96, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-        self.dec1 = nn.Sequential( nn.Conv2d(97, 64, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(64, 32, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv2d(32, 1, 3, padding=1)
-                                 )
-
-    def forward(self, x):
-        # downsampling
-        p1 = self.enc1(x)
-        p2 = self.enc2(p1)
-        p3 = self.enc3(p2)
-        p4 = self.enc4(p3)
-        p5 = self.enc5(p4)
-        h = self.enc6(p5)
-
-        # upsampling
-        n = p4.size(2)
-        m = p4.size(3)
-        h = F.interpolate(h, size=(n,m), mode='nearest')
-        h = torch.cat([h, p4], 1)
-
-        h = self.dec5(h)
-
-        n = p3.size(2)
-        m = p3.size(3)
-        h = F.interpolate(h, size=(n,m), mode='nearest')
-        h = torch.cat([h, p3], 1)
-
-        h = self.dec4(h)
-
-        n = p2.size(2)
-        m = p2.size(3)
-        h = F.interpolate(h, size=(n,m), mode='nearest')
-        h = torch.cat([h, p2], 1)
-
-        h = self.dec3(h)
-
-        n = p1.size(2)
-        m = p1.size(3)
-        h = F.interpolate(h, size=(n,m), mode='nearest')
-        h = torch.cat([h, p1], 1)
-
-        h = self.dec2(h)
-
-        n = x.size(2)
-        m = x.size(3)
-        h = F.interpolate(h, size=(n,m), mode='nearest')
-        h = torch.cat([h, x], 1)
-
-        y = x - self.dec1(h) # learn only noise component
-
-        return y
-
-class UDenoiseNet3D(nn.Module):
-    # U-net from noise2noise paper
-    def __init__(self, nf=48, base_width=11, top_width=3):
-        super(UDenoiseNet3D, self).__init__()
-
-        self.enc1 = nn.Sequential( nn.Conv3d(1, nf, base_width, padding=base_width//2)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool3d(2)
-                                 )
-        self.enc2 = nn.Sequential( nn.Conv3d(nf, nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool3d(2)
-                                 )
-        self.enc3 = nn.Sequential( nn.Conv3d(nf, nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool3d(2)
-                                 )
-        self.enc4 = nn.Sequential( nn.Conv3d(nf, nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool3d(2)
-                                 )
-        self.enc5 = nn.Sequential( nn.Conv3d(nf, nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.MaxPool3d(2)
-                                 )
-        self.enc6 = nn.Sequential( nn.Conv3d(nf, nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-
-        self.dec5 = nn.Sequential( nn.Conv3d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv3d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-        self.dec4 = nn.Sequential( nn.Conv3d(3*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv3d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-        self.dec3 = nn.Sequential( nn.Conv3d(3*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv3d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-        self.dec2 = nn.Sequential( nn.Conv3d(3*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv3d(2*nf, 2*nf, 3, padding=1)
-                                 , nn.LeakyReLU(0.1)
-                                 )
-        self.dec1 = nn.Sequential( nn.Conv3d(2*nf+1, 64, top_width, padding=top_width//2)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv3d(64, 32, top_width, padding=top_width//2)
-                                 , nn.LeakyReLU(0.1)
-                                 , nn.Conv3d(32, 1, top_width, padding=top_width//2)
-                                 )
-
-    def forward(self, x):
-        # downsampling
-        p1 = self.enc1(x)
-        p2 = self.enc2(p1)
-        p3 = self.enc3(p2)
-        p4 = self.enc4(p3)
-        p5 = self.enc5(p4)
-        h = self.enc6(p5)
-
-        # upsampling
-        n = p4.size(2)
-        m = p4.size(3)
-        o = p4.size(4)
-        #h = F.upsample(h, size=(n,m))
-        #h = F.upsample(h, size=(n,m), mode='bilinear', align_corners=False)
-        h = F.interpolate(h, size=(n,m,o), mode='nearest')
-        h = torch.cat([h, p4], 1)
-
-        h = self.dec5(h)
-
-        n = p3.size(2)
-        m = p3.size(3)
-        o = p3.size(4)
-        
-        h = F.interpolate(h, size=(n,m,o), mode='nearest')
-        h = torch.cat([h, p3], 1)
-
-        h = self.dec4(h)
-
-        n = p2.size(2)
-        m = p2.size(3)
-        o = p2.size(4)
-
-        h = F.interpolate(h, size=(n,m,o), mode='nearest')
-        h = torch.cat([h, p2], 1)
-
-        h = self.dec3(h)
-
-        n = p1.size(2)
-        m = p1.size(3)
-        o = p1.size(4)
-
-        h = F.interpolate(h, size=(n,m,o), mode='nearest')
-        h = torch.cat([h, p1], 1)
-
-        h = self.dec2(h)
-
-        n = x.size(2)
-        m = x.size(3)
-        o = x.size(4)
-
-        h = F.interpolate(h, size=(n,m,o), mode='nearest')
-        h = torch.cat([h, x], 1)
-
-        y = self.dec1(h)
-
-        return y
-
-
-
-class PairedImages:
-    def __init__(self, x, y, crop=800, xform=True, preload=False, cutoff=0):
-        self.x = x
-        self.y = y
-        self.crop = crop
-        self.xform = xform
-        self.cutoff = cutoff
-
-        self.preload = preload
-        if preload:
-            self.x = [self.load_image(p) for p in x]
-            self.y = [self.load_image(p) for p in y]
-
-    def load_image(self, path):
-        x = np.array(load_image(path), copy=False)
-        x = x.astype(np.float32) # make sure dtype is single precision
-        mu = x.mean()
-        std = x.std()
-        x = (x - mu)/std
-        if self.cutoff > 0:
-            x[(x < -self.cutoff) | (x > self.cutoff)] = 0
-        return x
-
-    def __len__(self):
-        return len(self.x)
-
-    def __getitem__(self, i):
-        if self.preload:
-            x = self.x[i]
-            y = self.y[i]
-        else:
-            x = self.load_image(self.x[i])
-            y = self.load_image(self.y[i])
-
-        # randomly crop
-        if self.crop is not None:
-            size = self.crop
-
-            n,m = x.shape
-            i = np.random.randint(n-size+1)
-            j = np.random.randint(m-size+1)
-
-            x = x[i:i+size, j:j+size]
-            y = y[i:i+size, j:j+size]
-
-        # randomly flip
-        if self.xform:
-            if np.random.rand() > 0.5:
-                x = np.flip(x, 0)
-                y = np.flip(y, 0)
-            if np.random.rand() > 0.5:
-                x = np.flip(x, 1)
-                y = np.flip(y, 1)
-
-
-            k = np.random.randint(4)
-            x = np.rot90(x, k=k)
-            y = np.rot90(y, k=k)
-
-            # swap x and y
-            if np.random.rand() > 0.5:
-                t = x
-                x = y
-                y = t
-
-        x = np.ascontiguousarray(x)
-        y = np.ascontiguousarray(y)
-
-        return x, y
-
-
-class NoiseImages:
-    def __init__(self, x, crop=800, xform=True, preload=False, cutoff=0):
-        self.x = x
-        self.crop = crop
-        self.xform = xform
-        self.cutoff = cutoff
-
-        self.preload = preload
-        if preload:
-            x = [self.load_image(p) for p in x]
-
-    def load_image(self, path):
-        x = np.array(load_image(path), copy=False)
-        mu = x.mean()
-        std = x.std()
-        x = (x - mu)/std
-        if self.cutoff > 0:
-            x[(x < -self.cutoff) | (x > self.cutoff)] = 0
-        return x
-
-    def __len__(self):
-        return len(self.x)
-
-    def __getitem__(self, i):
-        if self.preload:
-            x = self.x[i]
-        else:
-            x = self.load_image(self.x[i])
-
-        # randomly crop
-        if self.crop is not None:
-            size = self.crop
-
-            n,m = x.shape
-            i = np.random.randint(n-size+1)
-            j = np.random.randint(m-size+1)
-
-            x = x[i:i+size, j:j+size]
-
-        # randomly flip
-        if self.xform:
-            if np.random.rand() > 0.5:
-                x = np.flip(x, 0)
-            if np.random.rand() > 0.5:
-                x = np.flip(x, 1)
-
-            k = np.random.randint(4)
-            x = np.rot90(x, k=k)
-
-        x = np.ascontiguousarray(x)
-
-        return x
 
 
 class GaussianNoise:
@@ -1281,3 +614,130 @@ def gaussian(x, sigma=1, scale=5, use_cuda=False, dims=2):
             x = x.cuda()
         y = f(x).squeeze().cpu().numpy()
     return y
+
+
+
+
+###########################################################
+# new stuff below
+###########################################################
+
+class Denoise():
+    def __init__(self, model:torch.nn.Module):
+         self.model = model
+         
+    def __repr__(self) -> str:
+        pass
+    
+    def __call__(self, input):
+        self.denoise(input)
+    
+    def train(self):
+        pass
+    
+    def denoise(self):
+        pass
+    
+  
+#main classes  
+class Denoise2D(Denoise):
+    def __init__(self, model: torch.nn.Module):
+        super().__init__(model)
+        
+    def train(self, data):
+        pass
+    
+    def denoise(self, data):    
+        pass
+  
+    
+class Denoise3D(Denoise):
+    def __init__(self, model: torch.nn.Module):
+        super().__init__(model)
+        
+    def train(self, data):
+        pass
+    
+    def denoise(self):
+        pass
+    
+    
+
+# 3D denoising  
+def denoise(model, path, outdir, suffix, patch_size=128, padding=128, batch_size=1
+           , volume_num=1, total_volumes=1):
+    with open(path, 'rb') as f:
+        content = f.read()
+    tomo,header,extended_header = mrc.parse(content)
+    tomo = tomo.astype(np.float32)
+    name = os.path.basename(path)
+
+    mu = tomo.mean()
+    std = tomo.std()
+    # denoise in patches
+    d = next(iter(model.parameters())).device
+    denoised = np.zeros_like(tomo)
+
+    with torch.no_grad():
+        if patch_size < 1:
+            x = (tomo - mu)/std
+            x = torch.from_numpy(x).to(d)
+            x = model(x.unsqueeze(0).unsqueeze(0)).squeeze().cpu().numpy()
+            x = std*x + mu
+            denoised[:] = x
+        else:
+            patch_data = PatchDataset(tomo, patch_size, padding)
+            total = len(patch_data)
+            count = 0
+
+            batch_iterator = torch.utils.data.DataLoader(patch_data, batch_size=batch_size)
+            for index,x in batch_iterator:
+                x = x.to(d)
+                x = (x - mu)/std
+                x = x.unsqueeze(1) # batch x channel
+
+                # denoise
+                x = model(x)
+                x = x.squeeze(1).cpu().numpy()
+
+                # restore original statistics
+                x = std*x + mu
+
+                # stitch into denoised volume
+                for b in range(len(x)):
+                    i,j,k = index[b]
+                    xb = x[b]
+
+                    patch = denoised[i:i+patch_size,j:j+patch_size,k:k+patch_size]
+                    pz,py,px = patch.shape
+
+                    xb = xb[padding:padding+pz,padding:padding+py,padding:padding+px]
+                    denoised[i:i+patch_size,j:j+patch_size,k:k+patch_size] = xb
+
+                    count += 1
+                    print('# [{}/{}] {:.2%}'.format(volume_num, total_volumes, count/total), name, file=sys.stderr, end='\r')
+
+            print(' '*100, file=sys.stderr, end='\r')
+
+
+    ## save the denoised tomogram
+    if outdir is None:
+        # write denoised tomogram to same location as input, but add the suffix
+        if suffix is None: # use default
+            suffix = '.denoised'
+        no_ext,ext = os.path.splitext(path)
+        outpath = no_ext + suffix + ext
+    else:
+        if suffix is None:
+            suffix = ''
+        no_ext,ext = os.path.splitext(name)
+        outpath = outdir + os.sep + no_ext + suffix + ext
+
+    # use the read header except for a few fields
+    header = header._replace(mode=2) # 32-bit real
+    header = header._replace(amin=denoised.min())
+    header = header._replace(amax=denoised.max())
+    header = header._replace(amean=denoised.mean())
+
+    with open(outpath, 'wb') as f:
+        mrc.write(f, denoised, header=header, extended_header=extended_header)
