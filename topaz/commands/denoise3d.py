@@ -15,6 +15,7 @@ import argparse
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from topaz.denoising.models import train_model
 
 from topaz.utils.data.loader import load_image
 from topaz.utils.image import downsample
