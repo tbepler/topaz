@@ -1,4 +1,5 @@
 from __future__ import absolute_import, print_function
+from typing import Any, Tuple
 
 import numpy as np
 import struct
@@ -105,7 +106,7 @@ names += ' nlabl labels'
 header_struct = struct.Struct(fstr)
 MRCHeader = namedtuple('MRCHeader', names)
 
-def parse(content):
+def parse(content:bytes) -> Tuple[np.ndarray, Any, Any]:
     ## parse the header
     header = content[0:1024]
     header = MRCHeader._make(header_struct.unpack(content[:1024]))

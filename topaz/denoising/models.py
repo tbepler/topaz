@@ -9,7 +9,10 @@ import pkg_resources
 import multiprocessing as mp
 import torch
 import torch.functional as F
+from topaz.denoise import L0Loss
+from topaz.denoising.datasets import TrainingDataset3D
 from topaz.filters import AffineDenoise
+from torch.utils.data import DataLoader
 from torch import nn
 from topaz.denoising.utils import set_device
 
@@ -556,6 +559,7 @@ class UDenoiseNet3D(nn.Module):
         return y
 
 
+
 model_name_dict = {
     # 2D models
     'unet':'unet_L2_v0.2.2.sav',
@@ -623,37 +627,87 @@ def save_model(model, epoch, save_prefix, digits=3):
     path = save_prefix + ('_epoch{:0'+str(digits)+'}.sav').format(epoch) 
     #path = save_prefix + '_epoch{}.sav'.format(epoch)
     torch.save(model, path)
-        
 
-def train_epoch(iterator, model, cost_func, optim, epoch=1, num_epochs=1, N=1, use_cuda=False):   
-    c = 0
-    loss_accum = 0    
-    model.train()
 
-    for batch_idx, (source,target) in enumerate(iterator):    
-        b = source.size(0)        
+def __epoch(model, dataloader, loss_fn, optim, train=True, use_cuda=False) -> float:
+    #set train or evaluate mode
+    model.train(train)
+    
+    for idx, (source,target) in dataloader:
+        n = 0
+        loss_accum = 0
+
         if use_cuda:
             source = source.cuda()
             target = target.cuda()
-            
-        denoised_source = model(source)
-        loss = cost_func(denoised_source,target)
+
+        source = source.unsqueeze(1)
+        pred = model(source).squeeze(1)
+
+        loss = loss_fn(pred, target)
         
-        loss.backward()
-        optim.step()
-        optim.zero_grad()
+        if train:
+            loss.backward()
+            optim.step()
+            optim.zero_grad()
+
         loss = loss.item()
+        b = source.size(0)
 
-        c += b
+        # percentage of image/tomogram
+        n += b
         delta = b*(loss - loss_accum)
-        loss_accum += delta/c
-
-        template = '# [{}/{}] training {:.1%}, Error={:.5f}'
-        line = template.format(epoch+1, num_epochs, c/N, loss_accum)
-        print(line, end='\r', file=sys.stderr)
-    
-    print(' '*80, end='\r', file=sys.stderr)    
+        loss_accum += delta/n
+        
     return loss_accum
+
+
+def train_model(model, train_dataset, val_dataset, lr, optim:str, batch_size, num_epochs, loss_fn, shuffle, use_cuda, 
+                num_workers, verbose=True, save_best=False):
+    # prepare data
+    train_data = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+    val_data = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    
+    # create loss function
+    gamma = None
+    if loss_fn == 'L0':
+        gamma = 2
+        eps = 1e-8
+        loss_fn = L0Loss(eps=eps, gamma=gamma)
+    elif loss_fn == 'L1':
+        loss_fn = nn.L1Loss()
+    elif loss_fn == 'L2':
+        loss_fn = nn.MSELoss()
+    
+    # create optimizer
+    if optim == 'adam':
+        optim = torch.optim.Adam(model.parameters(), lr=lr)
+    elif optim == 'adagrad':
+        optim = torch.optim.Adagrad(model.parameters(), lr=lr)
+    elif optim == 'sgd':
+        optim = torch.optim.SGD(model.parameters(), lr=lr, nesterov=True, momentum=0.9)
+    
+    # training loop
+    best_val_loss = np.inf
+    for epoch in range(num_epochs):
+        
+        # anneal gamma to 0
+        if gamma is not None:
+            loss_fn.gamma = 2 - (epoch-1)*2/num_epochs
+        
+        train_loss = __epoch(model, train_data, loss_fn, train=True, use_cuda=use_cuda)
+        with torch.no_grad():
+            val_loss = __epoch(model, val_data, loss_fn, optim, train=False, use_cuda=use_cuda)
+        
+        if verbose:
+            print(f'# [{epoch}/{num_epochs}]  train_loss={round(train_loss, 5)}  val_loss={round(val_loss, 5)}', 
+                  file=sys.stderr, end='\r')
+            
+        if save_best:
+            pass
+                
+    return model
+        
 
 
 # 3D

@@ -2,9 +2,13 @@ import glob
 import os
 import sys
 from abc import ABC, abstractmethod
-from typing import Tuple
+from typing import List, Tuple, Union
 
 import numpy as np
+import h5py
+from requests import patch
+import torch
+from topaz import mrc
 from topaz.utils.data.loader import load_image
 
 
@@ -15,9 +19,6 @@ class DenoiseDataset(ABC):
     
     @abstractmethod
     def __init__(self, data) -> None:
-        ''' If data is images then it will be paths as List[pathsA], List[pathsB]
-            If data is hdf5 then h5py.File
-        '''
         pass
 
     @abstractmethod
@@ -30,7 +31,7 @@ class DenoiseDataset(ABC):
 
 
 class PairedImages(DenoiseDataset):
-    def __init__(self, x, y, crop=800, xform=True, preload=False, cutoff=0):
+    def __init__(self, x:List[str], y:List[str], crop:int=800, xform:bool=True, preload:bool=False, cutoff:float=0):
         self.x = x
         self.y = y
         self.crop = crop
@@ -42,7 +43,7 @@ class PairedImages(DenoiseDataset):
             self.x = [self.load_image(p) for p in x]
             self.y = [self.load_image(p) for p in y]
 
-    def load_image(self, path):
+    def load_image(self, path:str):
         x = np.array(load_image(path), copy=False)
         x = x.astype(np.float32) # make sure dtype is single precision
         mu = x.mean()
@@ -101,7 +102,7 @@ class PairedImages(DenoiseDataset):
     
     
 class HDFPairedDataset(DenoiseDataset):
-    def __init__(self, dataset, start=0, end=None, xform=False, cutoff=0):
+    def __init__(self, dataset:h5py.File, start:int=0, end:int=None, xform:bool=False, cutoff:float=0):
         if end is None:
             self.end = len(dataset)
         n = (self.end - self.start)//2
@@ -147,71 +148,11 @@ class HDFPairedDataset(DenoiseDataset):
         return x,y
 
 
-class PairedTomograms(DenoiseDataset):
-    def __init__(self, even_path, odd_path, N, tilesize):
-        self.N = N    # point per volume
-        self.tilesize = tilesize
-        # self.N_train = N_train
-        # self.N_test = N_test
-        # self.mode = 'train'
-        
-        self.even_paths = [even_path]
-        self.odd_paths = [odd_path]
-
-        if os.path.isdir(even_path) and os.path.isdir(odd_path):
-            for epath in glob.glob(even_path + os.sep + '*'):
-                name = os.path.basename(epath)
-                opath = odd_path + os.sep + name 
-                if not os.path.isfile(opath):
-                    print('# Error: name mismatch between even and odd directory,', name, file=sys.stderr)
-                    print('# Skipping...', file=sys.stderr)
-                else:
-                    self.even_paths.append(epath)
-                    self.odd_paths.append(opath)
-
-        self.means = []
-        self.stds = []
-        self.even = []
-        self.odd = []
-        self.train_idxs = []
-        self.test_idxs = []
-
-        for i,(f_even,f_odd) in enumerate(zip(self.even_paths, self.odd_paths)):
-            # load even and odd tomograms
-            even = self.load_mrc(f_even)
-            odd = self.load_mrc(f_odd)
-
-            if even.shape != odd.shape:
-                print('# Error: shape mismatch:', f_even, f_odd, file=sys.stderr)
-                print('# Skipping...', file=sys.stderr)
-            else:
-                self.even.append(even)
-                self.odd.append(odd)
-                even_mean,even_std = self.calc_mean_std(even)
-                odd_mean,odd_std = self.calc_mean_std(odd)
-                self.means.append((even_mean,odd_mean))
-                self.stds.append((even_std,odd_std))  
-
-                mask = np.ones(even.shape, dtype=np.uint8)
-                train_idxs, test_idxs = self.sample_coordinates(mask, N_train, N_test, vol_dims=(tilesize, tilesize, tilesize))
-          
-                self.train_idxs += train_idxs
-                self.test_idxs += test_idxs
-
-        if len(self.even) < 1:
-            print('# Error: need at least 1 file to proceeed', file=sys.stderr)
-            sys.exit(2)
-        
-    def __len__(self) -> int:
-        return self.N * len(self.even)
-    
-    def __getitem__(self, i: int) -> Tuple[np.ndarray]:
-        pass
-
-
-
-class TrainingDataset3D(torch.utils.data.Dataset):
-    def __init__(self,even_path,odd_path,tilesize,N_train,N_test):
+class TrainingDataset3D(DenoiseDataset):
+    ''' Class for splitting tomograms into training and testing volumes.
+        Applies random rotations and flips to augment.
+    '''
+    def __init__(self, even_path:str, odd_path:str, tilesize:int, N_train:int, N_test:int):
 
         self.tilesize = tilesize
         self.N_train = N_train
@@ -269,14 +210,14 @@ class TrainingDataset3D(torch.utils.data.Dataset):
             print('# Error: need at least 1 file to proceeed', file=sys.stderr)
             sys.exit(2)
 
-    def load_mrc(self, path):
+    def load_mrc(self, path:str):
         with open(path, 'rb') as f:
             content = f.read()
         tomo,_,_ = mrc.parse(content)
         tomo = tomo.astype(np.float32)
         return tomo
     
-    def get_train_test_idxs(self,dim):
+    def get_train_test_idxs(self, dim:Union[List[int],Tuple[int]]):
         assert len(dim) == 2
         t = self.tilesize
         x = np.arange(0,dim[0]-t,t,dtype=np.int32)
@@ -304,7 +245,7 @@ class TrainingDataset3D(torch.utils.data.Dataset):
                                                 train_pts[1])]).reshape((-1,2))
         return train_pts, test_pts
     
-    def sample_coordinates(self, mask, num_train_vols, num_val_vols, vol_dims=(96, 96, 96)):
+    def sample_coordinates(self, mask:np.ndarray, num_train_vols:int, num_val_vols:int, vol_dims:Union[Tuple[int],List[int]]=(96, 96, 96)):
         
         #This function is borrowed from:
         #https://github.com/juglab/cryoCARE_T2T/blob/master/example/generate_train_data.py
@@ -385,7 +326,7 @@ class TrainingDataset3D(torch.utils.data.Dataset):
         
         return train_coords, val_coords
 
-    def calc_mean_std(self,tomo):
+    def calc_mean_std(self,tomo:np.ndarray):
         mu = tomo.mean()
         std = tomo.std()
         return mu, std
@@ -396,7 +337,7 @@ class TrainingDataset3D(torch.utils.data.Dataset):
         else:
             return self.N_test * len(self.even)
             
-    def __getitem__(self,idx):
+    def __getitem__(self,idx:int):
         
         if self.mode == 'train':
             Idx = int(idx / self.N_train)
@@ -421,17 +362,20 @@ class TrainingDataset3D(torch.utils.data.Dataset):
         even_ = np.expand_dims(even_, axis=0)
         odd_ = np.expand_dims(odd_, axis=0)
         
-        source = torch.from_numpy(even_).float()
-        target = torch.from_numpy(odd_).float()
+        # source = torch.from_numpy(even_).float()
+        # target = torch.from_numpy(odd_).float()
+        # np arrays fine, over torch Tensors
+        source = even_
+        target = odd_
         
         return source , target
 
-    def set_mode(self,mode):
+    def set_mode(self,mode:str):
         modes = ['train','test']
         assert mode in modes
         self.mode = mode 
 
-    def augment(self, x, y):
+    def augment(self, x:np.ndarray, y:np.ndarray):
         # mirror axes
         for ax in range(3):
             if np.random.rand() < 0.5:
@@ -447,25 +391,33 @@ class TrainingDataset3D(torch.utils.data.Dataset):
         return np.ascontiguousarray(x), np.ascontiguousarray(y)
 
 
-class PatchDataset:
-    def __init__(self, tomo, patch_size=96, padding=48):
+class PairedTomograms(DenoiseDataset):
+    def __init__(self, x:List[np.ndarray], y:List[np.ndarray]):
+        self.x = x
+        self.y = y        
+    
+    def __len__(self) -> int:
+        return len(self.x)
+    
+    def __getitem__(self, i: int) -> Tuple[np.ndarray]:
+        return self.x[i], self.y[i] 
+
+
+class PatchDataset(DenoiseDataset):
+    def __init__(self, tomo:np.ndarray, patch_size:int=96, padding:int=48):
         self.tomo = tomo
         self.patch_size = patch_size
         self.padding = padding
 
-        nz,ny,nx = tomo.shape
+        nzyx = np.array(tomo.shape)
+        pzyx = np.ceil(nzyx / patch_size).astype(np.int32)
+        self.shape = tuple(pzyx)
+        self.num_patches = np.prod(pzyx)
 
-        pz = int(np.ceil(nz/patch_size))
-        py = int(np.ceil(ny/patch_size))
-        px = int(np.ceil(nx/patch_size))
-        self.shape = (pz,py,px)
-        self.num_patches = pz*py*px
-
-
-    def __len__(self):
+    def __len__(self) -> int:
         return self.num_patches
 
-    def __getitem__(self, patch):
+    def __getitem__(self, patch:int):
         # patch index
         i,j,k = np.unravel_index(patch, self.shape)
 
@@ -499,11 +451,12 @@ class PatchDataset:
         ekc = skc + (ek - sk)
 
         x[sic:eic,sjc:ejc,skc:ekc] = tomo[si:ei,sj:ej,sk:ek]
-        return np.array((i,j,k), dtype=int),x
+        indices = np.array((i,j,k), dtype=int)
+        return indices, x
 
 
 
-def make_paired_images_datasets(dir_a, dir_b, crop, random=np.random, holdout=0.1, preload=False, cutoff=0):
+def make_paired_images_datasets(dir_a:str, dir_b:str, crop, random=np.random, holdout=0.1, preload=False, cutoff=0):
     # train denoising model
     # make the dataset
     A = []
@@ -536,7 +489,8 @@ def make_paired_images_datasets(dir_a, dir_b, crop, random=np.random, holdout=0.
 
     return dataset_train, dataset_val
 
-def make_hdf5_datasets(path, paired=True, preload=False, holdout=0.1, cutoff=0):
+
+def make_hdf5_datasets(path:int, paired:bool=True, preload:bool=False, holdout:float=0.1, cutoff:float=0):
 
     # open the hdf5 dataset
     import h5py
@@ -560,4 +514,21 @@ def make_hdf5_datasets(path, paired=True, preload=False, holdout=0.1, cutoff=0):
     print('# validating on', len(dataset_val), 'image pairs', file=sys.stderr)
 
     return dataset_train, dataset_val
-  
+
+
+def make_tomogram_datasets(even_path:str, odd_path:str, tilesize:int, N_train:int, N_test:int):
+    ''' Split tomograms into training and testing data, augmented with rotations and flips.
+    '''
+    data = TrainingDataset3D(even_path, odd_path, tilesize, N_train, N_test)
+    data.set_mode('train')
+    train_data = list(data)
+    train_x = [x for (x,_) in train_data]
+    train_y = [y for (_,y) in train_data]
+    train_dataset = PairedTomograms(train_x, train_y)
+    data.set_mode('test')
+    test_data = list(data)
+    test_x = [x for (x,_) in test_data]
+    test_y = [y for (_,y) in test_data]
+    test_dataset = PairedTomograms(test_x, test_y)
+    
+    return train_dataset, test_dataset
