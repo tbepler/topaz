@@ -153,7 +153,12 @@ class TrainingDataset3D(DenoiseDataset):
         Applies random rotations and flips to augment.
     '''
     def __init__(self, even_path:str, odd_path:str, tilesize:int, N_train:int, N_test:int):
-
+                    
+        if tilesize < 1:
+            raise ValueError('ERROR: tilesize must be >0')
+        if tilesize < 10:
+            print('WARNING: small tilesize is not recommended', file=sys.stderr)
+        
         self.tilesize = tilesize
         self.N_train = N_train
         self.N_test = N_test
@@ -175,6 +180,8 @@ class TrainingDataset3D(DenoiseDataset):
                 else:
                     self.even_paths.append(epath)
                     self.odd_paths.append(opath)
+        else:
+            print('# Error: Cannot find files or directories:', file=sys.stderr)
 
         self.means = []
         self.stds = []

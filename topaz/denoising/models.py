@@ -641,6 +641,7 @@ def __epoch(model, dataloader, loss_fn, optim, train=True, use_cuda=False) -> fl
             source = source.cuda()
             target = target.cuda()
 
+        # TODO: these two lines came from 2D code and may break 3D code
         source = source.unsqueeze(1)
         pred = model(source).squeeze(1)
 
@@ -662,9 +663,26 @@ def __epoch(model, dataloader, loss_fn, optim, train=True, use_cuda=False) -> fl
     return loss_accum
 
 
-def train_model(model, train_dataset, val_dataset, lr, optim:str, batch_size, num_epochs, loss_fn, shuffle, use_cuda, 
-                num_workers, verbose=True, save_best=False):
+def train_model(model, train_dataset, val_dataset, loss_fn:str='L2', optim:str='adam', lr:float=0.001, weight_decay:float=0, batch_size:int=10, num_epochs:int=500, 
+                shuffle:bool=True, use_cuda:bool=False, num_workers:int=1, verbose:bool=True, save_best:bool=False, save_interval:int=None, save_prefix:str=None):
+    
+    output = sys.stdout
+    log = sys.stderr
+    # num digits to hold epoch numbers
+    digits = int(np.ceil(np.log10(num_epochs)))
+
+    if save_prefix is not None:
+        save_dir = os.path.dirname(save_prefix)
+        if len(save_dir) > 0 and not os.path.exists(save_dir):
+            print('# creating save directory:', save_dir, file=log)
+            os.makedirs(save_dir)
+
+    start_time = time.time()
+    now = datetime.datetime.now()
+    print('# starting time: {:02d}/{:02d}/{:04d} {:02d}h:{:02d}m:{:02d}s'.format(now.month,now.day,now.year,now.hour,now.minute,now.second), file=log)
+    
     # prepare data
+    num_workers = min(num_workers, mp.cpu_count())
     train_data = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     val_data = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     
@@ -678,16 +696,27 @@ def train_model(model, train_dataset, val_dataset, lr, optim:str, batch_size, nu
         loss_fn = nn.L1Loss()
     elif loss_fn == 'L2':
         loss_fn = nn.MSELoss()
+    else:
+        raise ValueError(f'Loss function: {loss_fn} not one of [L0, L1, L2].')
     
     # create optimizer
-    if optim == 'adam':
-        optim = torch.optim.Adam(model.parameters(), lr=lr)
-    elif optim == 'adagrad':
-        optim = torch.optim.Adagrad(model.parameters(), lr=lr)
+    params = [{'params': model.parameters(), 'weight_decay': weight_decay}]
+    if optim == 'adagrad':
+        optim = torch.optim.Adagrad(params, lr=lr)
+    elif optim == 'adam':
+        optim = torch.optim.Adam(params, lr=lr)
+    elif optim == 'rmsprop':
+        optim = torch.optim.RMSprop(params, lr=lr)
     elif optim == 'sgd':
-        optim = torch.optim.SGD(model.parameters(), lr=lr, nesterov=True, momentum=0.9)
-    
-    # training loop
+        optim = torch.optim.SGD(params, lr=lr, nesterov=True, momentum=0.9)
+    else:
+        raise ValueError('Unrecognized optim: ' + optim)
+
+    ## Begin model training
+    print('# training model...', file=log)
+    if verbose:    
+        print('\t'.join(['Epoch', 'Train Loss', 'Val Loss', 'Best Val Loss']), file=output)
+
     best_val_loss = np.inf
     for epoch in range(num_epochs):
         
@@ -698,160 +727,28 @@ def train_model(model, train_dataset, val_dataset, lr, optim:str, batch_size, nu
         train_loss = __epoch(model, train_data, loss_fn, train=True, use_cuda=use_cuda)
         with torch.no_grad():
             val_loss = __epoch(model, val_data, loss_fn, optim, train=False, use_cuda=use_cuda)
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                if save_best and save_prefix is not None:
+                    model.eval().cpu()
+                    save_model(model, epoch+1, save_prefix, digits=digits)
+                    if use_cuda:
+                        model.cuda()
         
         if verbose:
-            print(f'# [{epoch}/{num_epochs}]  train_loss={round(train_loss, 5)}  val_loss={round(val_loss, 5)}', 
-                  file=sys.stderr, end='\r')
-            
-        if save_best:
-            pass
-                
-    return model
-        
+            print('\t'.join([f'# [{epoch}/{num_epochs}]'] + [str(round(num, 5)) for num in (train_loss, val_loss, best_val_loss)]), file=output, end='\r')
 
-
-# 3D
-def train_model(even_path, odd_path, save_prefix, save_interval, device, base_kernel_width=11,
-                cost_func='L2', weight_decay=0, learning_rate=0.001, optim='adagrad', momentum=0.8,
-                minibatch_size=10, num_epochs=500, N_train=1000, N_test=200, tilesize=96, num_workers=1):
-    output = sys.stdout
-    log = sys.stderr
-
-    if save_prefix is not None:
-        save_dir = os.path.dirname(save_prefix)
-        if len(save_dir) > 0 and not os.path.exists(save_dir):
-            print('# creating save directory:', save_dir, file=log)
-            os.makedirs(save_dir)
-
-    start_time = time.time()
-    now = datetime.datetime.now()
-    print('# starting time: {:02d}/{:02d}/{:04d} {:02d}h:{:02d}m:{:02d}s'.format(now.month,now.day,now.year,now.hour,now.minute,now.second), file=log)
-
-    # initialize the model
-    print('# initializing model...', file=log)
-    model_base = UDenoiseNet3D(base_width=base_kernel_width)
-    model,use_cuda,num_devices = set_device(model_base, device)
-    
-    if cost_func == 'L2':
-        cost_func = nn.MSELoss()
-    elif cost_func == 'L1':
-        cost_func = nn.L1Loss()
-    else:
-        cost_func = nn.MSELoss()
-
-    wd = weight_decay
-    params = [{'params': model.parameters(), 'weight_decay': wd}]
-    lr = learning_rate
-    if optim == 'sgd':
-        optim = torch.optim.SGD(params, lr=lr, momentum=momentum)
-    elif optim == 'rmsprop':
-        optim = torch.optim.RMSprop(params, lr=lr)
-    elif optim == 'adam':
-        optim = torch.optim.Adam(params, lr=lr, betas=(0.9, 0.999), eps=1e-8, amsgrad=True)
-    elif optim == 'adagrad':
-        optim = torch.optim.Adagrad(params, lr=lr)
-    else:
-        raise Exception('Unrecognized optim: ' + optim)
-        
-    # Load the data
-    print('# loading data...', file=log)
-    if not (os.path.isdir(even_path) or os.path.isfile(even_path)):
-        print('ERROR: Cannot find file or directory:', even_path, file=log)
-        sys.exit(3)
-    if not (os.path.isdir(odd_path) or os.path.isfile(odd_path)):
-        print('ERROR: Cannot find directory:', odd_path, file=log)
-        sys.exit(3)
-    
-    if tilesize < 1:
-        print('ERROR: tilesize must be >0', file=log)
-        sys.exit(4)
-    if tilesize < 10:
-        print('WARNING: small tilesize is not recommended', file=log)
-    data = TrainingDataset3D(even_path, odd_path, tilesize, N_train, N_test)
-    
-    N_train = len(data)
-    data.set_mode('test')
-    N_test = len(data)
-    data.set_mode('train')
-    num_workers = min(num_workers, mp.cpu_count())
-    digits = int(np.ceil(np.log10(num_epochs)))
-
-    iterator = torch.utils.data.DataLoader(data,batch_size=minibatch_size,num_workers=num_workers,shuffle=False)
-    
-    ## Begin model training
-    print('# training model...', file=log)
-    print('\t'.join(['Epoch', 'Split', 'Error']), file=output)
-
-    for epoch in range(num_epochs):
-        data.set_mode('train')
-        epoch_loss_accum = train_epoch(iterator,
-                                       model,
-                                       cost_func,
-                                       optim,
-                                       epoch=epoch,
-                                       num_epochs=num_epochs,
-                                       N=N_train,
-                                       use_cuda=use_cuda)
-
-        line = '\t'.join([str(epoch+1), 'train', str(epoch_loss_accum)])
-        print(line, file=output)
-        
-        # evaluate on the test set
-        data.set_mode('test')
-        epoch_loss_accum = eval_model(iterator,
-                                   model,
-                                   cost_func,
-                                   epoch=epoch,
-                                   num_epochs=num_epochs,
-                                   N=N_test,
-                                   use_cuda=use_cuda)
-    
-        line = '\t'.join([str(epoch+1), 'test', str(epoch_loss_accum)])
-        print(line, file=output)
-
-        ## save the models
+        # periodically save model if desired
         if save_prefix is not None and (epoch+1)%save_interval == 0:
             model.eval().cpu()
             save_model(model, epoch+1, save_prefix, digits=digits)
             if use_cuda:
                 model.cuda()
-
+    
     print('# training completed!', file=log)
-
     end_time = time.time()
     now = datetime.datetime.now()
     print("# ending time: {:02d}/{:02d}/{:04d} {:02d}h:{:02d}m:{:02d}s".format(now.month,now.day,now.year,now.hour,now.minute,now.second), file=log)
     print("# total time:", time.strftime("%Hh:%Mm:%Ss", time.gmtime(end_time - start_time)), file=log)
-
-    return model_base, num_devices
-
-
-
-
-
-def eval_model(iterator, model, cost_func, epoch=1, num_epochs=1, N=1, use_cuda=False):  
-    c = 0
-    loss_accum = 0
-    model.eval()
-
-    with torch.no_grad():
-        for batch_idx, (source,target) in enumerate(iterator):
-            b = source.size(0)        
-            if use_cuda:
-                source = source.cuda()
-                target = target.cuda()
-                
-            denoised_source = model(source)
-            loss = cost_func(denoised_source,target)   
-            loss = loss.item()
-    
-            c += b
-            delta = b*(loss - loss_accum)
-            loss_accum += delta/c
-    
-            template = '# [{}/{}] testing {:.1%}, Error={:.5f}'
-            line = template.format(epoch+1, num_epochs, c/N, loss_accum)
-            print(line, end='\r', file=sys.stderr)
-             
-    print(' '*80, end='\r', file=sys.stderr)    
-    return loss_accum
+            
+    return model
