@@ -7,15 +7,13 @@ from typing import Union
 import numpy as np
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.data
-from topaz import mrc
 from topaz.denoising.datasets import PatchDataset
 from topaz.denoising.models import load_model, train_model
-from topaz.filters import (AffineDenoise, AffineFilter, GaussianDenoise,
-                           gaussian_filter, inverse_filter)
-from topaz.utils.data.loader import load_image
+from topaz.filters import (AffineFilter, GaussianDenoise, gaussian_filter,
+                           inverse_filter)
+from torch.utils.data import DataLoader
 
 
 def spatial_covariance(x, n=11, s=11):
@@ -421,66 +419,43 @@ class Denoise():
     def train(self, train_dataset, val_dataset, loss_fn:str='L2', optim:str='adam', lr:float=0.001, weight_decay:float=0, batch_size:int=10, num_epochs:int=500, 
                         shuffle:bool=True, use_cuda:bool=False, num_workers:int=1, verbose:bool=True, save_best:bool=False, save_interval:int=None, save_prefix:str=None) -> None:
         train_model(self.model, train_dataset, val_dataset, loss_fn, optim, lr, weight_decay, batch_size, num_epochs, shuffle, use_cuda, num_workers, verbose, save_best, save_interval, save_prefix)
-            
+    
+    @torch.no_grad()        
     def denoise(self, input:np.ndarray):
-        mu = input.mean()
-        sigma = input.std()
-        input = (input - mu) / sigma
-        # add singleton batch and input channel dimensions
-        expanded_input = np.expand_dims(input, axis=(0,1))
-        pred = self.model(expanded_input)
-        # remove singleton dimensions, unnormalize
-        return pred.squeeze() * sigma + mu
+        device = next(iter(self.model.parameters())).device
+        mu, std =  input.mean(), input.std()
+        # normalize, add singleton batch and input channel dims 
+        input = torch.from_numpy( (input-mu)/std ).to(device).unsqueeze(0).unsqueeze(0)
+        pred = self.model(input)
+        # remove singleton dims, unnormalize
+        return pred.squeeze().cpu().numpy() * std + mu
   
 
 class Denoise3D(Denoise):
     ''' Object for denoising tomograms. Extends the denoising method to allow multiple input volumes.
     '''
-    def denoise(self, input:np.ndarray, patch_size, padding, batch_size, volume_num, total_volumes):
-        # need to create a PatchDataset with preprocessing
-        pass
-    
-    
-
-# 3D denoising  
-def denoise(model, path, outdir, suffix, patch_size=128, padding=128, batch_size=1
-           , volume_num=1, total_volumes=1):
-    with open(path, 'rb') as f:
-        content = f.read()
-    tomo,header,extended_header = mrc.parse(content)
-    tomo = tomo.astype(np.float32)
-    name = os.path.basename(path)
-
-    mu = tomo.mean()
-    std = tomo.std()
-    # denoise in patches
-    d = next(iter(model.parameters())).device
-    denoised = np.zeros_like(tomo)
-
-    with torch.no_grad():
+    @torch.no_grad()
+    def denoise(self, tomo:np.ndarray, patch_size:int=128, padding:int=128, batch_size:int=1, volume_num:int=1, total_volumes:int=1, verbose:bool=True) -> np.ndarray:
+        device = next(iter(self.model.parameters())).device
+        denoised = np.zeros_like(tomo)
+        mu, std =  tomo.mean(), tomo.std()
+        
         if patch_size < 1:
-            x = (tomo - mu)/std
-            x = torch.from_numpy(x).to(d)
-            x = model(x.unsqueeze(0).unsqueeze(0)).squeeze().cpu().numpy()
-            x = std*x + mu
+            # normalize, add batch and input channel dims 
+            x = torch.from_numpy( (tomo - mu)/std ).to(device).unsqueeze(0).unsqueeze(0)
+            x = self.model(x).squeeze().cpu().numpy() * std + mu
             denoised[:] = x
         else:
+            # denoise volume in patches
             patch_data = PatchDataset(tomo, patch_size, padding)
-            total = len(patch_data)
-            count = 0
+            count, total = len(patch_data), 0
 
-            batch_iterator = torch.utils.data.DataLoader(patch_data, batch_size=batch_size)
+            batch_iterator = DataLoader(patch_data, batch_size=batch_size)
             for index,x in batch_iterator:
-                x = x.to(d)
-                x = (x - mu)/std
-                x = x.unsqueeze(1) # batch x channel
+                x = torch.from_numpy( (x - mu)/std ).to(device).unsqueeze(1) # batch x channel
 
-                # denoise
-                x = model(x)
-                x = x.squeeze(1).cpu().numpy()
-
-                # restore original statistics
-                x = std*x + mu
+                # denoise, unnormalize
+                x = self.model(x).squeeze(1).cpu().numpy() * std + mu
 
                 # stitch into denoised volume
                 for b in range(len(x)):
@@ -494,29 +469,9 @@ def denoise(model, path, outdir, suffix, patch_size=128, padding=128, batch_size
                     denoised[i:i+patch_size,j:j+patch_size,k:k+patch_size] = xb
 
                     count += 1
-                    print('# [{}/{}] {:.2%}'.format(volume_num, total_volumes, count/total), name, file=sys.stderr, end='\r')
+                    if verbose:
+                        print(f'# [{volume_num}/{total_volumes}] {round(count*100/total)}', file=sys.stderr, end='\r')
 
             print(' '*100, file=sys.stderr, end='\r')
 
-
-    ## save the denoised tomogram
-    if outdir is None:
-        # write denoised tomogram to same location as input, but add the suffix
-        if suffix is None: # use default
-            suffix = '.denoised'
-        no_ext,ext = os.path.splitext(path)
-        outpath = no_ext + suffix + ext
-    else:
-        if suffix is None:
-            suffix = ''
-        no_ext,ext = os.path.splitext(name)
-        outpath = outdir + os.sep + no_ext + suffix + ext
-
-    # use the read header except for a few fields
-    header = header._replace(mode=2) # 32-bit real
-    header = header._replace(amin=denoised.min())
-    header = header._replace(amax=denoised.max())
-    header = header._replace(amean=denoised.mean())
-
-    with open(outpath, 'wb') as f:
-        mrc.write(f, denoised, header=header, extended_header=extended_header)
+        return denoised
