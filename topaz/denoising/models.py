@@ -633,7 +633,7 @@ def __epoch(model, dataloader, loss_fn, optim, train=True, use_cuda=False) -> fl
     #set train or evaluate mode
     model.train(train)
     
-    for idx, (source,target) in dataloader:
+    for (source,target) in dataloader:
         n = 0
         loss_accum = 0
 
