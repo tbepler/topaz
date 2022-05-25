@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
+from typing import Union
 
 import numpy as np
 
@@ -11,6 +12,7 @@ import torch.nn.functional as F
 import torch.utils.data
 from topaz import mrc
 from topaz.denoising.datasets import PatchDataset
+from topaz.denoising.models import load_model, train_model
 from topaz.filters import (AffineDenoise, AffineFilter, GaussianDenoise,
                            gaussian_filter, inverse_filter)
 from topaz.utils.data.loader import load_image
@@ -400,42 +402,42 @@ def denoise_stack(model, stack, batch_size=20, use_cuda=False):
 ###########################################################
 
 class Denoise():
-    def __init__(self, model:torch.nn.Module):
-         self.model = model
-         
-    def __repr__(self) -> str:
-        pass
+    ''' Object for micrograph denoising utilities.
+    '''
+    def __init__(self, model:Union[torch.nn.Module, str]):
+        if type(model) == torch.nn.Module or type(model) == torch.nn.Sequential:
+            self.model = model
+        elif type(model) == str:
+            try:
+                self.model = load_model(model)
+            except:
+                raise ValueError('Unable to load model: ' + model)
+        else:
+            raise TypeError('Unrecognized model:' + model)
     
     def __call__(self, input):
         self.denoise(input)
     
-    def train(self):
-        pass
-    
-    def denoise(self):
-        pass
-    
+    def train(self, train_dataset, val_dataset, loss_fn:str='L2', optim:str='adam', lr:float=0.001, weight_decay:float=0, batch_size:int=10, num_epochs:int=500, 
+                        shuffle:bool=True, use_cuda:bool=False, num_workers:int=1, verbose:bool=True, save_best:bool=False, save_interval:int=None, save_prefix:str=None) -> None:
+        train_model(self.model, train_dataset, val_dataset, loss_fn, optim, lr, weight_decay, batch_size, num_epochs, shuffle, use_cuda, num_workers, verbose, save_best, save_interval, save_prefix)
+            
+    def denoise(self, input:np.ndarray):
+        mu = input.mean()
+        sigma = input.std()
+        input = (input - mu) / sigma
+        # add singleton batch and input channel dimensions
+        expanded_input = np.expand_dims(input, axis=(0,1))
+        pred = self.model(expanded_input)
+        # remove singleton dimensions, unnormalize
+        return pred.squeeze() * sigma + mu
   
-#main classes  
-class Denoise2D(Denoise):
-    def __init__(self, model: torch.nn.Module):
-        super().__init__(model)
-        
-    def train(self, data):
-        pass
-    
-    def denoise(self, data):    
-        pass
-  
-    
+
 class Denoise3D(Denoise):
-    def __init__(self, model: torch.nn.Module):
-        super().__init__(model)
-        
-    def train(self, data):
-        pass
-    
-    def denoise(self):
+    ''' Object for denoising tomograms. Extends the denoising method to allow multiple input volumes.
+    '''
+    def denoise(self, input:np.ndarray, patch_size, padding, batch_size, volume_num, total_volumes):
+        # need to create a PatchDataset with preprocessing
         pass
     
     
