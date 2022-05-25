@@ -641,7 +641,7 @@ def __epoch(model, dataloader, loss_fn, optim, train=True, use_cuda=False) -> fl
             source = source.cuda()
             target = target.cuda()
 
-        # TODO: these two lines came from 2D code and may break 3D code
+        # set input_channels to 1 (BW imgs) for Conv layers
         source = source.unsqueeze(1)
         pred = model(source).squeeze(1)
 
