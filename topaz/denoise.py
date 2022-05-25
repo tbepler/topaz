@@ -402,7 +402,7 @@ def denoise_stack(model, stack, batch_size=20, use_cuda=False):
 class Denoise():
     ''' Object for micrograph denoising utilities.
     '''
-    def __init__(self, model:Union[torch.nn.Module, str]):
+    def __init__(self, model:Union[torch.nn.Module, str], use_cuda=False):
         if type(model) == torch.nn.Module or type(model) == torch.nn.Sequential:
             self.model = model
         elif type(model) == str:
@@ -412,13 +412,15 @@ class Denoise():
                 raise ValueError('Unable to load model: ' + model)
         else:
             raise TypeError('Unrecognized model:' + model)
+        if use_cuda:
+            self.model = self.model.cuda()
     
     def __call__(self, input):
         self.denoise(input)
     
     def train(self, train_dataset, val_dataset, loss_fn:str='L2', optim:str='adam', lr:float=0.001, weight_decay:float=0, batch_size:int=10, num_epochs:int=500, 
-                        shuffle:bool=True, use_cuda:bool=False, num_workers:int=1, verbose:bool=True, save_best:bool=False, save_interval:int=None, save_prefix:str=None) -> None:
-        train_model(self.model, train_dataset, val_dataset, loss_fn, optim, lr, weight_decay, batch_size, num_epochs, shuffle, use_cuda, num_workers, verbose, save_best, save_interval, save_prefix)
+                        shuffle:bool=True, num_workers:int=1, verbose:bool=True, save_best:bool=False, save_interval:int=None, save_prefix:str=None) -> None:
+        train_model(self.model, train_dataset, val_dataset, loss_fn, optim, lr, weight_decay, batch_size, num_epochs, shuffle, self.use_cuda, num_workers, verbose, save_best, save_interval, save_prefix)
     
     @torch.no_grad()        
     def denoise(self, input:np.ndarray):

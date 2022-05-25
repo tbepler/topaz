@@ -2,19 +2,19 @@
 from __future__ import division, print_function
 
 import argparse
-import glob
 import os
 import sys
 
 import numpy as np
-import pandas as pd
 import topaz.cuda
 import topaz.denoise as dn
-from topaz.denoising.datasets import make_images_datasets, make_paired_images_datasets
 import topaz.mrc as mrc
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from topaz.denoise import Denoise
+from topaz.denoising.datasets import (make_hdf5_datasets,
+                                      make_paired_images_datasets)
 from topaz.utils.data.loader import load_image
 from topaz.utils.image import downsample, save_image
 
@@ -79,170 +79,34 @@ def add_arguments(parser=None):
 
 
 def main(args):
-
     # set the number of threads
     num_threads = args.num_threads
     from topaz.torch import set_num_threads
     set_num_threads(num_threads)
-
+    
     ## set the device
     use_cuda = topaz.cuda.set_device(args.device)
-    print('# using device={} with cuda={}'.format(args.device, use_cuda), file=sys.stderr)
+    print(f'# using device={args.device} with cuda={use_cuda}', file=sys.stderr)
 
-    cutoff = args.pixel_cutoff # pixel truncation limit
-
+    #create denoiser and send model to GPU if using cuda
+    denoiser = Denoise(args.arch, use_cuda)
+    
     do_train = (args.dir_a is not None and args.dir_b is not None) or (args.hdf is not None)
     if do_train:
-
-        method = args.method
-        paired = (method == 'noise2noise')
-        preload = args.preload
-        holdout = args.holdout # fraction of image pairs to holdout for validation
-
+        # create paired datasets for noise2noise training
         if args.hdf is None: #use dirA/dirB
-            crop = args.crop
-            dir_as = args.dir_a
-            dir_bs = args.dir_b
-
-            dset_train = []
-            dset_val = []
-
-            for dir_a, dir_b in zip(dir_as, dir_bs): 
-                random = np.random.RandomState(44444)
-                if paired:
-                    dataset_train, dataset_val = make_paired_images_datasets(dir_a, dir_b, crop
-                                                                            , random=random
-                                                                            , holdout=holdout
-                                                                            , preload=preload 
-                                                                            , cutoff=cutoff
-                                                                            )
-                else:
-                    dataset_train, dataset_val = make_images_datasets(dir_a, dir_b, crop
-                                                                     , cutoff=cutoff
-                                                                     , random=random
-                                                                     , holdout=holdout)
-                dset_train.append(dataset_train)
-                dset_val.append(dataset_val)
-
-            dataset_train = dset_train[0]
-            for i in range(1, len(dset_train)):
-                dataset_train.x += dset_train[i].x
-                if paired:
-                    dataset_train.y += dset_train[i].y
-
-            dataset_val = dset_val[0]
-            for i in range(1, len(dset_val)):
-                dataset_val.x += dset_val[i].x
-                if paired:
-                    dataset_val.y += dset_val[i].y
-
-            shuffle = True
-        else: # make HDF datasets
-            dataset_train, dataset_val = make_hdf5_datasets(args.hdf, paired=paired
-                                                           , cutoff=cutoff
-                                                           , holdout=holdout
-                                                           , preload=preload)
-            shuffle = preload
-
-        # initialize the model
-        arch = args.arch
-        if arch == 'unet':
-            model = dn.UDenoiseNet()
-        elif arch == 'unet-small':
-            model = dn.UDenoiseNetSmall()
-        elif arch == 'unet2':
-            model = dn.UDenoiseNet2()
-        elif arch == 'unet3':
-            model = dn.UDenoiseNet3()
-        elif arch == 'fcnet':
-            model = dn.DenoiseNet(32)
-        elif arch == 'fcnet2':
-            model = dn.DenoiseNet2(64)
-        elif arch == 'affine':
-            model = dn.AffineDenoise()
+            train_data, val_data = make_paired_images_datasets(args.dir_a, args.dir_b, crop=args.crop, random=np.random, holdout=args.holdout, preload=args.preload, cutoff=args.pixel_cutoff)
         else:
-            raise Exception('Unknown architecture: ' + arch)
-
-        if use_cuda:
-            model = model.cuda()
+            train_data, val_data = make_hdf5_datasets(args.hdf, paired=True, preload=args.preload, holdout=args.holdout, cutoff=args.pixel_cutoff)
 
         # train
-        optim = args.optim
-        lr = args.lr
-        batch_size = args.batch_size
-        num_epochs = args.num_epochs
-        digits = int(np.ceil(np.log10(num_epochs)))
-
-        num_workers = args.num_workers
-
-        print('epoch', 'loss_train', 'loss_val')
-        #criteria = nn.L1Loss()
-        criteria = args.criteria
-        
-
-        if method == 'noise2noise':
-            iterator = dn.train_noise2noise(model, dataset_train, lr=lr
-                                           , optim=optim
-                                           , batch_size=batch_size
-                                           , criteria=criteria
-                                           , num_epochs=num_epochs
-                                           , dataset_val=dataset_val
-                                           , use_cuda=use_cuda
-                                           , num_workers=num_workers
-                                           , shuffle=shuffle
-                                           )
-        elif method == 'masked':
-            iterator = dn.train_mask_denoise(model, dataset_train, lr=lr
-                                            , optim=optim
-                                            , batch_size=batch_size
-                                            , criteria=criteria
-                                            , num_epochs=num_epochs
-                                            , dataset_val=dataset_val
-                                            , use_cuda=use_cuda
-                                            , num_workers=num_workers
-                                            , shuffle=shuffle
-                                            )
-
-
-
-        for epoch,loss_train,loss_val in iterator:
-            print(epoch, loss_train, loss_val)
-            sys.stdout.flush()
-
-            # save the model
-            if args.save_prefix is not None:
-                path = args.save_prefix + ('_epoch{:0'+str(digits)+'}.sav').format(epoch) 
-                #path = args.save_prefix + '_epoch{}.sav'.format(epoch)
-                model.cpu()
-                model.eval()
-                torch.save(model, path)
-                if use_cuda:
-                    model.cuda()
-                    
-        models = [model]
-
-    else: # load the saved model(s)
-        models = []
-        for arg in args.model:
-            if arg == 'none':
-                print('# Warning: no denoising model will be used', file=sys.stderr)
-            else:
-                print('# Loading model:', arg, file=sys.stderr)
-            model = dn.load_model(arg)
-
-            model.eval()
-            if use_cuda:
-                model.cuda()
-
-            models.append(model)
-
-    # using trained model
-    # denoise the images
-
-    normalize = args.normalize
-    if args.format_ == 'png' or args.format_ == 'jpg':
-        # always normalize png and jpg format
-        normalize = True
+        denoiser.train(train_data, val_data, loss_fn=args.criteria, optim=args.optim, lr=args.lr, batch_size=args.batch_size, num_epochs=args.num_epochs, shuffle=True, 
+                       num_workers=args.num_workers, verbose=True, save_prefix=args.save_prefix, save_best=True)
+         
+         
+    # denoise using trained or pretrained model
+    # always normalize png and jpg format
+    normalize = True if args.format_ in ['png', 'jpg'] else args.normalize
 
     format_ = args.format_
     suffix = args.suffix

@@ -463,7 +463,7 @@ class PatchDataset(DenoiseDataset):
 
 
 
-def make_paired_images_datasets(dir_a:str, dir_b:str, crop, random=np.random, holdout=0.1, preload=False, cutoff=0):
+def make_paired_images_datasets(dir_a:str, dir_b:str, crop:int=800, random=np.random, holdout:float=0.1, preload:bool=False, cutoff:float=0):
     # train denoising model
     # make the dataset
     A = []
@@ -497,7 +497,7 @@ def make_paired_images_datasets(dir_a:str, dir_b:str, crop, random=np.random, ho
     return dataset_train, dataset_val
 
 
-def make_hdf5_datasets(path:int, paired:bool=True, preload:bool=False, holdout:float=0.1, cutoff:float=0):
+def make_hdf5_datasets(path:str, paired:bool=True, preload:bool=False, holdout:float=0.1, cutoff:float=0):
 
     # open the hdf5 dataset
     import h5py

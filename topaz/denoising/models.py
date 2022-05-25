@@ -1,20 +1,18 @@
 import datetime
+import multiprocessing as mp
 import os
 import sys
-from collections import OrderedDict
 import time
-import numpy as np
+from collections import OrderedDict
 
+import numpy as np
 import pkg_resources
-import multiprocessing as mp
 import torch
 import torch.functional as F
 from topaz.denoise import L0Loss
-from topaz.denoising.datasets import TrainingDataset3D
 from topaz.filters import AffineDenoise
-from torch.utils.data import DataLoader
 from torch import nn
-from topaz.denoising.utils import set_device
+from torch.utils.data import DataLoader
 
 
 class DenoiseNet(nn.Module):
@@ -739,7 +737,7 @@ def train_model(model, train_dataset, val_dataset, loss_fn:str='L2', optim:str='
             print('\t'.join([f'# [{epoch}/{num_epochs}]'] + [str(round(num, 5)) for num in (train_loss, val_loss, best_val_loss)]), file=output, end='\r')
 
         # periodically save model if desired
-        if save_prefix is not None and (epoch+1)%save_interval == 0:
+        if (save_prefix is not None) and (save_interval is not None) and (epoch+1)%save_interval == 0:
             model.eval().cpu()
             save_model(model, epoch+1, save_prefix, digits=digits)
             if use_cuda:
