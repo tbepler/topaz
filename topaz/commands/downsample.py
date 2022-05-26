@@ -1,12 +1,7 @@
 from __future__ import print_function
 
-import sys
-from turtle import down
-import numpy as np
-from PIL import Image # for saving images
 import argparse
 
-from topaz.utils.data.loader import load_image
 from topaz.utils.image import downsample_file
 
 name = 'downsample'
