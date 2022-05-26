@@ -231,15 +231,6 @@ class GaussianNoise:
         return x+r1, x+r2
     
 
-class L0Loss:
-    def __init__(self, eps=1e-8, gamma=2):
-        self.eps = eps
-        self.gamma = gamma
-
-    def __call__(self, x, y):
-        return torch.mean((torch.abs(x - y) + self.eps)**self.gamma)
-
-
 def lowpass(x, factor=1, dims=2):
     """ low pass filter with FFT """
 

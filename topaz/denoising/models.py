@@ -9,10 +9,18 @@ import numpy as np
 import pkg_resources
 import torch
 import torch.functional as F
-from topaz.denoise import L0Loss
 from topaz.filters import AffineDenoise
 from torch import nn
 from torch.utils.data import DataLoader
+
+
+class L0Loss:
+    def __init__(self, eps=1e-8, gamma=2):
+        self.eps = eps
+        self.gamma = gamma
+
+    def __call__(self, x, y):
+        return torch.mean((torch.abs(x - y) + self.eps)**self.gamma)
 
 
 class DenoiseNet(nn.Module):
