@@ -12,7 +12,7 @@ import topaz.mrc as mrc
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from topaz.denoise import Denoise
+from topaz.denoise import Denoise, denoise_image
 from topaz.denoising.datasets import (make_hdf5_datasets,
                                       make_paired_images_datasets)
 from topaz.utils.data.loader import load_image
@@ -87,12 +87,12 @@ def main(args):
     ## set the device
     use_cuda = topaz.cuda.set_device(args.device)
     print(f'# using device={args.device} with cuda={use_cuda}', file=sys.stderr)
-
-    #create denoiser and send model to GPU if using cuda
-    denoiser = Denoise(args.arch, use_cuda)
     
     do_train = (args.dir_a is not None and args.dir_b is not None) or (args.hdf is not None)
     if do_train:
+        #create denoiser and send model to GPU if using cuda
+        denoiser = Denoise(args.arch, use_cuda)
+        
         # create paired datasets for noise2noise training
         if args.hdf is None: #use dirA/dirB
             train_data, val_data = make_paired_images_datasets(args.dir_a, args.dir_b, crop=args.crop, random=np.random, holdout=args.holdout, preload=args.preload, cutoff=args.pixel_cutoff)
@@ -102,9 +102,22 @@ def main(args):
         # train
         denoiser.train(train_data, val_data, loss_fn=args.criteria, optim=args.optim, lr=args.lr, batch_size=args.batch_size, num_epochs=args.num_epochs, shuffle=True, 
                        num_workers=args.num_workers, verbose=True, save_prefix=args.save_prefix, save_best=True)
+        models = [denoiser]
+    else: # load the saved model(s)
+        models = []
+        for arg in args.model:
+            if arg == 'none':
+                print('# Warning: no denoising model will be used', file=sys.stderr)
+            else:
+                print('# Loading model:', arg, file=sys.stderr)
+            denoiser = Denoise(args.arch, use_cuda)
+            denoiser.model.eval()
+            if use_cuda:
+                denoiser.model.cuda()
+
+            models.append(denoiser)    
          
-         
-    # denoise using trained or pretrained model
+
     # always normalize png and jpg format
     normalize = True if args.format_ in ['png', 'jpg'] else args.normalize
 
@@ -146,7 +159,7 @@ def main(args):
         for i in range(len(stack)):
             mic = stack[i]
             # process and denoise the micrograph
-            mic = denoise_image(mic, models, lowpass=lowpass, cutoff=cutoff, gaus=gaus
+            mic = denoise_image(mic, models, lowpass=lowpass, cutoff=args.pixel_cutoff, gaus=gaus
                                , inv_gaus=inv_gaus, deconvolve=deconvolve
                                , deconv_patch=deconv_patch
                                , patch_size=ps, padding=padding, normalize=normalize

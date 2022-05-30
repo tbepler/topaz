@@ -45,26 +45,6 @@ def spatial_covariance(x, n=11, s=11):
 
     return cov
 
-def spatial_covariance_old(x, n=11, s=11):
-    tiles = []
-    for i in range(0, x.shape[0], s):
-        for j in range(0, x.shape[1], s):
-            if i+n <= x.shape[0] and j+n <= x.shape[1]:
-                t = x[i:i+n,j:j+n]
-                tiles.append(t)
-    tiles = torch.stack(tiles, 0)
-    tiles = tiles.view(len(tiles), -1)
-    m = tiles.mean(1, keepdim=True)
-    tiles = tiles - m
-
-    m = tiles.mean(0)
-    x = (tiles - m)
-    cov = torch.mm(x.t(), x)/x.size(0)
-    cov = cov.view(n, n, n, n)
-
-    # we are only interested in the central pixel
-    i = n//2
-    return cov[i,i]
 
 def estimate_unblur_filter(x, width=11, s=11):
     """
