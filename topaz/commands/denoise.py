@@ -190,7 +190,7 @@ def main(args):
             mic = np.array(load_image(path), copy=False).astype(np.float32)
 
             # process and denoise the micrograph
-            mic = denoise_image(mic, models, lowpass=lowpass, cutoff=cutoff, gaus=gaus
+            mic = denoise_image(mic, models, lowpass=lowpass, cutoff=args.pixel_cutoff, gaus=gaus
                                , inv_gaus=inv_gaus, deconvolve=deconvolve
                                , deconv_patch=deconv_patch
                                , patch_size=ps, padding=padding, normalize=normalize

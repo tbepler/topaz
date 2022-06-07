@@ -277,7 +277,7 @@ def denoise_image(mic, models, lowpass=1, cutoff=0, gaus=None, inv_gaus=None, de
                  , deconv_patch=1, patch_size=-1, padding=0, normalize=False
                  , use_cuda=False):
     if lowpass > 1:
-        mic = dn.lowpass(mic, lowpass)
+        mic = lowpass(mic, lowpass)
 
     mic = torch.from_numpy(mic)
     if use_cuda:
@@ -292,17 +292,17 @@ def denoise_image(mic, models, lowpass=1, cutoff=0, gaus=None, inv_gaus=None, de
 
     # apply guassian/inverse gaussian filter
     if gaus is not None:
-        x = dn.denoise(gaus, x)
+        x = denoise(gaus, x)
     elif inv_gaus is not None:
-        x = dn.denoise(inv_gaus, x)
+        x = denoise(inv_gaus, x)
     elif deconvolve:
         # estimate optimal filter and correct spatial correlation
-        x = dn.correct_spatial_covariance(x, patch=deconv_patch)
+        x = correct_spatial_covariance(x, patch=deconv_patch)
 
     # denoise
     mic = 0
     for model in models:
-        mic += dn.denoise(model, x, patch_size=patch_size, padding=padding)
+        mic += denoise(model, x, patch_size=patch_size, padding=padding)
     mic /= len(models)
 
     # restore pixel scaling
