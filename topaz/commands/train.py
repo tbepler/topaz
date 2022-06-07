@@ -136,6 +136,8 @@ def main(args):
 
     classifier = train_model(classifier, train_images, train_targets, test_images, test_targets, use_cuda, save_prefix, output, args)
     report('Done!')
+    
+    return classifier
 
 
 if __name__ == '__main__':
