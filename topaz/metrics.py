@@ -102,7 +102,7 @@ def particle_prc(targets_path:str, predicted_path:str, match_radius:int, images:
     elif images == 'predicted':
         image_list = set(predicts.image_name.unique())
     else:
-        raise Exception('Unknown image argument: ' + args.images)
+        raise Exception('Unknown image argument: ' + images)
 
     image_list = list(image_list)
 
