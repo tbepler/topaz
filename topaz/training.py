@@ -540,3 +540,5 @@ def train_model(classifier, train_images, train_targets, test_images, test_targe
 
     fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs,
                save_prefix=save_prefix, use_cuda=use_cuda, output=output)
+
+    return classifier

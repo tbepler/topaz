@@ -134,7 +134,7 @@ def main(args):
     output = sys.stdout if args.output is None else open(args.output, 'w')
     save_prefix = args.save_prefix
 
-    train_model(classifier, train_images, train_targets, test_images, test_targets, use_cuda, save_prefix, output, args)
+    classifier = train_model(classifier, train_images, train_targets, test_images, test_targets, use_cuda, save_prefix, output, args)
     report('Done!')
 
 
