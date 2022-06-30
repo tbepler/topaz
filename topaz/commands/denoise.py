@@ -533,6 +533,9 @@ def main(args):
     else:
         # stream the micrographs and denoise them
         total = len(args.micrographs)
+        if total < 1:
+            # if no micrographs are input for denoising, quit
+            return
 
         # make the output directory if it doesn't exist
         if not os.path.exists(args.output):
