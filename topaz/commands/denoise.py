@@ -5,8 +5,8 @@ import argparse
 import sys
 
 import numpy as np
-import topaz.cuda
 import topaz.denoise as dn
+from topaz.cuda import set_device
 from topaz.denoise import Denoise, denoise_stack, denoise_stream
 from topaz.denoising.datasets import (make_hdf5_datasets,
                                       make_paired_images_datasets)
@@ -78,7 +78,7 @@ def main(args):
     set_num_threads(num_threads)
     
     ## set the device
-    use_cuda = topaz.cuda.set_device(args.device)
+    use_cuda = set_device(args.device)
     print(f'# using device={args.device} with cuda={use_cuda}', file=sys.stderr)
     
     do_train = (args.dir_a is not None and args.dir_b is not None) or (args.hdf is not None)
