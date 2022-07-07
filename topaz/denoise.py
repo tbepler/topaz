@@ -377,6 +377,7 @@ class Denoise():
     
     @torch.no_grad()        
     def denoise(self, input:np.ndarray):
+        self.model.eval()
         device = next(iter(self.model.parameters())).device
         mu, std =  input.mean(), input.std()
         # normalize, add singleton batch and input channel dims 
