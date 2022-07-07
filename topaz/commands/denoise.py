@@ -2,21 +2,14 @@
 from __future__ import division, print_function
 
 import argparse
-import os
 import sys
 
 import numpy as np
 import topaz.cuda
 import topaz.denoise as dn
-import topaz.mrc as mrc
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from topaz.denoise import Denoise, denoise_image, denoise_stack
+from topaz.denoise import Denoise, denoise_stack, denoise_stream
 from topaz.denoising.datasets import (make_hdf5_datasets,
                                       make_paired_images_datasets)
-from topaz.utils.data.loader import load_image
-from topaz.utils.image import downsample, save_image
 
 name = 'denoise'
 help = 'denoise micrographs with various denoising algorithms'
@@ -118,10 +111,6 @@ def main(args):
     # always normalize png and jpg format
     normalize = True if args.format_ in ['png', 'jpg'] else args.normalize
 
-    format_ = args.format_
-    suffix = args.suffix
-
-    lowpass = args.lowpass
     gaus = args.gaussian
     inv_gaus = args.inv_gaussian
 
@@ -131,53 +120,16 @@ def main(args):
     inv_gaus = dn.InvGaussianFilter(inv_gaus) if inv_gaus > 0 else None
     inv_gaus.cuda() if use_cuda and inv_gaus is not None else inv_gaus
         
-    deconvolve = args.deconvolve
-    deconv_patch = args.deconv_patch
-    ps = args.patch_size
-    padding = args.patch_padding
-
-    count = 0
-
-    # we are denoising a single MRC stack
     if args.stack:
+        # we are denoising a single MRC stack
         denoised = denoise_stack(args.micrographs[0], args.output, models, args.lowpass, args.pixel_cutoff, gaus, inv_gaus,
                                  args.deconvolve, args.deconv_patch, args.patch_size, args.patch_padding,
                                  normalize, use_cuda)
-        
     else:
         # stream the micrographs and denoise them
-        total = len(args.micrographs)
-
-        # make the output directory if it doesn't exist
-        if not os.path.exists(args.output):
-            os.makedirs(args.output)
-
-        for path in args.micrographs:
-            name,_ = os.path.splitext(os.path.basename(path))
-            mic = np.array(load_image(path), copy=False).astype(np.float32)
-
-            # process and denoise the micrograph
-            mic = denoise_image(mic, models, lowpass=lowpass, cutoff=args.pixel_cutoff, gaus=gaus
-                               , inv_gaus=inv_gaus, deconvolve=deconvolve
-                               , deconv_patch=deconv_patch
-                               , patch_size=ps, padding=padding, normalize=normalize
-                               , use_cuda=use_cuda
-                               )
-
-            # write the micrograph
-            if not args.output:
-                if suffix == '' or suffix is None:
-                    suffix = '.denoised'
-                # write the file to the same location as input
-                no_ext,ext = os.path.splitext(path)
-                outpath = no_ext + suffix + '.' + format_
-            else:
-                outpath = args.output + os.sep + name + suffix + '.' + format_
-            save_image(mic, outpath) #, mi=None, ma=None)
-
-            count += 1
-            print('# {} of {} completed.'.format(count, total), file=sys.stderr, end='\r')
-        print('', file=sys.stderr)
+        denoised = denoise_stream(args.micrographs, args.output, args.format, args.suffix, models, args.lowpass, args.pixel_cutoff, 
+                                  gaus, inv_gaus, args.deconvolve, args.deconv_patch, args.patch_size, args.patch_padding,
+                                  normalize, use_cuda)
 
 
 if __name__ == '__main__':

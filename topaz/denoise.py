@@ -5,15 +5,17 @@ import sys
 from typing import Any, List, Union
 
 import numpy as np
-from topaz import mrc
 
 import torch
 import torch.nn.functional as F
 import torch.utils.data
+from topaz import mrc
 from topaz.denoising.datasets import PatchDataset
 from topaz.denoising.models import load_model, train_model
 from topaz.filters import (AffineFilter, GaussianDenoise, gaussian_filter,
                            inverse_filter)
+from topaz.utils.data.loader import load_image
+from topaz.utils.image import save_image
 from torch.utils.data import DataLoader
 
 
@@ -430,13 +432,15 @@ class Denoise3D(Denoise):
         return denoised
 
 
-def denoise_stack(path:str, output_path:str, models:List[Any], lowpass:float=1, pixel_cutoff:float=0, gaus=None, inv_gaus=None, deconvolve:bool=True, 
-                  deconv_patch:int=1, patch_size:int=1024, padding:int=500, normalize:bool=True, use_cuda:bool=False):
+def denoise_stack(path:str, output_path:str, models:List[Any], lowpass:float=1, pixel_cutoff:float=0, 
+                  gaus=None, inv_gaus=None, deconvolve:bool=True, deconv_patch:int=1, patch_size:int=1024, 
+                  padding:int=500, normalize:bool=True, use_cuda:bool=False):
     with open(path, 'rb') as f:
         content = f.read()
     stack,_,_ = mrc.parse(content)
     print('# denoising stack with shape:', stack.shape, file=sys.stderr)
     total = len(stack)
+    count = 0
 
     denoised = np.zeros_like(stack)
     for i in range(len(stack)):
@@ -455,5 +459,45 @@ def denoise_stack(path:str, output_path:str, models:List[Any], lowpass:float=1, 
     print('# writing to', output_path, file=sys.stderr)
     with open(output_path, 'wb') as f:
         mrc.write(f, denoised)
+    
+    return denoised
+
+
+def denoise_stream(micrographs:List[str], output_path:str, format:str='mrc', suffix:str='', models:List[Any]=None, lowpass:float=1, 
+                   pixel_cutoff:float=0, gaus=None, inv_gaus=None, deconvolve:bool=True, deconv_patch:int=1, patch_size:int=1024, 
+                   padding:int=500, normalize:bool=True, use_cuda:bool=False):
+    # stream the micrographs and denoise them
+    total = len(micrographs)
+    count = 0
+    denoised = [] 
+
+    # make the output directory if it doesn't exist
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
+    for path in micrographs:
+        name,_ = os.path.splitext(os.path.basename(path))
+        mic = np.array(load_image(path), copy=False).astype(np.float32)
+
+        # process and denoise the micrograph
+        mic = denoise_image(mic, models, lowpass=lowpass, cutoff=pixel_cutoff, gaus=gaus, 
+                            inv_gaus=inv_gaus, deconvolve=deconvolve, deconv_patch=deconv_patch, 
+                            patch_size=patch_size, padding=padding, normalize=normalize, use_cuda=use_cuda)
+        denoised.append(mic)
+
+        # write the micrograph
+        if not output_path:
+            if suffix == '' or suffix is None:
+                suffix = '.denoised'
+            # write the file to the same location as input
+            no_ext,ext = os.path.splitext(path)
+            outpath = no_ext + suffix + '.' + format
+        else:
+            outpath = output_path + os.sep + name + suffix + '.' + format
+        save_image(mic, outpath) #, mi=None, ma=None)
+
+        count += 1
+        print('# {} of {} completed.'.format(count, total), file=sys.stderr, end='\r')
+    print('', file=sys.stderr)
     
     return denoised
