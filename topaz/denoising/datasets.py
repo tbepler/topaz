@@ -6,7 +6,6 @@ from typing import List, Tuple, Union
 
 import numpy as np
 import h5py
-from requests import patch
 import torch
 from topaz import mrc
 from topaz.utils.data.loader import load_image
