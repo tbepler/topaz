@@ -12,7 +12,7 @@ import topaz.mrc as mrc
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from topaz.denoise import Denoise, denoise_image
+from topaz.denoise import Denoise, denoise_image, denoise_stack
 from topaz.denoising.datasets import (make_hdf5_datasets,
                                       make_paired_images_datasets)
 from topaz.utils.data.loader import load_image
@@ -106,17 +106,14 @@ def main(args):
     else: # load the saved model(s)
         models = []
         for arg in args.model:
-            if arg == 'none':
-                print('# Warning: no denoising model will be used', file=sys.stderr)
-            else:
-                print('# Loading model:', arg, file=sys.stderr)
+            out_string = '# Warning: no denoising model will be used' if arg == 'none' else '# Loading model:'+str(arg)
+            print(out_string, file=sys.stderr)
+            
             denoiser = Denoise(args.arch, use_cuda)
             denoiser.model.eval()
             if use_cuda:
                 denoiser.model.cuda()
-
             models.append(denoiser)    
-         
 
     # always normalize png and jpg format
     normalize = True if args.format_ in ['png', 'jpg'] else args.normalize
@@ -126,22 +123,16 @@ def main(args):
 
     lowpass = args.lowpass
     gaus = args.gaussian
-    if gaus > 0:
-        gaus = dn.GaussianDenoise(gaus)
-        if use_cuda:
-            gaus.cuda()
-    else:
-        gaus = None
     inv_gaus = args.inv_gaussian
-    if inv_gaus > 0:
-        inv_gaus = dn.InvGaussianFilter(inv_gaus)
-        if use_cuda:
-            inv_gaus.cuda()
-    else:
-        inv_gaus = None
+
+    gaus = dn.GaussianDenoise(gaus) if gaus > 0 else None
+    gaus.cuda() if use_cuda and gaus is not None else gaus
+            
+    inv_gaus = dn.InvGaussianFilter(inv_gaus) if inv_gaus > 0 else None
+    inv_gaus.cuda() if use_cuda and inv_gaus is not None else inv_gaus
+        
     deconvolve = args.deconvolve
     deconv_patch = args.deconv_patch
-
     ps = args.patch_size
     padding = args.patch_padding
 
@@ -149,34 +140,10 @@ def main(args):
 
     # we are denoising a single MRC stack
     if args.stack:
-        with open(args.micrographs[0], 'rb') as f:
-            content = f.read()
-        stack,_,_ = mrc.parse(content)
-        print('# denoising stack with shape:', stack.shape, file=sys.stderr)
-        total = len(stack)
-
-        denoised = np.zeros_like(stack)
-        for i in range(len(stack)):
-            mic = stack[i]
-            # process and denoise the micrograph
-            mic = denoise_image(mic, models, lowpass=lowpass, cutoff=args.pixel_cutoff, gaus=gaus
-                               , inv_gaus=inv_gaus, deconvolve=deconvolve
-                               , deconv_patch=deconv_patch
-                               , patch_size=ps, padding=padding, normalize=normalize
-                               , use_cuda=use_cuda
-                               )
-            denoised[i] = mic
-
-            count += 1
-            print('# {} of {} completed.'.format(count, total), file=sys.stderr, end='\r')
-
-        print('', file=sys.stderr)
-        # write the denoised stack
-        path = args.output
-        print('# writing', path, file=sys.stderr)
-        with open(path, 'wb') as f:
-            mrc.write(f, denoised)
-    
+        denoised = denoise_stack(args.micrographs[0], args.output, models, args.lowpass, args.pixel_cutoff, gaus, inv_gaus,
+                                 args.deconvolve, args.deconv_patch, args.patch_size, args.patch_padding,
+                                 normalize, use_cuda)
+        
     else:
         # stream the micrographs and denoise them
         total = len(args.micrographs)
@@ -211,7 +178,6 @@ def main(args):
             count += 1
             print('# {} of {} completed.'.format(count, total), file=sys.stderr, end='\r')
         print('', file=sys.stderr)
-
 
 
 if __name__ == '__main__':

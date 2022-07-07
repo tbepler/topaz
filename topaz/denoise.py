@@ -2,9 +2,10 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
-from typing import Union
+from typing import Any, List, Union
 
 import numpy as np
+from topaz import mrc
 
 import torch
 import torch.nn.functional as F
@@ -344,27 +345,6 @@ def denoise_patches(model, x, patch_size, padding=128):
     return y
 
 
-def denoise_stack(model, stack, batch_size=20, use_cuda=False):
-    denoised = np.zeros_like(stack)
-    with torch.no_grad():
-        stack = torch.from_numpy(stack).float()
-
-        for i in range(0, len(stack), batch_size):
-            x = stack[i:i+batch_size]
-            if use_cuda:
-                x = x.cuda()
-            mu = x.view(x.size(0), -1).mean(1)
-            std = x.view(x.size(0), -1).std(1)
-            x = (x - mu.unsqueeze(1).unsqueeze(2))/std.unsqueeze(1).unsqueeze(2)
-
-            y = model(x.unsqueeze(1)).squeeze(1)
-            y = std.unsqueeze(1).unsqueeze(2)*y + mu.unsqueeze(1).unsqueeze(2)
-
-            y = y.cpu().numpy()
-            denoised[i:i+batch_size] = y
-
-    return denoised
-
 
 ###########################################################
 # new stuff below
@@ -448,3 +428,32 @@ class Denoise3D(Denoise):
             print(' '*100, file=sys.stderr, end='\r')
 
         return denoised
+
+
+def denoise_stack(path:str, output_path:str, models:List[Any], lowpass:float=1, pixel_cutoff:float=0, gaus=None, inv_gaus=None, deconvolve:bool=True, 
+                  deconv_patch:int=1, patch_size:int=1024, padding:int=500, normalize:bool=True, use_cuda:bool=False):
+    with open(path, 'rb') as f:
+        content = f.read()
+    stack,_,_ = mrc.parse(content)
+    print('# denoising stack with shape:', stack.shape, file=sys.stderr)
+    total = len(stack)
+
+    denoised = np.zeros_like(stack)
+    for i in range(len(stack)):
+        mic = stack[i]
+        # process and denoise the micrograph
+        mic = denoise_image(mic, models, lowpass=lowpass, cutoff=pixel_cutoff, gaus=gaus, 
+                            inv_gaus=inv_gaus, deconvolve=deconvolve, deconv_patch=deconv_patch,
+                            patch_size=patch_size, padding=padding, normalize=normalize, use_cuda=use_cuda)
+        denoised[i] = mic
+
+        count += 1
+        print('# {} of {} completed.'.format(count, total), file=sys.stderr, end='\r')
+
+    print('', file=sys.stderr)
+    # write the denoised stack
+    print('# writing to', output_path, file=sys.stderr)
+    with open(output_path, 'wb') as f:
+        mrc.write(f, denoised)
+    
+    return denoised
