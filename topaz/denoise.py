@@ -502,3 +502,82 @@ def denoise_stream(micrographs:List[str], output_path:str, format:str='mrc', suf
     print('', file=sys.stderr)
     
     return denoised
+
+
+def denoise_tomogram(model, path, outdir, suffix, patch_size=128, padding=128, batch_size=1
+           , volume_num=1, total_volumes=1):
+    with open(path, 'rb') as f:
+        content = f.read()
+    tomo,header,extended_header = mrc.parse(content)
+    tomo = tomo.astype(np.float32)
+    name = os.path.basename(path)
+
+    mu = tomo.mean()
+    std = tomo.std()
+    # denoise in patches
+    d = next(iter(model.parameters())).device
+    denoised = np.zeros_like(tomo)
+
+    with torch.no_grad():
+        if patch_size < 1:
+            x = (tomo - mu)/std
+            x = torch.from_numpy(x).to(d)
+            x = model(x.unsqueeze(0).unsqueeze(0)).squeeze().cpu().numpy()
+            x = std*x + mu
+            denoised[:] = x
+        else:
+            patch_data = PatchDataset(tomo, patch_size, padding)
+            total = len(patch_data)
+            count = 0
+
+            batch_iterator = torch.utils.data.DataLoader(patch_data, batch_size=batch_size)
+            for index,x in batch_iterator:
+                x = x.to(d)
+                x = (x - mu)/std
+                x = x.unsqueeze(1) # batch x channel
+
+                # denoise
+                x = model(x)
+                x = x.squeeze(1).cpu().numpy()
+
+                # restore original statistics
+                x = std*x + mu
+
+                # stitch into denoised volume
+                for b in range(len(x)):
+                    i,j,k = index[b]
+                    xb = x[b]
+
+                    patch = denoised[i:i+patch_size,j:j+patch_size,k:k+patch_size]
+                    pz,py,px = patch.shape
+
+                    xb = xb[padding:padding+pz,padding:padding+py,padding:padding+px]
+                    denoised[i:i+patch_size,j:j+patch_size,k:k+patch_size] = xb
+
+                    count += 1
+                    print('# [{}/{}] {:.2%}'.format(volume_num, total_volumes, count/total), name, file=sys.stderr, end='\r')
+
+            print(' '*100, file=sys.stderr, end='\r')
+
+
+    ## save the denoised tomogram
+    if outdir is None:
+        # write denoised tomogram to same location as input, but add the suffix
+        if suffix is None: # use default
+            suffix = '.denoised'
+        no_ext,ext = os.path.splitext(path)
+        outpath = no_ext + suffix + ext
+    else:
+        if suffix is None:
+            suffix = ''
+        no_ext,ext = os.path.splitext(name)
+        outpath = outdir + os.sep + no_ext + suffix + ext
+
+    # use the read header except for a few fields
+    header = header._replace(mode=2) # 32-bit real
+    header = header._replace(amin=denoised.min())
+    header = header._replace(amax=denoised.max())
+    header = header._replace(amean=denoised.mean())
+
+    with open(outpath, 'wb') as f:
+        mrc.write(f, denoised, header=header, extended_header=extended_header)

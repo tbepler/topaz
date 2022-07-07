@@ -1,28 +1,14 @@
 #!/usr/bin/env python
-from __future__ import print_function, division
+from __future__ import division, print_function
 
-import os
-import sys
-import glob
-import time
-import datetime
-import multiprocessing as mp
-
-import numpy as np
-import pandas as pd
 import argparse
+import sys
 
-import torch
+import topaz.denoise as dn
 import torch.nn as nn
-import torch.nn.functional as F
-from topaz.denoising.models import train_model
-
-from topaz.utils.data.loader import load_image
-from topaz.utils.image import downsample
-import topaz.mrc as mrc
-import topaz.cuda
-
-from topaz.denoise import UDenoiseNet3D
+from topaz.cuda import set_device
+from topaz.denoise import Denoise3D, denoise_image
+from topaz.denoising.datasets import make_tomogram_datasets
 from topaz.filters import GaussianDenoise
 
 name = 'denoise3d'
@@ -82,59 +68,59 @@ def main(args):
     from topaz.torch import set_num_threads
     set_num_threads(num_threads)
 
-    # do denoising
-    model = None
+    ## set the device
+    use_cuda = set_device(args.device)
+    print(f'# using device={args.device} with cuda={use_cuda}', file=sys.stderr)
+    
     do_train = (args.even_train_path is not None) or (args.odd_train_path is not None)
     if do_train:
-        print('# training denoising model!', file=sys.stderr)
-        model, num_devices = train_model(args.even_train_path, args.odd_train_path
-                           , args.save_prefix, args.save_interval
-                           , args.device
-                           , base_kernel_width=args.base_kernel_width
-                           , cost_func=args.criteria
-                           , learning_rate=args.lr
-                           , optim=args.optim
-                           , momentum=args.momentum
-                           , minibatch_size=args.batch_size
-                           , num_epochs=args.num_epochs
-                           , N_train=args.N_train
-                           , N_test=args.N_test
-                           , tilesize=args.crop
-                           , num_workers=args.num_workers
-                           )
-
-    if len(args.volumes) > 0: # tomograms to denoise!
-        if model is None: # need to load model
-            model = load_model(args.model, base_kernel_width=args.base_kernel_width)
-
-        gaussian_sigma = args.gaussian
-        if gaussian_sigma > 0:
-            print('# apply Gaussian filter postprocessing with sigma={}'.format(gaussian_sigma), file=sys.stderr)
-            model = nn.Sequential(model, GaussianDenoise(gaussian_sigma, dims=3))
-        model.eval()
+        #create denoiser and send model to GPU if using cuda
+        denoiser = Denoise3D(args.arch, use_cuda)
         
-        model, use_cuda, num_devices = set_device(model, args.device)
+        # create paired datasets for noise2noise training
+        train_data, val_data = make_tomogram_datasets(args.even_train_path, args.odd_train_path, 
+                                                      args.patch_size, args.N_train, args.N_test)
 
-        #batch_size = args.batch_size
-        #batch_size *= num_devices
-        batch_size = num_devices
+        # train
+        denoiser.train(train_data, val_data, loss_fn=args.criteria, optim=args.optim, lr=args.lr, batch_size=args.batch_size, 
+                       num_epochs=args.num_epochs, shuffle=True, num_workers=args.num_workers, verbose=True, save_best=True,
+                       save_interval=args.save_interval, save_prefix=args.save_prefix)
+        models = [denoiser]
+    else: # load the saved model(s)
+        models = []
+        for arg in args.model:
+            out_string = '# Warning: no denoising model will be used' if arg == 'none' else '# Loading model:'+str(arg)
+            print(out_string, file=sys.stderr)
+            
+            denoiser = Denoise3D(args.arch, use_cuda)
+            denoiser.model.eval()
+            if use_cuda:
+                denoiser.model.cuda()
+            models.append(denoiser)    
 
-        patch_size = args.patch_size
-        padding = args.patch_padding
-        print('# denoising with patch size={} and padding={}'.format(patch_size, padding), file=sys.stderr)
-        # denoise the volumes
-        total = len(args.volumes)
-        count = 0
-        for path in args.volumes:
-            count += 1
-            denoise(model, path, args.output, args.suffix
-                   , patch_size=patch_size
-                   , padding=padding
-                   , batch_size=batch_size
-                   , volume_num=count
-                   , total_volumes=total
-                   )
+    gaus = args.gaussian
+    gaus = dn.GaussianDenoise(gaus) if gaus > 0 else None
+    gaus.cuda() if use_cuda and gaus is not None else gaus
+    ## SHOULD GAUSSIAN FILTER COME BEFORE OR AFTER MODELS???     
+    inv_gaus = args.inv_gaussian
+    inv_gaus = dn.InvGaussianFilter(inv_gaus) if inv_gaus > 0 else None
+    inv_gaus.cuda() if use_cuda and inv_gaus is not None else inv_gaus
 
+    total = len(args.volumes)
+    #terminate if no tomograms given
+    if total < 1:
+        return
+    
+    print(f'# denoising {total} tomograms with patch size={args.patch_size} and padding={args.padding}', file=sys.stderr)
+    # denoise the volumes
+    count = 0
+    for path in args.volumes:
+        count += 1
+        
+        denoise(model, path, args.output, args.suffix, 
+                patch_size=patch_size, padding=padding, 
+                batch_size=batch_size, volume_num=count,
+                total_volumes=total)
 
 
 if __name__ == '__main__':

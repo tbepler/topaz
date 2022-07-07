@@ -112,14 +112,16 @@ def main(args):
     normalize = True if args.format_ in ['png', 'jpg'] else args.normalize
 
     gaus = args.gaussian
-    inv_gaus = args.inv_gaussian
-
     gaus = dn.GaussianDenoise(gaus) if gaus > 0 else None
     gaus.cuda() if use_cuda and gaus is not None else gaus
-            
+    
+    inv_gaus = args.inv_gaussian
     inv_gaus = dn.InvGaussianFilter(inv_gaus) if inv_gaus > 0 else None
     inv_gaus.cuda() if use_cuda and inv_gaus is not None else inv_gaus
-        
+    
+    #terminate if no micrographs given
+    if len(args.micrographs) < 1:
+        return
     if args.stack:
         # we are denoising a single MRC stack
         denoised = denoise_stack(args.micrographs[0], args.output, models, args.lowpass, args.pixel_cutoff, gaus, inv_gaus,
