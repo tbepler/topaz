@@ -94,7 +94,7 @@ def main(args):
 
         # train
         denoiser.train(train_data, val_data, loss_fn=args.criteria, optim=args.optim, lr=args.lr, batch_size=args.batch_size, num_epochs=args.num_epochs, shuffle=True, 
-                       num_workers=args.num_workers, verbose=True, save_prefix=args.save_prefix, save_best=True)
+                       num_workers=args.num_workers, verbose=True, save_best=True, save_interval=args.save_interval, save_prefix=args.save_prefix)
         models = [denoiser]
     else: # load the saved model(s)
         models = []
