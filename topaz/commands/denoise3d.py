@@ -7,7 +7,7 @@ import sys
 import topaz.denoise as dn
 import torch.nn as nn
 from topaz.cuda import set_device
-from topaz.denoise import Denoise3D, denoise_image
+from topaz.denoise import Denoise3D, denoise_image, denoise_tomogram, denoise_tomogram_stream
 from topaz.denoising.datasets import make_tomogram_datasets
 from topaz.filters import GaussianDenoise
 
@@ -101,10 +101,6 @@ def main(args):
     gaus = args.gaussian
     gaus = dn.GaussianDenoise(gaus) if gaus > 0 else None
     gaus.cuda() if use_cuda and gaus is not None else gaus
-    ## SHOULD GAUSSIAN FILTER COME BEFORE OR AFTER MODELS???     
-    inv_gaus = args.inv_gaussian
-    inv_gaus = dn.InvGaussianFilter(inv_gaus) if inv_gaus > 0 else None
-    inv_gaus.cuda() if use_cuda and inv_gaus is not None else inv_gaus
 
     total = len(args.volumes)
     #terminate if no tomograms given
@@ -113,14 +109,8 @@ def main(args):
     
     print(f'# denoising {total} tomograms with patch size={args.patch_size} and padding={args.padding}', file=sys.stderr)
     # denoise the volumes
-    count = 0
-    for path in args.volumes:
-        count += 1
-        
-        denoise(model, path, args.output, args.suffix, 
-                patch_size=patch_size, padding=padding, 
-                batch_size=batch_size, volume_num=count,
-                total_volumes=total)
+    denoised = denoise_tomogram_stream(args.volumes)
+    return denoised
 
 
 if __name__ == '__main__':

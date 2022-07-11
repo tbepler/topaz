@@ -2,6 +2,9 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
+from tabnanny import verbose
+from tkinter import N
+from turtle import st
 from typing import Any, List, Union
 
 import numpy as np
@@ -171,6 +174,31 @@ def correct_spatial_covariance(x, width=11, s=11, patch=1):
 
     return y
 
+def lowpass(x, factor=1, dims=2):
+    """ low pass filter with FFT """
+
+    if dims == 2:
+        freq0 = np.fft.fftfreq(x.shape[-2])
+        freq1 = np.fft.rfftfreq(x.shape[-1])
+    elif dims == 3:
+        freq0 = np.fft.fftfreq(x.shape[-3])
+        freq1 = np.fft.fftfreq(x.shape[-2])
+        freq2 = np.fft.rfftfreq(x.shape[-1])
+
+    freq = np.meshgrid(freq0, freq1, indexing='ij') if dims ==2 else np.meshgrid(freq0, freq1, freq2, indexing='ij')
+    freq = np.stack(freq, dims)
+
+    r = np.abs(freq)
+    mask = np.any((r > 0.5/factor), dims) 
+
+    F = np.fft.rfftn(x)
+    F[...,mask] = 0
+
+    f = np.fft.irfftn(F, s=x.shape)
+    f = f.astype(x.dtype)
+
+    return f
+
 
 class GaussianNoise:
     def __init__(self, x, sigma=1.0, crop=500, xform=True):
@@ -214,47 +242,6 @@ class GaussianNoise:
         return x+r1, x+r2
     
 
-def lowpass(x, factor=1, dims=2):
-    """ low pass filter with FFT """
-
-    if dims == 2:
-        freq0 = np.fft.fftfreq(x.shape[-2])
-        freq1 = np.fft.rfftfreq(x.shape[-1])
-    elif dims == 3:
-        freq0 = np.fft.fftfreq(x.shape[-3])
-        freq1 = np.fft.fftfreq(x.shape[-2])
-        freq2 = np.fft.rfftfreq(x.shape[-1])
-
-    freq = np.meshgrid(freq0, freq1, indexing='ij') if dims ==2 else np.meshgrid(freq0, freq1, freq2, indexing='ij')
-    freq = np.stack(freq, dims)
-
-    r = np.abs(freq)
-    mask = np.any((r > 0.5/factor), dims) 
-
-    F = np.fft.rfftn(x)
-    F[...,mask] = 0
-
-    f = np.fft.irfftn(F, s=x.shape)
-    f = f.astype(x.dtype)
-
-    return f
-
-
-def gaussian(x, sigma=1, scale=5, use_cuda=False, dims=2):
-    """
-    Apply Gaussian filter with sigma to image. Truncates the kernel at scale times sigma pixels
-    """
-
-    f = GaussianDenoise(sigma, scale=scale, dims=dims)
-    if use_cuda:
-        f.cuda()
-
-    with torch.no_grad():
-        x = torch.from_numpy(x).unsqueeze(0).unsqueeze(0)
-        if use_cuda:
-            x = x.cuda()
-        y = f(x).squeeze().cpu().numpy()
-    return y
 
 
 
@@ -321,30 +308,6 @@ def denoise_image(mic, models, lowpass=1, cutoff=0, gaus=None, inv_gaus=None, de
     return mic
 
 
-def denoise_patches(model, x, patch_size, padding=128):
-    y = torch.zeros_like(x)
-    x = x.unsqueeze(0).unsqueeze(0)
-
-    with torch.no_grad():
-        for i in range(0, x.size(2), patch_size):
-            for j in range(0, x.size(3), patch_size):
-                # include padding extra pixels on either side
-                si = max(0, i - padding)
-                ei = min(x.size(2), i + patch_size + padding)
-
-                sj = max(0, j - padding)
-                ej = min(x.size(3), j + patch_size + padding)
-
-                xij = x[:,:,si:ei,sj:ej]
-                yij = model(xij).squeeze() # denoise the patch
-
-                # match back without the padding
-                si = i - si
-                sj = j - sj
-
-                y[i:i+patch_size,j:j+patch_size] = yij[si:si+patch_size,sj:sj+patch_size]
-
-    return y
 
 
 
@@ -367,51 +330,73 @@ class Denoise():
             raise TypeError('Unrecognized model:' + model)
         if use_cuda:
             self.model = self.model.cuda()
+        self.device = next(iter(self.model.parameters())).device
     
     def __call__(self, input):
         self.denoise(input)
+ 
     
     def train(self, train_dataset, val_dataset, loss_fn:str='L2', optim:str='adam', lr:float=0.001, weight_decay:float=0, batch_size:int=10, num_epochs:int=500, 
                         shuffle:bool=True, num_workers:int=1, verbose:bool=True, save_best:bool=False, save_interval:int=None, save_prefix:str=None) -> None:
         train_model(self.model, train_dataset, val_dataset, loss_fn, optim, lr, weight_decay, batch_size, num_epochs, shuffle, self.use_cuda, num_workers, verbose, save_best, save_interval, save_prefix)
+
     
     @torch.no_grad()        
     def denoise(self, input:np.ndarray):
         self.model.eval()
-        device = next(iter(self.model.parameters())).device
         mu, std =  input.mean(), input.std()
         # normalize, add singleton batch and input channel dims 
-        input = torch.from_numpy( (input-mu)/std ).to(device).unsqueeze(0).unsqueeze(0)
+        input = torch.from_numpy( (input-mu)/std ).to(self.device).unsqueeze(0).unsqueeze(0)
         pred = self.model(input)
         # remove singleton dims, unnormalize
         return pred.squeeze().cpu().numpy() * std + mu
+ 
+    
+    @torch.no_grad()
+    def denoise_patches(self, model, x, patch_size, padding=128):
+        ''' Denoise micrograph patches.
+        '''
+        y = torch.zeros_like(x)
+
+        for i in range(0, x.size(2), patch_size):
+            for j in range(0, x.size(3), patch_size):
+                # include padding extra pixels on either side
+                si = max(0, i - padding)
+                ei = min(x.size(2), i + patch_size + padding)
+                sj = max(0, j - padding)
+                ej = min(x.size(3), j + patch_size + padding)
+
+                xij = x[:,:,si:ei,sj:ej]
+                yij = self.denoise(xij) # denoise the patch
+
+                # match back without the padding
+                si = i - si
+                sj = j - sj
+
+                y[i:i+patch_size,j:j+patch_size] = yij[si:si+patch_size,sj:sj+patch_size]
+        return y
   
 
+
 class Denoise3D(Denoise):
-    ''' Object for denoising tomograms. Extends the denoising method to allow multiple input volumes.
+    ''' Object for denoising tomograms.
     '''
     @torch.no_grad()
     def denoise(self, tomo:np.ndarray, patch_size:int=128, padding:int=128, batch_size:int=1, volume_num:int=1, total_volumes:int=1, verbose:bool=True) -> np.ndarray:
-        device = next(iter(self.model.parameters())).device
         denoised = np.zeros_like(tomo)
         mu, std =  tomo.mean(), tomo.std()
         
         if patch_size < 1:
-            # normalize, add batch and input channel dims 
-            x = torch.from_numpy( (tomo - mu)/std ).to(device).unsqueeze(0).unsqueeze(0)
-            x = self.model(x).squeeze().cpu().numpy() * std + mu
-            denoised[:] = x
+            # no patches, simple denoise
+            denoised[:] = super().denoise(tomo)
         else:
             # denoise volume in patches
             patch_data = PatchDataset(tomo, patch_size, padding)
-            count, total = len(patch_data), 0
-
             batch_iterator = DataLoader(patch_data, batch_size=batch_size)
+            count, total = 0, len(patch_data)
+            
             for index,x in batch_iterator:
-                x = torch.from_numpy( (x - mu)/std ).to(device).unsqueeze(1) # batch x channel
-
-                # denoise, unnormalize
-                x = self.model(x).squeeze(1).cpu().numpy() * std + mu
+                x = super().denoise( (x - mu)/std ) * std + mu
 
                 # stitch into denoised volume
                 for b in range(len(x)):
@@ -433,9 +418,13 @@ class Denoise3D(Denoise):
         return denoised
 
 
-def denoise_stack(path:str, output_path:str, models:List[Any], lowpass:float=1, pixel_cutoff:float=0, 
+
+
+
+def denoise_stack(path:str, output_path:str, models:List[Denoise], lowpass:float=1, pixel_cutoff:float=0, 
                   gaus=None, inv_gaus=None, deconvolve:bool=True, deconv_patch:int=1, patch_size:int=1024, 
                   padding:int=500, normalize:bool=True, use_cuda:bool=False):
+    # TODO: REMOVE USE OF DENOISE_IMAGE
     with open(path, 'rb') as f:
         content = f.read()
     stack,_,_ = mrc.parse(content)
@@ -447,6 +436,13 @@ def denoise_stack(path:str, output_path:str, models:List[Any], lowpass:float=1, 
     for i in range(len(stack)):
         mic = stack[i]
         # process and denoise the micrograph
+        mic_denoised = 0
+        for model in models:
+            mic_denoised += model.denoise()
+            denoise(model, x, patch_size=patch_size, padding=padding)
+            mic_denoised /= len(models)
+    
+    
         mic = denoise_image(mic, models, lowpass=lowpass, cutoff=pixel_cutoff, gaus=gaus, 
                             inv_gaus=inv_gaus, deconvolve=deconvolve, deconv_patch=deconv_patch,
                             patch_size=patch_size, padding=padding, normalize=normalize, use_cuda=use_cuda)
@@ -464,7 +460,7 @@ def denoise_stack(path:str, output_path:str, models:List[Any], lowpass:float=1, 
     return denoised
 
 
-def denoise_stream(micrographs:List[str], output_path:str, format:str='mrc', suffix:str='', models:List[Any]=None, lowpass:float=1, 
+def denoise_stream(micrographs:List[str], output_path:str, format:str='mrc', suffix:str='', models:List[Denoise]=None, lowpass:float=1, 
                    pixel_cutoff:float=0, gaus=None, inv_gaus=None, deconvolve:bool=True, deconv_patch:int=1, patch_size:int=1024, 
                    padding:int=500, normalize:bool=True, use_cuda:bool=False):
     # stream the micrographs and denoise them
@@ -481,6 +477,7 @@ def denoise_stream(micrographs:List[str], output_path:str, format:str='mrc', suf
         mic = np.array(load_image(path), copy=False).astype(np.float32)
 
         # process and denoise the micrograph
+        # TODO: REMOVE USE OF DENOISE_IMAGE
         mic = denoise_image(mic, models, lowpass=lowpass, cutoff=pixel_cutoff, gaus=gaus, 
                             inv_gaus=inv_gaus, deconvolve=deconvolve, deconv_patch=deconv_patch, 
                             patch_size=patch_size, padding=padding, normalize=normalize, use_cuda=use_cuda)
@@ -504,72 +501,31 @@ def denoise_stream(micrographs:List[str], output_path:str, format:str='mrc', suf
     return denoised
 
 
-def denoise_tomogram(model, path, outdir, suffix, patch_size=128, padding=128, batch_size=1
-           , volume_num=1, total_volumes=1):
+def denoise_tomogram(path:str, model:Denoise3D, outdir:str=None, suffix:str='', patch_size:int=96, 
+                     padding:str=48, batch_size:int=10, volume_num=1, total_volumes=1,
+                     gaus=None, verbose:bool=True):
+    name = os.path.basename(path)
+    
     with open(path, 'rb') as f:
         content = f.read()
     tomo,header,extended_header = mrc.parse(content)
     tomo = tomo.astype(np.float32)
-    name = os.path.basename(path)
 
-    mu = tomo.mean()
-    std = tomo.std()
-    # denoise in patches
-    d = next(iter(model.parameters())).device
-    denoised = np.zeros_like(tomo)
+    denoised = model.denoise(tomo, patch_size=patch_size, padding=padding, batch_size=batch_size, 
+                             volume_num=volume_num, total_volumes=total_volumes, verbose=verbose)
 
-    with torch.no_grad():
-        if patch_size < 1:
-            x = (tomo - mu)/std
-            x = torch.from_numpy(x).to(d)
-            x = model(x.unsqueeze(0).unsqueeze(0)).squeeze().cpu().numpy()
-            x = std*x + mu
-            denoised[:] = x
-        else:
-            patch_data = PatchDataset(tomo, patch_size, padding)
-            total = len(patch_data)
-            count = 0
-
-            batch_iterator = torch.utils.data.DataLoader(patch_data, batch_size=batch_size)
-            for index,x in batch_iterator:
-                x = x.to(d)
-                x = (x - mu)/std
-                x = x.unsqueeze(1) # batch x channel
-
-                # denoise
-                x = model(x)
-                x = x.squeeze(1).cpu().numpy()
-
-                # restore original statistics
-                x = std*x + mu
-
-                # stitch into denoised volume
-                for b in range(len(x)):
-                    i,j,k = index[b]
-                    xb = x[b]
-
-                    patch = denoised[i:i+patch_size,j:j+patch_size,k:k+patch_size]
-                    pz,py,px = patch.shape
-
-                    xb = xb[padding:padding+pz,padding:padding+py,padding:padding+px]
-                    denoised[i:i+patch_size,j:j+patch_size,k:k+patch_size] = xb
-
-                    count += 1
-                    print('# [{}/{}] {:.2%}'.format(volume_num, total_volumes, count/total), name, file=sys.stderr, end='\r')
-
-            print(' '*100, file=sys.stderr, end='\r')
-
+    # Gaussian filter output
+    if gaus is not None:
+        tomo = gaus.apply(tomo)
 
     ## save the denoised tomogram
     if outdir is None:
         # write denoised tomogram to same location as input, but add the suffix
-        if suffix is None: # use default
+        if suffix is '': # use default
             suffix = '.denoised'
         no_ext,ext = os.path.splitext(path)
         outpath = no_ext + suffix + ext
     else:
-        if suffix is None:
-            suffix = ''
         no_ext,ext = os.path.splitext(name)
         outpath = outdir + os.sep + no_ext + suffix + ext
 
@@ -581,3 +537,34 @@ def denoise_tomogram(model, path, outdir, suffix, patch_size=128, padding=128, b
 
     with open(outpath, 'wb') as f:
         mrc.write(f, denoised, header=header, extended_header=extended_header)
+        
+        
+def denoise_tomogram_stream(volumes:List[str], output_path:str, format:str='mrc', suffix:str='', models:List[Any]=None, lowpass:float=1, 
+                   pixel_cutoff:float=0, gaus=None, inv_gaus=None, deconvolve:bool=True, deconv_patch:int=1, patch_size:int=1024, 
+                   padding:int=500, normalize:bool=True, use_cuda:bool=False):
+        # stream the micrographs and denoise them
+    total = len(volumes)
+    count = 0
+    denoised = [] 
+
+    # make the output directory if it doesn't exist
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
+    for path in volumes:
+        name,_ = os.path.splitext(os.path.basename(path))
+        volume = np.array(load_image(path), copy=False).astype(np.float32)
+
+        # process and denoise the micrograph
+        #TODO: make sure volumes are being counted
+        #TODO: double check method signatures
+        volume = denoise_tomogram(volume, models, lowpass=lowpass, cutoff=pixel_cutoff, gaus=gaus, 
+                                  inv_gaus=inv_gaus, deconvolve=deconvolve, deconv_patch=deconv_patch, 
+                                  patch_size=patch_size, padding=padding, normalize=normalize, use_cuda=use_cuda)
+        denoised.append(volume)
+        
+        count += 1
+        print('# {} of {} completed.'.format(count, total), file=sys.stderr, end='\r')
+    print('', file=sys.stderr)
+    
+    return denoised
