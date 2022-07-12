@@ -4,12 +4,9 @@ from __future__ import division, print_function
 import argparse
 import sys
 
-import topaz.denoise as dn
-import torch.nn as nn
 from topaz.cuda import set_device
-from topaz.denoise import Denoise3D, denoise, denoise_image, denoise_tomogram, denoise_tomogram_stream
+from topaz.denoise import Denoise3D, denoise_tomogram_stream
 from topaz.denoising.datasets import make_tomogram_datasets
-from topaz.filters import GaussianDenoise
 
 name = 'denoise3d'
 help = 'denoise 3D volumes with various denoising algorithms'
