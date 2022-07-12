@@ -7,7 +7,7 @@ import sys
 import topaz.denoise as dn
 import torch.nn as nn
 from topaz.cuda import set_device
-from topaz.denoise import Denoise3D, denoise_image, denoise_tomogram, denoise_tomogram_stream
+from topaz.denoise import Denoise3D, denoise, denoise_image, denoise_tomogram, denoise_tomogram_stream
 from topaz.denoising.datasets import make_tomogram_datasets
 from topaz.filters import GaussianDenoise
 
@@ -85,22 +85,10 @@ def main(args):
         denoiser.train(train_data, val_data, loss_fn=args.criteria, optim=args.optim, lr=args.lr, batch_size=args.batch_size, 
                        num_epochs=args.num_epochs, shuffle=True, num_workers=args.num_workers, verbose=True, save_best=True,
                        save_interval=args.save_interval, save_prefix=args.save_prefix)
-        models = [denoiser]
     else: # load the saved model(s)
-        models = []
-        for arg in args.model:
-            out_string = '# Warning: no denoising model will be used' if arg == 'none' else '# Loading model:'+str(arg)
-            print(out_string, file=sys.stderr)
-            
-            denoiser = Denoise3D(args.arch, use_cuda)
-            denoiser.model.eval()
-            if use_cuda:
-                denoiser.model.cuda()
-            models.append(denoiser)    
-
-    gaus = args.gaussian
-    gaus = dn.GaussianDenoise(gaus) if gaus > 0 else None
-    gaus.cuda() if use_cuda and gaus is not None else gaus
+        out_string = '# Warning: no denoising model will be used' if args.model == 'none' else '# Loading model:'+str(args.model)
+        print(out_string, file=sys.stderr)
+        denoiser = Denoise3D(args.arch, use_cuda) if args.model != 'none' else None
 
     total = len(args.volumes)
     #terminate if no tomograms given
@@ -109,7 +97,8 @@ def main(args):
     
     print(f'# denoising {total} tomograms with patch size={args.patch_size} and padding={args.padding}', file=sys.stderr)
     # denoise the volumes
-    denoised = denoise_tomogram_stream(args.volumes)
+    denoised = denoise_tomogram_stream(volumes=args.volumes, model=denoiser, output_path=args.output, suffix=args.suffix, gaus=args.gaus, 
+                                       patch_size=args.patch_size, padding=args.patch_padding, verbose=True, use_cuda=use_cuda)
     return denoised
 
 

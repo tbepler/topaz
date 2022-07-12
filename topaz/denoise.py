@@ -382,7 +382,8 @@ class Denoise3D(Denoise):
     ''' Object for denoising tomograms.
     '''
     @torch.no_grad()
-    def denoise(self, tomo:np.ndarray, patch_size:int=128, padding:int=128, batch_size:int=1, volume_num:int=1, total_volumes:int=1, verbose:bool=True) -> np.ndarray:
+    def denoise(self, tomo:np.ndarray, patch_size:int=96, padding:int=48, batch_size:int=1, 
+                volume_num:int=1, total_volumes:int=1, verbose:bool=True) -> np.ndarray:
         denoised = np.zeros_like(tomo)
         mu, std =  tomo.mean(), tomo.std()
         
@@ -501,9 +502,10 @@ def denoise_stream(micrographs:List[str], output_path:str, format:str='mrc', suf
     return denoised
 
 
-def denoise_tomogram(path:str, model:Denoise3D, outdir:str=None, suffix:str='', patch_size:int=96, 
-                     padding:str=48, batch_size:int=10, volume_num=1, total_volumes=1,
-                     gaus=None, verbose:bool=True):
+
+
+def denoise_tomogram(path:str, model:Denoise3D, outdir:str=None, suffix:str='', patch_size:int=96, padding:int=48, 
+                     volume_num:int=1, total_volumes:int=1, gaus:GaussianDenoise=None, verbose:bool=True):
     name = os.path.basename(path)
     
     with open(path, 'rb') as f:
@@ -511,12 +513,12 @@ def denoise_tomogram(path:str, model:Denoise3D, outdir:str=None, suffix:str='', 
     tomo,header,extended_header = mrc.parse(content)
     tomo = tomo.astype(np.float32)
 
-    denoised = model.denoise(tomo, patch_size=patch_size, padding=padding, batch_size=batch_size, 
+    # Use train or pre-trained model to denoise
+    denoised = model.denoise(tomo, patch_size=patch_size, padding=padding, batch_size=1, 
                              volume_num=volume_num, total_volumes=total_volumes, verbose=verbose)
 
     # Gaussian filter output
-    if gaus is not None:
-        tomo = gaus.apply(tomo)
+    tomo = gaus.apply(tomo) if gaus is not None else tomo
 
     ## save the denoised tomogram
     if outdir is None:
@@ -536,12 +538,12 @@ def denoise_tomogram(path:str, model:Denoise3D, outdir:str=None, suffix:str='', 
     header = header._replace(amean=denoised.mean())
 
     with open(outpath, 'wb') as f:
-        mrc.write(f, denoised, header=header, extended_header=extended_header)
+        mrc.write(f, denoised, header=header, extended_header=extended_header)    
+    return tomo
         
         
-def denoise_tomogram_stream(volumes:List[str], output_path:str, format:str='mrc', suffix:str='', models:List[Any]=None, lowpass:float=1, 
-                   pixel_cutoff:float=0, gaus=None, inv_gaus=None, deconvolve:bool=True, deconv_patch:int=1, patch_size:int=1024, 
-                   padding:int=500, normalize:bool=True, use_cuda:bool=False):
+def denoise_tomogram_stream(volumes:List[str], model:Denoise3D, output_path:str, suffix:str='', gaus:float=None, 
+                            patch_size:int=96, padding:int=48, verbose:bool=True, use_cuda:bool=False):
         # stream the micrographs and denoise them
     total = len(volumes)
     count = 0
@@ -550,21 +552,17 @@ def denoise_tomogram_stream(volumes:List[str], output_path:str, format:str='mrc'
     # make the output directory if it doesn't exist
     if not os.path.exists(output_path):
         os.makedirs(output_path)
+    
+    # Create Gaussian filter for post-processing
+    gaus = GaussianDenoise(gaus, use_cuda=use_cuda) if gaus > 0 else None
 
-    for path in volumes:
-        name,_ = os.path.splitext(os.path.basename(path))
-        volume = np.array(load_image(path), copy=False).astype(np.float32)
-
-        # process and denoise the micrograph
-        #TODO: make sure volumes are being counted
-        #TODO: double check method signatures
-        volume = denoise_tomogram(volume, models, lowpass=lowpass, cutoff=pixel_cutoff, gaus=gaus, 
-                                  inv_gaus=inv_gaus, deconvolve=deconvolve, deconv_patch=deconv_patch, 
-                                  patch_size=patch_size, padding=padding, normalize=normalize, use_cuda=use_cuda)
+    for idx, path in enumerate(volumes):
+        volume = denoise_tomogram(path, model, outdir=output_path, suffix=suffix, patch_size=patch_size, padding=padding, 
+                                  volume_num=idx, total_volumes=total, gaus=gaus, verbose=verbose)
         denoised.append(volume)
         
         count += 1
-        print('# {} of {} completed.'.format(count, total), file=sys.stderr, end='\r')
+        print(f'# {count} of {total} completed.', file=sys.stderr, end='\r')
     print('', file=sys.stderr)
     
     return denoised
