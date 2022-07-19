@@ -132,7 +132,7 @@ def main(args):
         denoised = denoise_stream(args.micrographs, args.output, args.format, args.suffix, models, args.lowpass, args.pixel_cutoff, 
                                   gaus, inv_gaus, args.deconvolve, args.deconv_patch, args.patch_size, args.patch_padding,
                                   normalize, use_cuda)
-
+    return denoised
 
 if __name__ == '__main__':
     parser = add_arguments()
