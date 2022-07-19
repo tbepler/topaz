@@ -2,10 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
-from tabnanny import verbose
-from tkinter import N
-from turtle import st
-from typing import Any, List, Union
+from typing import List, Union
 
 import numpy as np
 
@@ -242,9 +239,6 @@ class GaussianNoise:
         return x+r1, x+r2
     
 
-
-
-
 ###########################################################
 # new stuff below
 ###########################################################
@@ -267,7 +261,7 @@ class Denoise():
         self.device = next(iter(self.model.parameters())).device
 
     
-    def __call__(self, input):
+    def __call__(self, input:Union[np.ndarray, torch.Tensor]):
         self._denoise(input)
  
     
@@ -290,7 +284,7 @@ class Denoise():
  
 
     @torch.no_grad()
-    def denoise_patches(self, x, patch_size:int, padding:int=128):
+    def denoise_patches(self, x:Union[np.ndarray, torch.Tensor], patch_size:int, padding:int=128):
         ''' Denoise micrograph patches.
         '''
         y = torch.zeros_like(x)
@@ -315,7 +309,7 @@ class Denoise():
 
 
     @torch.no_grad()
-    def denoise(self, x, patch_size=-1, padding=128):
+    def denoise(self, x:Union[np.ndarray, torch.Tensor], patch_size=-1, padding=128):
         s = patch_size + padding  # check the patch plus padding size
         use_patch = (patch_size > 0) and (s < x.size(0) or s < x.size(1)) # must denoise in patches
         result = self.denoise_patches(x, patch_size, padding=padding) if use_patch else self.denoise(x)
@@ -362,7 +356,6 @@ class Denoise3D(Denoise):
             print(' '*100, file=sys.stderr, end='\r')
 
         return denoised
-
 
 
 
@@ -418,13 +411,6 @@ def denoise_stack(path:str, output_path:str, models:List[Denoise], lowpass:float
     for i in range(len(stack)):
         mic = stack[i]
         # process and denoise the micrograph
-        mic_denoised = 0
-        for model in models:
-            mic_denoised += model.denoise()
-            denoise(model, x, patch_size=patch_size, padding=padding)
-            mic_denoised /= len(models)
-    
-    
         mic = denoise_image(mic, models, lowpass=lowpass, cutoff=pixel_cutoff, gaus=gaus, 
                             inv_gaus=inv_gaus, deconvolve=deconvolve, deconv_patch=deconv_patch,
                             patch_size=patch_size, padding=padding, normalize=normalize, use_cuda=use_cuda)
@@ -459,7 +445,6 @@ def denoise_stream(micrographs:List[str], output_path:str, format:str='mrc', suf
         mic = np.array(load_image(path), copy=False).astype(np.float32)
 
         # process and denoise the micrograph
-        # TODO: REMOVE USE OF DENOISE_IMAGE
         mic = denoise_image(mic, models, lowpass=lowpass, cutoff=pixel_cutoff, gaus=gaus, 
                             inv_gaus=inv_gaus, deconvolve=deconvolve, deconv_patch=deconv_patch, 
                             patch_size=patch_size, padding=padding, normalize=normalize, use_cuda=use_cuda)
