@@ -15,8 +15,8 @@ import torch.utils.data
 from topaz import mrc
 from topaz.denoising.datasets import PatchDataset
 from topaz.denoising.models import load_model, train_model
-from topaz.filters import (AffineFilter, GaussianDenoise, gaussian_filter,
-                           inverse_filter)
+from topaz.filters import (AffineFilter, GaussianDenoise, InvGaussianFilter,
+                           gaussian_filter, inverse_filter)
 from topaz.utils.data.loader import load_image
 from topaz.utils.image import save_image
 from torch.utils.data import DataLoader
@@ -245,76 +245,10 @@ class GaussianNoise:
 
 
 
-def denoise(model, x, patch_size=-1, padding=128):
-
-    # check the patch plus padding size
-    use_patch = False
-    if patch_size > 0:
-        s = patch_size + padding
-        use_patch = (s < x.size(0)) or (s < x.size(1))
-
-    if use_patch:
-        return denoise_patches(model, x, patch_size, padding=padding)
-
-    with torch.no_grad():
-        x = x.unsqueeze(0).unsqueeze(0)
-        y = model(x).squeeze()
-
-    return y
-
-
-def denoise_image(mic, models, lowpass=1, cutoff=0, gaus=None, inv_gaus=None, deconvolve=False
-                 , deconv_patch=1, patch_size=-1, padding=0, normalize=False
-                 , use_cuda=False):
-    if lowpass > 1:
-        mic = lowpass(mic, lowpass)
-
-    mic = torch.from_numpy(mic)
-    if use_cuda:
-        mic = mic.cuda()
-
-    # normalize and remove outliers
-    mu = mic.mean()
-    std = mic.std()
-    x = (mic - mu)/std
-    if cutoff > 0:
-        x[(x < -cutoff) | (x > cutoff)] = 0
-
-    # apply guassian/inverse gaussian filter
-    if gaus is not None:
-        x = denoise(gaus, x)
-    elif inv_gaus is not None:
-        x = denoise(inv_gaus, x)
-    elif deconvolve:
-        # estimate optimal filter and correct spatial correlation
-        x = correct_spatial_covariance(x, patch=deconv_patch)
-
-    # denoise
-    mic = 0
-    for model in models:
-        mic += denoise(model, x, patch_size=patch_size, padding=padding)
-    mic /= len(models)
-
-    # restore pixel scaling
-    if normalize:
-        mic = (mic - mic.mean())/mic.std()
-    else:
-        # add back std. dev. and mean
-        mic = std*mic + mu
-
-    # back to numpy/cpu
-    mic = mic.cpu().numpy()
-
-    return mic
-
-
-
-
-
 ###########################################################
 # new stuff below
 ###########################################################
-
+#TODO: ADJUST INIT AND DENOISE TO TAKE MULTIPLE MODEL OBJECTS OR STRINGS
 class Denoise():
     ''' Object for micrograph denoising utilities.
     '''
@@ -331,9 +265,10 @@ class Denoise():
         if use_cuda:
             self.model = self.model.cuda()
         self.device = next(iter(self.model.parameters())).device
+
     
     def __call__(self, input):
-        self.denoise(input)
+        self._denoise(input)
  
     
     def train(self, train_dataset, val_dataset, loss_fn:str='L2', optim:str='adam', lr:float=0.001, weight_decay:float=0, batch_size:int=10, num_epochs:int=500, 
@@ -342,7 +277,9 @@ class Denoise():
 
     
     @torch.no_grad()        
-    def denoise(self, input:np.ndarray):
+    def _denoise(self, input:Union[np.ndarray, torch.Tensor]):
+        '''Call stored denoising model.
+        '''
         self.model.eval()
         mu, std =  input.mean(), input.std()
         # normalize, add singleton batch and input channel dims 
@@ -351,9 +288,9 @@ class Denoise():
         # remove singleton dims, unnormalize
         return pred.squeeze().cpu().numpy() * std + mu
  
-    
+
     @torch.no_grad()
-    def denoise_patches(self, model, x, patch_size, padding=128):
+    def denoise_patches(self, x, patch_size:int, padding:int=128):
         ''' Denoise micrograph patches.
         '''
         y = torch.zeros_like(x)
@@ -367,7 +304,7 @@ class Denoise():
                 ej = min(x.size(3), j + patch_size + padding)
 
                 xij = x[:,:,si:ei,sj:ej]
-                yij = self.denoise(xij) # denoise the patch
+                yij = self._denoise(xij) # denoise the patch
 
                 # match back without the padding
                 si = i - si
@@ -375,6 +312,14 @@ class Denoise():
 
                 y[i:i+patch_size,j:j+patch_size] = yij[si:si+patch_size,sj:sj+patch_size]
         return y
+
+
+    @torch.no_grad()
+    def denoise(self, x, patch_size=-1, padding=128):
+        s = patch_size + padding  # check the patch plus padding size
+        use_patch = (patch_size > 0) and (s < x.size(0) or s < x.size(1)) # must denoise in patches
+        result = self.denoise_patches(x, patch_size, padding=padding) if use_patch else self.denoise(x)
+        return result
   
 
 
@@ -421,11 +366,47 @@ class Denoise3D(Denoise):
 
 
 
+#2D Denoising Functions
+def denoise_image(mic, models:List[Denoise], lowpass=1, cutoff=0, gaus:GaussianDenoise=None, inv_gaus:InvGaussianFilter=None, deconvolve=False, 
+                    deconv_patch=1, patch_size=-1, padding=0, normalize=False, use_cuda=False):
+    ''' Denoise micrograph using (pre-)trained neural networks and various filters.
+    '''
+    mic = lowpass(mic, lowpass) if lowpass > 1 else mic
+    mic = torch.from_numpy(mic)
+    mic = mic.cuda() if use_cuda else mic
+
+    # normalize and remove outliers
+    mu, std = mic.mean(), mic.std()
+    x = (mic - mu)/std
+    if cutoff > 0:
+        x[(x < -cutoff) | (x > cutoff)] = 0
+
+    # apply guassian/inverse gaussian filter
+    if gaus is not None:
+        x = gaus.apply(x)
+    elif inv_gaus is not None:
+        x = inv_gaus.apply(x)
+    elif deconvolve:
+        # estimate optimal filter and correct spatial correlation
+        x = correct_spatial_covariance(x, patch=deconv_patch)
+
+    # denoise
+    mic = sum( [model.denoise(x, patch_size=patch_size, padding=padding) for model in models] ) / len(models)
+
+    if normalize:
+        # restore pixel scaling
+        mic = (mic - mic.mean())/mic.std()
+    else:
+        # add back std. dev. and mean
+        mic = std*mic + mu
+
+    # return back to numpy/cpu
+    return mic.cpu().numpy()
+
 
 def denoise_stack(path:str, output_path:str, models:List[Denoise], lowpass:float=1, pixel_cutoff:float=0, 
                   gaus=None, inv_gaus=None, deconvolve:bool=True, deconv_patch:int=1, patch_size:int=1024, 
                   padding:int=500, normalize:bool=True, use_cuda:bool=False):
-    # TODO: REMOVE USE OF DENOISE_IMAGE
     with open(path, 'rb') as f:
         content = f.read()
     stack,_,_ = mrc.parse(content)
@@ -503,7 +484,7 @@ def denoise_stream(micrographs:List[str], output_path:str, format:str='mrc', suf
 
 
 
-
+#3D Denoising Functions
 def denoise_tomogram(path:str, model:Denoise3D, outdir:str=None, suffix:str='', patch_size:int=96, padding:int=48, 
                      volume_num:int=1, total_volumes:int=1, gaus:GaussianDenoise=None, verbose:bool=True):
     name = os.path.basename(path)

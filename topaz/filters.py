@@ -76,12 +76,12 @@ class GaussianDenoise(nn.Module):
         if self.use_cuda:
             self.filter.cuda()
             x = x.cuda()
-        y = f(x).squeeze().cpu().numpy()
+        y = self.forward(x).squeeze().cpu().numpy()
         return y
     
 
-class InvGaussianFilter(nn.Module):
-    def __init__(self, sigma, scale=5):
+class InvGaussianFilter(GaussianDenoise, nn.Module):
+    def __init__(self, sigma, scale=5, use_cuda=False):
         super(InvGaussianFilter, self).__init__()
         width = 1 + 2*int(np.ceil(sigma*scale))
         f = gaussian_filter(sigma, s=width)
@@ -93,6 +93,4 @@ class InvGaussianFilter(nn.Module):
         self.filter = nn.Conv2d(1, 1, width, padding=width//2)
         self.filter.weight.data[:] = torch.from_numpy(F).float()
         self.filter.bias.data.zero_()
-
-    def forward(self, x):
-        return self.filter(x)
+        self.use_cuda = use_cuda
