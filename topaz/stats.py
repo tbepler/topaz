@@ -295,23 +295,30 @@ class Normalize:
 
     def __call__(self, path):
         # load the image
-        x = np.array(load_image(path), copy=False).astype(np.float32)
+        image = load_image(path)
+        # check if MRC with header and extender header 
+        image, header, extended_header = image if type(image) is tuple else image, None, None
+        x = np.array(image, copy=False).astype(np.float32)
 
         if self.scale > 1:
             x = downsample(x, self.scale)
+            if header:
+                # update image size (pixels) in header if present
+                new_height, new_width = x.shape
+                header.ny, header.nx = new_height, new_width
 
         # normalize it
         method = 'gmm'
         if self.affine:
             method = 'affine'
-        x,metadata = normalize(x, alpha=self.alpha, beta=self.beta, num_iters=self.num_iters
-                              , method=method, sample=self.sample, use_cuda=self.use_cuda)
+        x,metadata = normalize(x, alpha=self.alpha, beta=self.beta, num_iters=self.num_iters, 
+                               method=method, sample=self.sample, use_cuda=self.use_cuda)
 
         # save the image and the metadata
         name,_ = os.path.splitext(os.path.basename(path))
         base = os.path.join(self.dest, name)
         for f in self.formats:
-            save_image(x, base, f=f)
+            save_image(x, base, f=f, header=header, extended_header=extended_header)
 
         if self.metadata:
             # save the metadata in json format
