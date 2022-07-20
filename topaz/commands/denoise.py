@@ -103,21 +103,16 @@ def main(args):
             print(out_string, file=sys.stderr)
             
             denoiser = Denoise(args.arch, use_cuda)
-            denoiser.model.eval()
-            if use_cuda:
-                denoiser.model.cuda()
             models.append(denoiser)    
 
     # always normalize png and jpg format
     normalize = True if args.format_ in ['png', 'jpg'] else args.normalize
 
     gaus = args.gaussian
-    gaus = dn.GaussianDenoise(gaus) if gaus > 0 else None
-    gaus.cuda() if use_cuda and gaus is not None else gaus
+    gaus = dn.GaussianDenoise(gaus, use_cuda=use_cuda) if gaus > 0 else None
     
     inv_gaus = args.inv_gaussian
-    inv_gaus = dn.InvGaussianFilter(inv_gaus) if inv_gaus > 0 else None
-    inv_gaus.cuda() if use_cuda and inv_gaus is not None else inv_gaus
+    inv_gaus = dn.InvGaussianFilter(inv_gaus, use_cuda=use_cuda) if inv_gaus > 0 else None
     
     #terminate if no micrographs given
     if len(args.micrographs) < 1:
