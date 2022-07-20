@@ -7,7 +7,7 @@
 # Topaz
 A pipeline for particle detection in cryo-electron microscopy images using convolutional neural networks trained from positive and unlabeled examples. Topaz also includes methods for micrograph and tomogram denoising using deep denoising models.
 
-**Check out our [Discussion](https://github.com/tbepler/topaz/discussions) section for general help, suggestions, and tips on using Topaz.**
+**Check out our [Discussion](https://github.com/tbepler/topaz/discussions) section for general help, suggestions, and tips on using Topaz. You can also find our documentation site [here](https://topaz-em.readthedocs.io/en/latest/?badge=latest).**
 
 ## New in v0.2.5
 - Added Relion integration scripts
