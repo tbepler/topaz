@@ -37,23 +37,26 @@ def downsample(x, factor=1, shape=None):
 
 def downsample_file(path:str, scale:int, output:str, verbose:bool):
     ## load image
-    im = load_image(path)
+    image = load_image(path)
+    # check if MRC with header and extender header 
+    image, header, extended_header = image if type(image) is tuple else image, None, None
     # convert PIL image to array
-    im = np.array(im, copy=False).astype(np.float32)
+    image = np.array(image, copy=False).astype(np.float32)
 
-    small = downsample(im, scale)
+    small = downsample(image, scale)
+    if header:
+        # update image size (pixels) in header if present
+        new_height, new_width = small.shape
+        header.ny, header.nx = new_height, new_width
 
     if verbose:
         print('Downsample image:', path, file=sys.stderr)
-        print('From', im.shape, 'to', small.shape, file=sys.stderr)
+        print('From', image.shape, 'to', small.shape, file=sys.stderr)
 
     # write the downsampled image
-    with open(output, 'wb') as f:
-        im = Image.fromarray(small)
-        if small.dtype == np.uint8:
-            im.save(f, 'png')
-        else:
-            im.save(f, 'tiff')
+    save_image(small, output, header=header, extended_header=extended_header)
+    
+    return small
 
 
 def quantize(x, mi=-3, ma=3, dtype=np.uint8):
@@ -116,7 +119,3 @@ def save_jpeg(x, path, mi=-3, ma=3):
     # byte encode the image
     im = Image.fromarray(quantize(x, mi=mi, ma=ma))
     im.save(path, 'jpeg')
-
-
-
-

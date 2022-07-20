@@ -19,7 +19,7 @@ def add_arguments(parser=None):
 
 
 def main(args):
-    downsample_file(args.file, args.scale, args.output, args.verbose)
+    small = downsample_file(args.file, args.scale, args.output, args.verbose)
 
 
 if __name__ == '__main__':
