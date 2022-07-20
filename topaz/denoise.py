@@ -242,7 +242,6 @@ class GaussianNoise:
 ###########################################################
 # new stuff below
 ###########################################################
-#TODO: ADJUST INIT AND DENOISE TO TAKE MULTIPLE MODEL OBJECTS OR STRINGS
 class Denoise():
     ''' Object for micrograph denoising utilities.
     '''
