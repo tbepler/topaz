@@ -75,7 +75,7 @@ def unquantize(x, mi=-3, ma=3, dtype=np.float32):
     return y
 
 
-def save_image(x, path, mi=-3, ma=3, f=None, verbose=False):
+def save_image(x, path, mi=-3, ma=3, f=None, verbose=False, header=None, extended_header=None):
     if f is None:
         f = os.path.splitext(path)[1]
         f = f[1:] # remove the period
@@ -86,7 +86,7 @@ def save_image(x, path, mi=-3, ma=3, f=None, verbose=False):
         print('# saving:', path)
 
     if f == 'mrc':
-        save_mrc(x, path)
+        save_mrc(x, path, header=header, extended_header=extended_header)
     elif f == 'tiff' or f == 'tif':
         save_tiff(x, path)
     elif f == 'png':
@@ -95,10 +95,10 @@ def save_image(x, path, mi=-3, ma=3, f=None, verbose=False):
         save_jpeg(x, path, mi=mi, ma=ma)
 
 
-def save_mrc(x, path):
+def save_mrc(x, path, header=None, extended_header=None):
     with open(path, 'wb') as f:
         x = x[np.newaxis] # need to add z-axis for mrc write
-        mrc.write(f, x)
+        mrc.write(f, x, header=header, extended_header=extended_header)
 
 
 def save_tiff(x, path):

@@ -10,7 +10,7 @@ import torch
 import torch.nn.functional as F
 import torch.utils.data
 from topaz import mrc
-from topaz.denoising.datasets import PatchDataset
+from topaz.denoising.datasets import DenoiseDataset, PatchDataset
 from topaz.denoising.models import load_model, train_model
 from topaz.filters import (AffineFilter, GaussianDenoise, InvGaussianFilter,
                            gaussian_filter, inverse_filter)
@@ -264,7 +264,7 @@ class Denoise():
         self._denoise(input)
  
     
-    def train(self, train_dataset, val_dataset, loss_fn:str='L2', optim:str='adam', lr:float=0.001, weight_decay:float=0, batch_size:int=10, num_epochs:int=500, 
+    def train(self, train_dataset:DenoiseDataset, val_dataset:DenoiseDataset, loss_fn:str='L2', optim:str='adam', lr:float=0.001, weight_decay:float=0, batch_size:int=10, num_epochs:int=500, 
                         shuffle:bool=True, num_workers:int=1, verbose:bool=True, save_best:bool=False, save_interval:int=None, save_prefix:str=None) -> None:
         train_model(self.model, train_dataset, val_dataset, loss_fn, optim, lr, weight_decay, batch_size, num_epochs, shuffle, self.use_cuda, num_workers, verbose, save_best, save_interval, save_prefix)
 
@@ -401,7 +401,7 @@ def denoise_stack(path:str, output_path:str, models:List[Denoise], lowpass:float
                   padding:int=500, normalize:bool=True, use_cuda:bool=False):
     with open(path, 'rb') as f:
         content = f.read()
-    stack,_,_ = mrc.parse(content)
+    stack,header,extended_header = mrc.parse(content)
     print('# denoising stack with shape:', stack.shape, file=sys.stderr)
     total = len(stack)
     count = 0
@@ -422,7 +422,7 @@ def denoise_stack(path:str, output_path:str, models:List[Denoise], lowpass:float
     # write the denoised stack
     print('# writing to', output_path, file=sys.stderr)
     with open(output_path, 'wb') as f:
-        mrc.write(f, denoised)
+        mrc.write(f, denoised, header=header, extender_header=extended_header)
     
     return denoised
 
@@ -441,7 +441,10 @@ def denoise_stream(micrographs:List[str], output_path:str, format:str='mrc', suf
 
     for path in micrographs:
         name,_ = os.path.splitext(os.path.basename(path))
-        mic = np.array(load_image(path), copy=False).astype(np.float32)
+        image = load_image(path)
+        # check if MRC with header and extender header 
+        image, header, extended_header = image if type(image) is tuple else image, None, None
+        mic = np.array(image, copy=False).astype(np.float32)
 
         # process and denoise the micrograph
         mic = denoise_image(mic, models, lowpass=lowpass, cutoff=pixel_cutoff, gaus=gaus, 
@@ -458,10 +461,10 @@ def denoise_stream(micrographs:List[str], output_path:str, format:str='mrc', suf
             outpath = no_ext + suffix + '.' + format
         else:
             outpath = output_path + os.sep + name + suffix + '.' + format
-        save_image(mic, outpath) #, mi=None, ma=None)
+        save_image(mic, outpath, header=header, extended_header=extended_header) #, mi=None, ma=None)
 
         count += 1
-        print('# {} of {} completed.'.format(count, total), file=sys.stderr, end='\r')
+        print(f'# {count} of {total} completed.', file=sys.stderr, end='\r')
     print('', file=sys.stderr)
     
     return denoised

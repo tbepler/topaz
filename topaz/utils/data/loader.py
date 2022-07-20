@@ -54,7 +54,7 @@ def load_mrc(path, standardize=False):
     if standardize:
         image = image - header.amean
         image /= header.rms
-    return Image.fromarray(image)
+    return Image.fromarray(image), header, extended_header
 
 def load_tiff(path, standardize=False):
     image = Image.open(path)
@@ -104,10 +104,11 @@ def load_image(path, standardize=False):
     ## this might be more stable as path.endswith('.mrc')
     ext = os.path.splitext(path)[1]
     if ext == '.mrc':
-        image = load_mrc(path, standardize=standardize)
+        image, header, extended_header = load_mrc(path, standardize=standardize)
+        return image, header, extended_header
     else:
         image = load_pil(path, standardize=standardize)
-    return image
+        return image
 
 
 def load_images_from_directory(names, rootdir, sources=None, standardize=False):
