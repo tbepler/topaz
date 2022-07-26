@@ -5,6 +5,7 @@ import argparse
 import sys
 
 import topaz.cuda
+from topaz.model.features.basic import BasicConv3d
 from topaz.training import load_data,make_model,train_model
 from topaz.utils.printing import report
 
@@ -24,26 +25,19 @@ def add_arguments(parser=None):
     parser.add_argument('-j', '--num-threads', type=int, default=0, help='number of threads for pytorch, 0 uses pytorch defaults, <0 uses all cores (default: 0)')
 
     # group arguments into sections
-
     data = parser.add_argument_group('training data arguments (required)')
-
     data.add_argument('--train-images', help='path to file listing the training images. also accepts directory path from which all images are loaded.')
     data.add_argument('--train-targets', help='path to file listing the training particle coordinates')
 
-
-
     data = parser.add_argument_group('test data arguments (optional)')
-
     data.add_argument('--test-images', help='path to file listing the test images. also accepts directory path from which all images are loaded.')
     data.add_argument('--test-targets', help='path to file listing the testing particle coordinates.')
-
     
     data = parser.add_argument_group('data format arguments (optional)')
     ## optional format of the particle coordinates file
     data.add_argument('--format', dest='format_', choices=['auto', 'coord', 'csv', 'star', 'box'], default='auto'
                        , help='file format of the particle coordinates file (default: detect format automatically based on file extension)')
     data.add_argument('--image-ext', default='', help='sets the image extension if loading images from directory. should include "." before the extension (e.g. .tiff). (default: find all extensions)')
-
     
     data = parser.add_argument_group('cross validation arguments (optional)')
     ## cross-validation k-fold split options
@@ -51,11 +45,9 @@ def add_arguments(parser=None):
     data.add_argument('--fold', default=0, type=int, help='when using K-fold cross validation, sets which fold is used as the heldout test set (default: 0)')
     data.add_argument('--cross-validation-seed', default=42, type=int, help='random seed for partitioning data into folds (default: 42)')
 
-
     training = parser.add_argument_group('training arguments (required)')
     training.add_argument('-n', '--num-particles', type=float, default=-1, help='instead of setting pi directly, pi can be set by giving the expected number of particles per micrograph (>0). either this parameter or pi must be set.')
     training.add_argument('--pi', type=float, help='parameter specifying fraction of data that is expected to be positive')
-
     
     training = parser.add_argument_group('training arguments (optional)')
     # training parameters
@@ -93,7 +85,6 @@ def add_arguments(parser=None):
     outputs.add_argument('--save-prefix', help='path prefix to save trained models each epoch')
     outputs.add_argument('-o', '--output', help='destination to write the train/test curve')
 
-
     misc = parser.add_argument_group('miscellaneous arguments (optional)')
     misc.add_argument('--test-batch-size', default=1, type=int, help='batch size for calculating test set statistics (default: 1)')
 
@@ -105,9 +96,6 @@ def main(args):
     num_threads = args.num_threads
     from topaz.torch import set_num_threads
     set_num_threads(num_threads)
-
-    ## initialize the model
-    classifier = make_model(args)
 
     if args.describe: 
         ## only print a description of the model and terminate
@@ -125,6 +113,9 @@ def main(args):
             load_data(args.train_images, args.train_targets, args.test_images, args.test_targets,
                       args.radius, format_=args.format_, k_fold=args.k_fold, fold=args.fold,
                       cross_validation_seed=args.cross_validation_seed, image_ext=args.image_ext)
+            
+    ## initialize the model
+    classifier = BasicConv3d([7,5,5,5], args.units, args.unit_scaling, args.dropout, args.bn, args.pooling)     
     
     ## fit the model, report train/test stats, save model if required
     output = sys.stdout if args.output is None else open(args.output, 'w')
@@ -132,7 +123,6 @@ def main(args):
 
     classifier = train_model(classifier, train_images, train_targets, test_images, test_targets, use_cuda, save_prefix, output, args)
     report('Done!')
-    
     return classifier
 
 
