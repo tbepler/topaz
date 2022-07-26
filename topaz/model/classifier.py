@@ -7,7 +7,7 @@ import torch.nn.functional as F
 class LinearClassifier(nn.Module):
     '''A simple convolutional layer without non-linear activation.'''
 
-    def __init__(self, features):
+    def __init__(self, features, dims=2):
         '''
         Args:
             features (:obj:): the sizes associated with the layer
@@ -17,7 +17,8 @@ class LinearClassifier(nn.Module):
         '''
         super(LinearClassifier, self).__init__()
         self.features = features
-        self.classifier = nn.Conv2d(features.latent_dim, 1, 1)
+        conv = nn.Conv3d if dims == 3 else nn.Conv2d
+        self.classifier = conv(features.latent_dim, 1, 1)
 
     @property
     def width(self):
@@ -45,4 +46,3 @@ class LinearClassifier(nn.Module):
         z = self.features(x)
         y = self.classifier(z)
         return y
-
