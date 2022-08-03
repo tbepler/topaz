@@ -85,7 +85,6 @@ class BasicConv(nn.Module):
             if hasattr(mod, 'stride'):
                 mod.stride = tuple([1 for _ in range(self.dims)])
             stride *= mod_stride
-        layers = list(self.features.modules())
         self.filled = True
         return stride
 
