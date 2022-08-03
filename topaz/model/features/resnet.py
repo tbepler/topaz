@@ -4,7 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from topaz.model.utils import insize_from_outsize
 
-# below are ResNet utility components
+
+# below are ResNet constituent components
 class MaxPool(nn.Module):
     def __init__(self, kernel_size, stride=1, dims=2):
         super(MaxPool, self).__init__()
@@ -20,10 +21,10 @@ class MaxPool(nn.Module):
     def set_padding(self, pad):
         if pad:
             p = self.dilation*(self.kernel_size//2) # this is bugged in pytorch...
-            self.pool.padding = tuple([p for _ in range(self.dims)])
+            self.pool.padding = tuple(p for _ in range(self.dims))
             self.padding = p
         else:
-            self.pool.padding = tuple([0 for _ in range(self.dims)])
+            self.pool.padding = tuple(0 for _ in range(self.dims))
             self.padding = 0
 
     def fill(self, stride):
@@ -46,6 +47,8 @@ class MaxPool(nn.Module):
 
 
 class BasicConv(nn.Module):
+    '''Basic convolutional layer for use in ResNet architectures.
+    Supports 2- and 3-dimensional inputs/kernels.'''
     def __init__(self, nin, nout, kernel_size, dilation=1, stride=1, bn=False, activation=nn.ReLU, dims=2):
         super(BasicConv, self).__init__()
 
@@ -74,24 +77,24 @@ class BasicConv(nn.Module):
     def set_padding(self, pad):
         if pad:
             p = self.dilation * (self.kernel_size // 2)
-            self.conv.padding = tuple([p for _ in range(self.dims)])
+            self.conv.padding = tuple(p for _ in range(self.dims))
             self.padding = p
         else:
-            self.conv.padding = tuple([0 for _ in range(self.dims)])
+            self.conv.padding = tuple(0 for _ in range(self.dims))
             self.padding = 0
 
     def fill(self, stride):
-        self.conv.dilation = tuple([self.og_dilation*stride for _ in range(self.dims)])
-        self.conv.stride = tuple([1 for _ in range(self.dims)])
-        self.conv.padding = tuple([pad * stride for pad in self.conv.padding])
+        self.conv.dilation = tuple(self.og_dilation*stride for _ in range(self.dims))
+        self.conv.stride = tuple(1 for _ in range(self.dims))
+        self.conv.padding = tuple(pad * stride for pad in self.conv.padding)
         self.dilation *= stride
         return self.stride
 
     def unfill(self):
         stride = self.dilation // self.og_dilation
-        self.conv.dilation = tuple([self.og_dilation for _ in range(self.dims)])
-        self.conv.stride = tuple([self.stride for _ in range(self.dims)])
-        self.conv.padding = tuple([pad // stride for pad in self.conv.padding])
+        self.conv.dilation = tuple(self.og_dilation for _ in range(self.dims))
+        self.conv.stride = tuple(self.stride for _ in range(self.dims))
+        self.conv.padding = tuple(pad // stride for pad in self.conv.padding)
         self.dilation = self.og_dilation
 
     def forward(self, x):
@@ -100,16 +103,20 @@ class BasicConv(nn.Module):
             y = self.bn(y)
         return self.act(y)
 
-class BasicConv2d(nn.Module):
+class BasicConv2d(BasicConv):
+    '''Convolutional layer for 2D ResNet.'''
     def __init__(self, nin, nout, kernel_size, dilation=1, stride=1, bn=False, activation=nn.ReLU):
         super(BasicConv2d, self).__init__(nin, nout, kernel_size, dilation, stride, bn, activation, dims=2)
 
-class BasicConv3d(nn.Module):
+class BasicConv3d(BasicConv):
+    '''Convolutional layer for 3D ResNet.'''
     def __init__(self, nin, nout, kernel_size, dilation=1, stride=1, bn=False, activation=nn.ReLU):
         super(BasicConv3d, self).__init__(nin, nout, kernel_size, dilation, stride, bn, activation, dims=3)
         
 
 class ResidA(nn.Module):
+    '''Residual block primitive for ResNet architectures. 
+    Supports 2- and 3-dimensional inputs/kernels.'''
     def __init__(self, nin, nhidden, nout, dilation=1, stride=1, activation=nn.ReLU, bn=False, dims=2):
         super(ResidA, self).__init__()
 
@@ -143,37 +150,37 @@ class ResidA(nn.Module):
 
     def set_padding(self, pad):
         if pad:
-            self.conv0.padding = tuple([1 for _ in range(self.dims)])
+            self.conv0.padding = tuple(1 for _ in range(self.dims))
             self.conv1.padding = self.conv1.dilation
             self.padding = self.kernel_size // 2
         else:
-            self.conv0.padding = tuple([0 for _ in range(self.dims)])
+            self.conv0.padding = tuple(0 for _ in range(self.dims))
             self.conv1.padding = self.conv1.padding
             self.padding = 0
 
     def fill(self, stride):
-        self.conv0.dilation = (stride, stride)
-        self.conv0.padding = (self.conv0.padding[0]*stride, self.conv0.padding[1]*stride)
+        self.conv0.dilation = tuple(stride for _ in range(self.dims))
+        self.conv0.padding = tuple(pad * stride for pad in self.conv0.padding)
         
-        self.conv1.dilation = (self.conv1.dilation[0]*stride, self.conv1.dilation[1]*stride)
-        self.conv1.stride = (1,1)
-        self.conv1.padding = (self.conv1.padding[0]*stride, self.conv1.padding[1]*stride)
+        self.conv1.dilation = tuple(dil * stride for dil in self.conv1.dilation)
+        self.conv1.padding = tuple(pad * stride for pad in self.conv1.padding)
+        self.conv1.stride = tuple(1 for _ in range(self.dims))
         
         if hasattr(self, 'proj'):
-            self.proj.stride = (1,1)
-        self.dilation = self.dilation*stride
+            self.proj.stride = tuple(1 for _ in range(self.dims))
+        self.dilation = self.dilation * stride
         return self.stride
 
     def unfill(self):
-        self.conv0.dilation = (1,1)
-        self.conv0.padding = (self.conv0.padding[0]//self.dilation, self.conv0.padding[1]//self.dilation)
+        self.conv0.dilation = tuple(1 for _ in range(self.dims))
+        self.conv0.padding = tuple(pad // self.dilation for pad in self.conv0.padding)
         
-        self.conv1.dilation = (self.conv1.dilation[0]//self.dilation, self.conv1.dilation[1]//self.dilation)
-        self.conv1.stride = (self.stride,self.stride)
-        self.conv1.padding = (self.conv1.padding[0]//self.dilation, self.conv1.padding[1]//self.dilation)
+        self.conv1.dilation = tuple(dil // self.dilation for dil in self.conv1.dilation)
+        self.conv1.padding = tuple(pad // self.dilation for pad in self.conv1.padding)
+        self.conv1.stride = tuple(self.stride for _ in range(self.dims))
         
         if hasattr(self, 'proj'):
-            self.proj.stride = (self.stride,self.stride)
+            self.proj.stride = tuple(self.stride for _ in range(self.dims))
         self.dilation = 1
 
     def forward(self, x):
@@ -193,9 +200,9 @@ class ResidA(nn.Module):
             x = self.proj(x)
         elif self.conv1.stride[0] > 1:
             if self.dims == 2:
-                x = x[:,:,::self.stride,::self.stride]
+                x = x[..., ::self.stride, ::self.stride]
             elif self.dims == 3:
-                x = x[:,:,::self.stride,::self.stride,::self.stride]
+                x = x[..., ::self.stride, ::self.stride, ::self.stride]
 
         y = y + x
         if self.bn:
@@ -204,10 +211,21 @@ class ResidA(nn.Module):
 
         return y
 
+class ResidA2d(ResidA):
+    '''Two-dimensional residual block'''
+    def __init__(self, nin, nhidden, nout, dilation=1, stride=1, activation=nn.ReLU, bn=False):
+        super().__init__(nin, nhidden, nout, dilation, stride, activation, bn, dims=2)
+        
+class ResidA3d(ResidA):
+    '''Three-dimensional residual block'''
+    def __init__(self, nin, nhidden, nout, dilation=1, stride=1, activation=nn.ReLU, bn=False):
+        super().__init__(nin, nhidden, nout, dilation, stride, activation, bn, dims=3)
+        
 
-
+# Sample architectures
 class ResNet(nn.Module):
-    def __init__(self, *args, **kwargs):
+    '''ResNet utility functions. Must be subclassed to define network architecture.'''
+    def __init__(self, *args, dims=2, **kwargs):
         super(ResNet, self).__init__()
 
         if 'pooling' in kwargs:
@@ -220,6 +238,7 @@ class ResNet(nn.Module):
 
         self.width = insize_from_outsize(modules, 1)
         self.pad = False
+        self.dims = dims
 
     ## make property for num_features !!
 
@@ -240,11 +259,12 @@ class ResNet(nn.Module):
         self.pad = pad
 
     def forward(self, x):
-        if len(x.size()) < 4:
+        if len(x.size()) < self.dims + 2:
             x = x.unsqueeze(1) # add channels dim
         if self.pad: ## add (width-1)//2 zeros to edges of x
-            p = self.width//2
-            x = F.pad(x, (p,p,p,p))
+            p = self.width // 2
+            pad = tuple(p for _ in range(self.dims * 2))
+            x = F.pad(x, pad)
         z = self.features(x)
         return z
 
@@ -259,16 +279,16 @@ class ResNet6(ResNet):
 
         self.num_features = units[-1]
 
-        modules = [BasicConv2d(1, units[0], 5, bn=bn, activation=activation)]
-        modules += [MaxPool(3, stride=2)]   
+        modules = [BasicConv(1, units[0], 5, bn=bn, activation=activation, dims=self.dims)]
+        modules += [MaxPool(3, stride=2, dims=self.dims)]   
         modules += [nn.Dropout(p=dropout)] if dropout > 0 else modules
         
-        modules += [ResidA(units[0], units[0], units[1], dilation=4, bn=bn, activation=activation)]
-        modules += [MaxPool(3, stride=2)]    
+        modules += [ResidA(units[0], units[0], units[1], dilation=4, bn=bn, activation=activation, dims=self.dims)]
+        modules += [MaxPool(3, stride=2, dims=self.dims)]    
         modules += [nn.Dropout(p=dropout)] if dropout > 0 else modules
         
-        modules += [ResidA(units[1], units[1], units[1], dilation=2, bn=bn, activation=activation)]
-        modules += [BasicConv2d(units[1], units[2], 5, bn=bn, activation=activation)]
+        modules += [ResidA(units[1], units[1], units[1], dilation=2, bn=bn, activation=activation, dims=self.dims)]
+        modules += [BasicConv(units[1], units[2], 5, bn=bn, activation=activation, dims=self.dims)]
         modules += nn.Dropout(p=dropout) if dropout > 0 else modules
         
         self.latent_dim = units[-1]
@@ -289,19 +309,19 @@ class ResNet8(ResNet):
             self.stride = 2
         stride = self.stride
 
-        modules = [BasicConv2d(1, units[0], 7, stride=stride, bn=bn, activation=activation)]
+        modules = [BasicConv(1, units[0], 7, stride=stride, bn=bn, activation=activation, dims=self.dims)]
         modules += [pooling(3, stride=2)] if pooling is not None else modules
         modules += [nn.Dropout(p=dropout)] if dropout > 0 else modules
 
-        modules += [ResidA(units[0], units[0], units[0], dilation=2, bn=bn, activation=activation),
-                    ResidA(units[0], units[0], units[1], dilation=2, stride=stride, bn=bn, activation=activation)]
+        modules += [ResidA(units[0], units[0], units[0], dilation=2, bn=bn, activation=activation, dims=self.dims),
+                    ResidA(units[0], units[0], units[1], dilation=2, stride=stride, bn=bn, activation=activation, dims=self.dims)]
         if pooling is not None:
             modules.append(pooling(3, stride=2))
         if dropout > 0:
             modules.append(nn.Dropout(p=dropout)) #, inplace=True))
 
-        modules += [ResidA(units[1], units[1], units[1], dilation=2, bn=bn, activation=activation),
-                    BasicConv2d(units[1], units[2], 5, bn=bn, activation=activation)]
+        modules += [ResidA(units[1], units[1], units[1], dilation=2, bn=bn, activation=activation, dims=self.dims),
+                    BasicConv(units[1], units[2], 5, bn=bn, activation=activation, dims=self.dims)]
         if dropout > 0:
             modules.append(nn.Dropout(p=dropout)) #, inplace=True))
 
@@ -311,8 +331,7 @@ class ResNet8(ResNet):
 
 
 class ResNet16(ResNet):
-    def make_modules(self, units=[32, 64, 128], bn=True, dropout=0.0
-                    , activation=nn.ReLU, pooling=None, **kwargs):
+    def make_modules(self, units=[32, 64, 128], bn=True, dropout=0.0, activation=nn.ReLU, pooling=None, **kwargs):
         if units is None:
             units = [32, 64, 128]
         elif type(units) is not list:
@@ -325,33 +344,25 @@ class ResNet16(ResNet):
             self.stride = 2
         stride = self.stride
 
-        modules = [
-                BasicConv2d(1, units[0], 7, bn=bn, activation=activation),
-                ResidA(units[0], units[0], units[0]
-                      , stride=stride, bn=bn, activation=activation),
-                ]
+        modules = [BasicConv(1, units[0], 7, bn=bn, activation=activation, dims=self.dims),
+                   ResidA(units[0], units[0], units[0], stride=stride, bn=bn, activation=activation, dims=self.dims)]
         if pooling is not None:
             modules.append(pooling(3, stride=2))
         if dropout > 0:
             modules.append(nn.Dropout(p=dropout)) #, inplace=True))
 
-        modules += [
-                ResidA(units[0], units[0], units[0], bn=bn, activation=activation),
-                ResidA(units[0], units[0], units[0], bn=bn, activation=activation),
-                ResidA(units[0], units[0], units[0], bn=bn, activation=activation),
-                ResidA(units[0], units[0], units[1]
-                      , stride=stride, bn=bn, activation=activation),
-                ]
+        modules += [ResidA(units[0], units[0], units[0], bn=bn, activation=activation, dims=self.dims),
+                    ResidA(units[0], units[0], units[0], bn=bn, activation=activation, dims=self.dims),
+                    ResidA(units[0], units[0], units[0], bn=bn, activation=activation, dims=self.dims),
+                    ResidA(units[0], units[0], units[1], stride=stride, bn=bn, activation=activation, dims=self.dims)]
         if pooling is not None:
             modules.append(pooling(3, stride=2))
         if dropout > 0:
             modules.append(nn.Dropout(p=dropout)) #, inplace=True))
 
-        modules += [
-                ResidA(units[1], units[1], units[1], bn=bn, activation=activation),
-                ResidA(units[1], units[1], units[1], bn=bn, activation=activation),
-                BasicConv2d(units[1], units[2], 5, bn=bn, activation=activation)
-                ]
+        modules += [ResidA(units[1], units[1], units[1], bn=bn, activation=activation, dims=self.dims),
+                    ResidA(units[1], units[1], units[1], bn=bn, activation=activation, dims=self.dims),
+                    BasicConv(units[1], units[2], 5, bn=bn, activation=activation, dims=self.dims)]
         if dropout > 0:
             modules.append(nn.Dropout(p=dropout)) #, inplace=True))
 
