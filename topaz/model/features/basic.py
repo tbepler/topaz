@@ -81,9 +81,9 @@ class BasicConv(nn.Module):
     def fill(self, stride=1):
         for mod,mod_stride in zip(self.features.children(), self.strides):
             if hasattr(mod, 'dilation'):
-                mod.dilation = tuple([stride for _ in range(self.dims)])
+                mod.dilation = tuple(stride for _ in range(self.dims))
             if hasattr(mod, 'stride'):
-                mod.stride = tuple([1 for _ in range(self.dims)])
+                mod.stride = tuple(1 for _ in range(self.dims))
             stride *= mod_stride
         self.filled = True
         return stride
@@ -92,9 +92,9 @@ class BasicConv(nn.Module):
     def unfill(self):
         for mod,mod_stride in zip(self.features.children(), self.strides):
             if hasattr(mod, 'dilation'):
-                mod.dilation = tuple([1 for _ in range(self.dims)])
+                mod.dilation = tuple(1 for _ in range(self.dims))
             if hasattr(mod, 'stride'):
-                mod.stride = tuple([mod_stride for _ in range(self.dims)])
+                mod.stride = tuple(mod_stride for _ in range(self.dims))
         self.filled = False
 
 
@@ -105,7 +105,7 @@ class BasicConv(nn.Module):
         if self.filled: ## add (width-1)//2 zeros to edges of x
             p = self.width//2
             #before and after padding for each dim
-            pads = tuple([p for _ in range(self.dims * 2)])
+            pads = tuple(p for _ in range(self.dims * 2))
             x = F.pad(x, pads)
         z = self.features(x)
         return z
