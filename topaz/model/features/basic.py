@@ -1,19 +1,19 @@
 from __future__ import print_function, division
+from typing import List
 
 import numpy as np
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 
 from topaz.model.utils import insize_from_outsize
 
 class BasicConv(nn.Module):
     '''A generic convolutional neural network scaffold.'''
 
-    def __init__(self, layers, units, unit_scaling=1, dropout=0, 
-                 bn=True, pooling=None, activation=nn.PReLU, dims=2):
+    def __init__(self, layers:List[int], units:int, unit_scaling:int=1, dropout:float=0, 
+                 bn:bool=True, pooling:nn.Module=None, activation:nn.Module=nn.PReLU, dims:int=2):
         super(BasicConv, self).__init__()
 
         if dims == 2:
@@ -78,7 +78,7 @@ class BasicConv(nn.Module):
         self.dims = dims
 
 
-    def fill(self, stride=1):
+    def fill(self, stride:int=1):
         for mod,mod_stride in zip(self.features.children(), self.strides):
             if hasattr(mod, 'dilation'):
                 mod.dilation = tuple(stride for _ in range(self.dims))
@@ -98,7 +98,7 @@ class BasicConv(nn.Module):
         self.filled = False
 
 
-    def forward(self, x):
+    def forward(self, x:torch.Tensor):
         if len(x.size()) < self.dims + 2:
             # add channels dim, assumes batch dim is present
             x = x.unsqueeze(1)
@@ -111,21 +111,10 @@ class BasicConv(nn.Module):
         return z
 
 
-class BasicConv2d(BasicConv):
-    '''CNN scaffold for 2D image models'''
-    def __init__(self, layers, units, unit_scaling=1, dropout=0, bn=True, pooling=None, activation=nn.PReLU):
-        super().__init__(layers, units, unit_scaling, dropout, bn, pooling, activation, dims=2)
+class Conv127(BasicConv):
+    def __init__(self, units:int, **kwargs):
+        super(Conv127, self).__init__([7, 5, 5, 5, 5], units, dims=2, **kwargs)
 
-class BasicConv3d(BasicConv):
-    '''CNN scaffold for 3D volume models'''
-    def __init__(self, layers, units, unit_scaling=1, dropout=0, bn=True, pooling=None, activation=nn.PReLU):
-        super().__init__(layers, units, unit_scaling, dropout, bn, pooling, activation, dims=3)
-
-
-class Conv127(BasicConv2d):
-    def __init__(self, units, **kwargs):
-        super(Conv127, self).__init__(units, [7, 5, 5, 5, 5], **kwargs)
-
-class Conv63(BasicConv2d):
-    def __init__(self, units, **kwargs):
-        super(Conv63, self).__init__(units, [7, 5, 5, 5], **kwargs)
+class Conv63(BasicConv):
+    def __init__(self, units:int, **kwargs):
+        super(Conv63, self).__init__([7, 5, 5, 5], units, dims=2, **kwargs)

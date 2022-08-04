@@ -5,7 +5,8 @@ import argparse
 import sys
 
 import topaz.cuda
-from topaz.model.features.basic import BasicConv3d
+from topaz.model.features.basic import BasicConv
+from topaz.model.features.resnet import ResNet8, ResNet16
 from topaz.training import load_data,make_model,train_model
 from topaz.utils.printing import report
 
@@ -115,7 +116,8 @@ def main(args):
                       cross_validation_seed=args.cross_validation_seed, image_ext=args.image_ext)
             
     ## initialize the model
-    classifier = BasicConv3d([7,5,5,5], args.units, args.unit_scaling, args.dropout, args.bn, args.pooling)     
+    classifier = BasicConv([7,5,5,5], args.units, args.unit_scaling, args.dropout, args.bn, args.pooling, dims=3)     
+    #TODO: use ResNet8(dims=3) or ResNet16(dims=3)
     
     ## fit the model, report train/test stats, save model if required
     output = sys.stdout if args.output is None else open(args.output, 'w')

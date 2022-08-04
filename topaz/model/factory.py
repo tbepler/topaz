@@ -3,7 +3,7 @@ from __future__ import print_function, division
 import torch
 
 import topaz
-from topaz.model.features.basic import BasicConv2d, BasicConv3d 
+from topaz.model.features.basic import BasicConv
 from topaz.model.features.resnet import ResNet16, ResNet8, ResNet6
 from topaz.model.classifier import LinearClassifier
 
@@ -13,15 +13,15 @@ resnet6 = ResNet6
 
 def conv127(*args, **kwargs):
     layers = [7, 5, 5, 5, 5]
-    return BasicConv2d(layers, *args, **kwargs)
+    return BasicConv(layers, *args, **kwargs)
 
 def conv63(*args, **kwargs):
     layers = [7, 5, 5, 5]
-    return BasicConv2d(layers, *args, **kwargs)
+    return BasicConv(layers, *args, **kwargs)
 
 def conv31(*args, **kwargs):
     layers = [7, 5, 5]
-    return BasicConv2d(layers, *args, **kwargs)
+    return BasicConv(layers, *args, **kwargs)
 
 
 def get_feature_extractor(model, *args, **kwargs):

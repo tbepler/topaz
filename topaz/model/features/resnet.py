@@ -1,5 +1,6 @@
 from __future__ import division, print_function
 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from topaz.model.utils import insize_from_outsize
@@ -7,7 +8,7 @@ from topaz.model.utils import insize_from_outsize
 
 # below are ResNet constituent components
 class MaxPool(nn.Module):
-    def __init__(self, kernel_size, stride=1, dims=2):
+    def __init__(self, kernel_size:int, stride:int=1, dims:int=2):
         super(MaxPool, self).__init__()
         self.pool = nn.MaxPool3d(kernel_size, stride=stride) if dims == 3 \
             else nn.MaxPool2d(kernel_size, stride=stride)
@@ -18,7 +19,7 @@ class MaxPool(nn.Module):
         self.padding = 0
         self.dims = dims
 
-    def set_padding(self, pad):
+    def set_padding(self, pad:bool):
         if pad:
             p = self.dilation*(self.kernel_size//2) # this is bugged in pytorch...
             self.pool.padding = tuple(p for _ in range(self.dims))
@@ -27,7 +28,7 @@ class MaxPool(nn.Module):
             self.pool.padding = tuple(0 for _ in range(self.dims))
             self.padding = 0
 
-    def fill(self, stride):
+    def fill(self, stride:int):
         self.pool.dilation = stride
         self.pool.padding = self.pool.padding * stride
         self.pool.stride = 1
@@ -42,14 +43,14 @@ class MaxPool(nn.Module):
         self.dilation = 1
         self.stride = self.og_stride
 
-    def forward(self, x):
+    def forward(self, x:torch.Tensor):
         return self.pool(x)
 
 
 class BasicConv(nn.Module):
     '''Basic convolutional layer for use in ResNet architectures.
     Supports 2- and 3-dimensional inputs/kernels.'''
-    def __init__(self, nin, nout, kernel_size, dilation=1, stride=1, bn=False, activation=nn.ReLU, dims=2):
+    def __init__(self, nin:int, nout:int, kernel_size:int, dilation:int=1, stride:int=1, bn:bool=False, activation:nn.Module=nn.ReLU, dims:int=2):
         super(BasicConv, self).__init__()
 
         if dims == 2:
@@ -74,7 +75,7 @@ class BasicConv(nn.Module):
         self.padding = 0
         self.dims = dims
 
-    def set_padding(self, pad):
+    def set_padding(self, pad:bool):
         if pad:
             p = self.dilation * (self.kernel_size // 2)
             self.conv.padding = tuple(p for _ in range(self.dims))
@@ -83,7 +84,7 @@ class BasicConv(nn.Module):
             self.conv.padding = tuple(0 for _ in range(self.dims))
             self.padding = 0
 
-    def fill(self, stride):
+    def fill(self, stride:int):
         self.conv.dilation = tuple(self.og_dilation*stride for _ in range(self.dims))
         self.conv.stride = tuple(1 for _ in range(self.dims))
         self.conv.padding = tuple(pad * stride for pad in self.conv.padding)
@@ -97,21 +98,11 @@ class BasicConv(nn.Module):
         self.conv.padding = tuple(pad // stride for pad in self.conv.padding)
         self.dilation = self.og_dilation
 
-    def forward(self, x):
+    def forward(self, x:torch.Tensor):
         y = self.conv(x)
         if hasattr(self, 'bn'):
             y = self.bn(y)
         return self.act(y)
-
-class BasicConv2d(BasicConv):
-    '''Convolutional layer for 2D ResNet.'''
-    def __init__(self, nin, nout, kernel_size, dilation=1, stride=1, bn=False, activation=nn.ReLU):
-        super(BasicConv2d, self).__init__(nin, nout, kernel_size, dilation, stride, bn, activation, dims=2)
-
-class BasicConv3d(BasicConv):
-    '''Convolutional layer for 3D ResNet.'''
-    def __init__(self, nin, nout, kernel_size, dilation=1, stride=1, bn=False, activation=nn.ReLU):
-        super(BasicConv3d, self).__init__(nin, nout, kernel_size, dilation, stride, bn, activation, dims=3)
         
 
 class ResidA(nn.Module):
@@ -210,16 +201,6 @@ class ResidA(nn.Module):
         y = self.act1(y)
 
         return y
-
-class ResidA2d(ResidA):
-    '''Two-dimensional residual block'''
-    def __init__(self, nin, nhidden, nout, dilation=1, stride=1, activation=nn.ReLU, bn=False):
-        super().__init__(nin, nhidden, nout, dilation, stride, activation, bn, dims=2)
-        
-class ResidA3d(ResidA):
-    '''Three-dimensional residual block'''
-    def __init__(self, nin, nhidden, nout, dilation=1, stride=1, activation=nn.ReLU, bn=False):
-        super().__init__(nin, nhidden, nout, dilation, stride, activation, bn, dims=3)
         
 
 # Sample architectures
