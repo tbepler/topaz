@@ -11,8 +11,8 @@ from topaz.training import load_data,make_model,train_model
 from topaz.utils.printing import report
 
 
-name = 'train'
-help = 'train region classifier from images with labeled coordinates'
+name = 'train3d'
+help = 'train 3D region classifier from volumes with labeled coordinates'
 
 def add_arguments(parser=None):
     if parser is None:

@@ -10,7 +10,7 @@ from topaz.utils.printing import report
 
 
 name = 'train'
-help = 'train region classifier from images with labeled coordinates'
+help = 'train 2D region classifier from images with labeled coordinates'
 
 def add_arguments(parser=None):
     if parser is None:
