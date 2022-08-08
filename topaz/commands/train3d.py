@@ -5,11 +5,10 @@ import argparse
 import sys
 
 import topaz.cuda
-from topaz.model.features.basic import BasicConv
 from topaz.model.features.resnet import ResNet8, ResNet16
-from topaz.training import load_data,make_model,train_model
+from topaz.model.classifier import LinearClassifier
+from topaz.training import load_data, train_model
 from topaz.utils.printing import report
-
 
 name = 'train3d'
 help = 'train 3D region classifier from volumes with labeled coordinates'
@@ -108,7 +107,7 @@ def main(args):
     report('Using device={} with cuda={}'.format(args.device, use_cuda))
     if use_cuda:
         classifier.cuda()
-    
+        
     ## load the data
     train_images, train_targets, test_images, test_targets = \
             load_data(args.train_images, args.train_targets, args.test_images, args.test_targets,
@@ -116,9 +115,14 @@ def main(args):
                       cross_validation_seed=args.cross_validation_seed, image_ext=args.image_ext)
             
     ## initialize the model
-    classifier = BasicConv([7,5,5,5], args.units, args.unit_scaling, args.dropout, args.bn, args.pooling, dims=3)     
-    #TODO: use ResNet8(dims=3) or ResNet16(dims=3)
-    
+    if args.model == 'resnet8':
+        feature_extractor = ResNet8(args, dims=3)
+    elif args.model == 'resnet16':
+        feature_extractor = ResNet16(args, dims=3)
+    else:
+        raise ValueError(f'Unsupported architecture: {args.model}. Current 3D support includes resnet8 and resnet16.')
+    classifier = LinearClassifier(feature_extractor, dims=3)
+
     ## fit the model, report train/test stats, save model if required
     output = sys.stdout if args.output is None else open(args.output, 'w')
     save_prefix = args.save_prefix

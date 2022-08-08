@@ -265,7 +265,6 @@ def report_data_stats(train_images, train_targets, test_images, test_targets):
 
 def make_model(args):
     import topaz.model.classifier as C
-    from topaz.model.classifier import LinearClassifier
     from topaz.model.factory import get_feature_extractor
 
     report('Loading model:', args.model)
