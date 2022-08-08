@@ -206,8 +206,9 @@ class ResidA(nn.Module):
 # Sample architectures
 class ResNet(nn.Module):
     '''ResNet utility functions. Must be subclassed to define network architecture.'''
-    def __init__(self, *args, dims=2, **kwargs):
+    def __init__(self, dims=2, *args, **kwargs):
         super(ResNet, self).__init__()
+        self.dims = dims
 
         if 'pooling' in kwargs:
             pooling = kwargs['pooling']
@@ -219,7 +220,6 @@ class ResNet(nn.Module):
 
         self.width = insize_from_outsize(modules, 1)
         self.pad = False
-        self.dims = dims
 
     ## make property for num_features !!
 
@@ -277,7 +277,7 @@ class ResNet6(ResNet):
 
 
 class ResNet8(ResNet):
-    def make_modules(self, units=[32, 64, 128], bn=True, dropout=0.0, activation=nn.ReLU, pooling=None, **kwargs):
+    def make_modules(self, units=[32, 64, 128], bn=True, dropout=0.0, activation=nn.ReLU, pooling:MaxPool=None, **kwargs):
         if units is None:
             units = [32, 64, 128]
         elif type(units) is not list:
@@ -291,13 +291,13 @@ class ResNet8(ResNet):
         stride = self.stride
 
         modules = [BasicConv(1, units[0], 7, stride=stride, bn=bn, activation=activation, dims=self.dims)]
-        modules += [pooling(3, stride=2)] if pooling is not None else modules
+        modules += [pooling(3, stride=2, dims=self.dims)] if pooling is not None else modules
         modules += [nn.Dropout(p=dropout)] if dropout > 0 else modules
 
         modules += [ResidA(units[0], units[0], units[0], dilation=2, bn=bn, activation=activation, dims=self.dims),
                     ResidA(units[0], units[0], units[1], dilation=2, stride=stride, bn=bn, activation=activation, dims=self.dims)]
         if pooling is not None:
-            modules.append(pooling(3, stride=2))
+            modules.append(pooling(3, stride=2, dims=self.dims))
         if dropout > 0:
             modules.append(nn.Dropout(p=dropout)) #, inplace=True))
 
@@ -328,7 +328,7 @@ class ResNet16(ResNet):
         modules = [BasicConv(1, units[0], 7, bn=bn, activation=activation, dims=self.dims),
                    ResidA(units[0], units[0], units[0], stride=stride, bn=bn, activation=activation, dims=self.dims)]
         if pooling is not None:
-            modules.append(pooling(3, stride=2))
+            modules.append(pooling(3, stride=2, dims=self.dims))
         if dropout > 0:
             modules.append(nn.Dropout(p=dropout)) #, inplace=True))
 
@@ -337,7 +337,7 @@ class ResNet16(ResNet):
                     ResidA(units[0], units[0], units[0], bn=bn, activation=activation, dims=self.dims),
                     ResidA(units[0], units[0], units[1], stride=stride, bn=bn, activation=activation, dims=self.dims)]
         if pooling is not None:
-            modules.append(pooling(3, stride=2))
+            modules.append(pooling(3, stride=2, dims=self.dims))
         if dropout > 0:
             modules.append(nn.Dropout(p=dropout)) #, inplace=True))
 
