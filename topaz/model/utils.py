@@ -50,11 +50,11 @@ def segment_images(model, paths:List[str], output_dir:str, use_cuda:bool, verbos
     for path in paths:
         basename = os.path.basename(path)
         image_name = os.path.splitext(basename)[0]
-        image = load_image(path)
+        image = load_image(path, make_image=False)
 
         ## process image with the model
         with torch.no_grad():
-            X = torch.from_numpy(np.array(image, copy=False)).unsqueeze(0).unsqueeze(0)
+            X = torch.from_numpy(image).unsqueeze(0).unsqueeze(0)
             if use_cuda:
                 X = X.cuda()
             score = model(X).data[0,0].cpu().numpy()

@@ -295,10 +295,10 @@ class Normalize:
 
     def __call__(self, path):
         # load the image
-        image = load_image(path)
+        image = load_image(path, make_image=False)
         # check if MRC with header and extender header 
         image, header, extended_header = image if type(image) is tuple else image, None, None
-        x = np.array(image, copy=False).astype(np.float32)
+        x = image.astype(np.float32)
 
         if self.scale > 1:
             x = downsample(x, self.scale)

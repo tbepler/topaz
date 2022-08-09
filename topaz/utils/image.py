@@ -37,11 +37,10 @@ def downsample(x, factor=1, shape=None):
 
 def downsample_file(path:str, scale:int, output:str, verbose:bool):
     ## load image
-    image = load_image(path)
+    image = load_image(path, make_image=False)
     # check if MRC with header and extender header 
     image, header, extended_header = image if type(image) is tuple else image, None, None
-    # convert PIL image to array
-    image = np.array(image, copy=False).astype(np.float32)
+    image = image.astype(np.float32)
 
     small = downsample(image, scale)
     if header:

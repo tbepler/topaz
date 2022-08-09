@@ -43,7 +43,7 @@ class PairedImages(DenoiseDataset):
             self.y = [self.load_image(p) for p in y]
 
     def load_image(self, path:str):
-        x = np.array(load_image(path), copy=False)
+        x = load_image(path, make_image=False)
         x = x.astype(np.float32) # make sure dtype is single precision
         mu = x.mean()
         std = x.std()
