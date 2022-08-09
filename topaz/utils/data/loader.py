@@ -2,6 +2,7 @@ from __future__ import print_function, division
 
 import os
 import glob
+from typing import Any, Tuple, Union
 
 import numpy as np
 from PIL import Image
@@ -45,7 +46,7 @@ class ImageTree:
     def get(self, source, name):
         return self.images[source][name]
 
-def load_mrc(path, standardize=False):
+def load_mrc(path:str, standardize:bool=False) -> Tuple[np.ndarray, Any, Any]:
     with open(path, 'rb') as f:
         content = f.read()
     image, header, extended_header = mrc.parse(content)
@@ -54,20 +55,19 @@ def load_mrc(path, standardize=False):
     if standardize:
         image = image - header.amean
         image /= header.rms
-    return Image.fromarray(image), header, extended_header
+    return image, header, extended_header
 
-def load_tiff(path, standardize=False):
+def load_tiff(path:str, standardize:bool=False) -> np.ndarray:
     image = Image.open(path)
     fp = image.fp
     image.load()
     fp.close()
+    image = np.array(image, copy=False)
     if standardize:
-        image = np.array(image, copy=False)
         image = (image - image.mean())/image.std()
-        image = Image.fromarray(image)
     return image
 
-def load_png(path, standardize=False):
+def load_png(path:str, standardize:bool=False) -> np.ndarray:
     from topaz.utils.image import unquantize
     image = Image.open(path)
     fp = image.fp
@@ -77,10 +77,9 @@ def load_png(path, standardize=False):
     x = unquantize(x)
     if standardize:
         x = (x - x.mean())/x.std()
-    image = Image.fromarray(x)
     return image
 
-def load_jpeg(path, standardize=False):
+def load_jpeg(path:str, standardize:bool=False) -> np.ndarray:
     from topaz.utils.image import unquantize
     image = Image.open(path)
     fp = image.fp
@@ -90,26 +89,25 @@ def load_jpeg(path, standardize=False):
     x = unquantize(x)
     if standardize:
         x = (x - x.mean())/x.std()
-    image = Image.fromarray(x)
     return image
 
-def load_pil(path, standardize=False):
+def load_pil(path:str, standardize=False):
     if path.endswith('.png'):
         return load_png(path, standardize=standardize)
     elif path.endswith('.jpeg') or path.endswith('.jpg'):
         return load_jpeg(path, standardize=standardize)
     return load_tiff(path, standardize=standardize)
 
-def load_image(path, standardize=False):
+def load_image(path:str, standardize:bool=False, make_image:bool=True) -> Union[Union[np.ndarray,Image.Image], Tuple[Union[np.ndarray, Image.Image], Any, Any]]:
+    '''Utility for reading images and tomograms of various formats. Includes header and extended header when available for mrc files. 
+    Returns PIL Images by default, but can return numpy arrays.
+    To load tomograms, ensure make_image=False.'''
     ## this might be more stable as path.endswith('.mrc')
     ext = os.path.splitext(path)[1]
-    if ext == '.mrc':
-        image, header, extended_header = load_mrc(path, standardize=standardize)
-        return image, header, extended_header
-    else:
-        image = load_pil(path, standardize=standardize)
-        return image
-
+    data = load_mrc(path, standardize) if ext == '.mrc' else load_pil(path, standardize)
+    image, header, extended_header = data if type(data) == tuple else data, None, None
+    image = Image.fromarray(image) if make_image else image
+    return (image,header,extended_header) if header else image
 
 def load_images_from_directory(names, rootdir, sources=None, standardize=False):
     images = {}
