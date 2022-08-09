@@ -1,16 +1,8 @@
 from __future__ import division, print_function
 
 import argparse
-import glob
-import json
-import os
-import sys
 
-import numpy as np
-import pandas as pd
-from PIL import Image
-from topaz.utils.conversions import coordinates_to_eman2_json, file_coordinates_to_eman2_json
-from topaz.utils.data.loader import load_image
+from topaz.utils.conversions import file_coordinates_to_eman2_json
 
 name = 'coordinates_to_eman2_json'
 help = 'convert coordinates table to EMAN2 json format files per image'
