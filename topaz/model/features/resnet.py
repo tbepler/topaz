@@ -262,15 +262,15 @@ class ResNet6(ResNet):
 
         modules = [BasicConv(1, units[0], 5, bn=bn, activation=activation, dims=self.dims)]
         modules += [MaxPool(3, stride=2, dims=self.dims)]   
-        modules += [nn.Dropout(p=dropout)] if dropout > 0 else modules
+        modules += [nn.Dropout(p=dropout)] if dropout > 0 else []
         
         modules += [ResidA(units[0], units[0], units[1], dilation=4, bn=bn, activation=activation, dims=self.dims)]
         modules += [MaxPool(3, stride=2, dims=self.dims)]    
-        modules += [nn.Dropout(p=dropout)] if dropout > 0 else modules
+        modules += [nn.Dropout(p=dropout)] if dropout > 0 else []
         
         modules += [ResidA(units[1], units[1], units[1], dilation=2, bn=bn, activation=activation, dims=self.dims)]
         modules += [BasicConv(units[1], units[2], 5, bn=bn, activation=activation, dims=self.dims)]
-        modules += nn.Dropout(p=dropout) if dropout > 0 else modules
+        modules += nn.Dropout(p=dropout) if dropout > 0 else []
         
         self.latent_dim = units[-1]
         return modules
@@ -291,23 +291,17 @@ class ResNet8(ResNet):
         stride = self.stride
 
         modules = [BasicConv(1, units[0], 7, stride=stride, bn=bn, activation=activation, dims=self.dims)]
-        modules += [pooling(3, stride=2, dims=self.dims)] if pooling is not None else modules
-        modules += [nn.Dropout(p=dropout)] if dropout > 0 else modules
-
+        modules += [pooling(3, stride=2, dims=self.dims)] if pooling is not None else []
+        modules += [nn.Dropout(p=dropout)] if dropout > 0 else []
         modules += [ResidA(units[0], units[0], units[0], dilation=2, bn=bn, activation=activation, dims=self.dims),
                     ResidA(units[0], units[0], units[1], dilation=2, stride=stride, bn=bn, activation=activation, dims=self.dims)]
-        if pooling is not None:
-            modules.append(pooling(3, stride=2, dims=self.dims))
-        if dropout > 0:
-            modules.append(nn.Dropout(p=dropout)) #, inplace=True))
-
+        modules += [pooling(3, stride=2, dims=self.dims)] if pooling is not None else []
+        modules += [nn.Dropout(p=dropout)] if dropout > 0 else []
         modules += [ResidA(units[1], units[1], units[1], dilation=2, bn=bn, activation=activation, dims=self.dims),
                     BasicConv(units[1], units[2], 5, bn=bn, activation=activation, dims=self.dims)]
-        if dropout > 0:
-            modules.append(nn.Dropout(p=dropout)) #, inplace=True))
+        modules += [nn.Dropout(p=dropout)] if dropout > 0 else []
 
         self.latent_dim = units[-1]
-
         return modules
 
 
@@ -327,26 +321,18 @@ class ResNet16(ResNet):
 
         modules = [BasicConv(1, units[0], 7, bn=bn, activation=activation, dims=self.dims),
                    ResidA(units[0], units[0], units[0], stride=stride, bn=bn, activation=activation, dims=self.dims)]
-        if pooling is not None:
-            modules.append(pooling(3, stride=2, dims=self.dims))
-        if dropout > 0:
-            modules.append(nn.Dropout(p=dropout)) #, inplace=True))
-
+        modules += [pooling(3, stride=2, dims=self.dims)] if pooling is not None else []
+        modules += [nn.Dropout(p=dropout)] if dropout > 0 else []
         modules += [ResidA(units[0], units[0], units[0], bn=bn, activation=activation, dims=self.dims),
                     ResidA(units[0], units[0], units[0], bn=bn, activation=activation, dims=self.dims),
                     ResidA(units[0], units[0], units[0], bn=bn, activation=activation, dims=self.dims),
                     ResidA(units[0], units[0], units[1], stride=stride, bn=bn, activation=activation, dims=self.dims)]
-        if pooling is not None:
-            modules.append(pooling(3, stride=2, dims=self.dims))
-        if dropout > 0:
-            modules.append(nn.Dropout(p=dropout)) #, inplace=True))
-
+        modules += [pooling(3, stride=2, dims=self.dims)] if pooling is not None else []
+        modules += [nn.Dropout(p=dropout)] if dropout > 0 else []
         modules += [ResidA(units[1], units[1], units[1], bn=bn, activation=activation, dims=self.dims),
                     ResidA(units[1], units[1], units[1], bn=bn, activation=activation, dims=self.dims),
                     BasicConv(units[1], units[2], 5, bn=bn, activation=activation, dims=self.dims)]
-        if dropout > 0:
-            modules.append(nn.Dropout(p=dropout)) #, inplace=True))
+        modules += [nn.Dropout(p=dropout)] if dropout > 0 else []
 
         self.latent_dim = units[-1]
-
         return modules
