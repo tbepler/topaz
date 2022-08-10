@@ -8,6 +8,7 @@ import sys
 
 import numpy as np
 import pandas as pd
+from PIL import Image
 
 import topaz.utils.files as file_utils
 import torch
@@ -30,6 +31,37 @@ def match_images_targets(images, targets, radius):
         targets.append(list(these_targets))
 
     return images, targets
+
+
+def check_particle_image_bounds(images, targets, dims=2):
+    '''Check that the target particles roughly fit within the images/micrographs. If they don't, 
+    prints a warning that images/particle coordinates may not have been scaled correctly.'''
+    width, height, depth = 0, 0, 0
+    #set maximum bounds from image shapes
+    for k,d in images.items():
+        for image in d.values():
+            if dims == 2:
+                # if numpy array (H, W), reverse height and width order to (W,H)
+                w,h = image.size if type(image) == Image.Image else image.shape[::-1]
+            elif dims == 3:
+                h, w, d = image.shape #3D arrays can only be read as numpy arrays             
+            width, height = max(w, width), max(h, height)
+            depth = max(d, depth) if dims==3 else 0        
+    out_of_bounds = (targets.x_coord > width) | (targets.y_coord > height) | (dims==3 and targets.z_coord > depth)
+    count = out_of_bounds.sum()
+    
+    # arbitrary cutoff of more than 10% of particles being out of bounds...
+    if count > int(0.1*len(targets)): 
+        print(f'WARNING: {count} particle coordinates are out of the micrograph dimensions. Did you scale the micrographs and particle coordinates correctly?', file=sys.stderr)
+    # also check that the coordinates fill most of the micrograph, cutoffs arbitrary
+    x_max, y_max = targets.x_coord.max(), targets.y_coord.max()
+    z_max = targets.z_coord.max() if dims==3 else None
+    xy_below_cutoff = (x_max < 0.7 * width) and (y_max < 0.7 * height)
+    if xy_below_cutoff:        
+        z_output = f'or z_coord > {z_max}' if (dims == 3) and (z_max < 0.7 * depth) else ''
+        output = f'WARNING: no coordinates are observed with x_coord > {x_max} or y_coord > {y_max} {z_output}. \
+                Did you scale the micrographs and particle coordinates correctly?'
+        print(output, file=sys.stderr)
 
 
 def make_traindataset(X, Y, crop):
@@ -113,8 +145,8 @@ def cross_validation_split(k, fold, images, targets, random=np.random):
     return train_images, train_targets, test_images, test_targets
 
 
-def load_data(train_images, train_targets, test_images, test_targets, radius
-             , k_fold=0, fold=0, cross_validation_seed=42, format_='auto', image_ext=''):
+def load_data(train_images, train_targets, test_images, test_targets, radius, k_fold=0, fold=0, 
+              cross_validation_seed=42, format_='auto', image_ext='', as_images:bool=True, dims:int=2):
 
     # if train_images is a directory path, map to all images in the directory
     if os.path.isdir(train_images):
@@ -138,8 +170,7 @@ def load_data(train_images, train_targets, test_images, test_targets, radius
         train_images['source'] = 0
         train_targets['source'] = 0
     # load the images and create target masks from the particle coordinates
-    train_images = load_images_from_list(train_images.image_name, train_images.path
-                                        , sources=train_images.source)
+    train_images = load_images_from_list(train_images.image_name, train_images.path, sources=train_images.source, as_images=as_images)
 
     # discard coordinates for micrographs not in the set of images
     # and warn the user if any are discarded
@@ -156,25 +187,8 @@ def load_data(train_images, train_targets, test_images, test_targets, radius
 
     # check that the particles roughly fit within the images
     # if they don't, the user may not have scaled the particles/images correctly
-    width = 0
-    height = 0
-    for k,d in train_images.items():
-        for image in d.values():
-            w,h = image.size
-            if w > width:
-                width = w
-            if h > height:
-                height = h
-    out_of_bounds = (train_targets.x_coord > width) | (train_targets.y_coord > height)
-    count = out_of_bounds.sum()
-    if count > int(0.1*len(train_targets)): # arbitrary cutoff of more than 10% of particles being out of bounds...
-        print('WARNING: {} particle coordinates are out of the micrograph dimensions. Did you scale the micrographs and particle coordinates correctly?'.format(count), file=sys.stderr)
-    #  also check that the coordinates fill most of the micrograph
-    x_max = train_targets.x_coord.max()
-    y_max = train_targets.y_coord.max()
-    if x_max < 0.7*width and y_max < 0.7*height: # more arbitrary cutoffs
-        print('WARNING: no coordinates are observed with x_coord > {} or y_coord > {}. Did you scale the micrographs and particle coordinates correctly?'.format(x_max, y_max), file=sys.stderr)
-
+    check_particle_image_bounds(train_images, train_targets, dims=dims)
+    
     num_micrographs = sum(len(train_images[k]) for k in train_images.keys())
     num_particles = len(train_targets)
     report('Loaded {} training micrographs with {} labeled particles'.format(num_micrographs, num_particles))
@@ -206,8 +220,7 @@ def load_data(train_images, train_targets, test_images, test_targets, radius
         if 'source' not in test_images and 'source' not in test_targets:
             test_images['source'] = 0
             test_targets['source'] = 0
-        test_images = load_images_from_list(test_images.image_name, test_images.path
-                                           , sources=test_images.source)
+        test_images = load_images_from_list(test_images.image_name, test_images.path, sources=test_images.source, as_images=as_images)
 
         # discard coordinates for micrographs not in the set of images
         # and warn the user if any are discarded
