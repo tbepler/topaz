@@ -5,6 +5,7 @@ import glob
 import multiprocessing as mp
 import os
 import sys
+from typing import List, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -20,8 +21,11 @@ from topaz.utils.data.loader import load_images_from_list
 from topaz.utils.printing import report
 
 
-def match_images_targets(images, targets, radius):
-    matched = match_coordinates_to_images(targets, images, radius=radius)
+def match_images_targets(images:dict, targets:pd.DataFrame, radius:float, dims:int=2) \
+    -> Tuple[List[Union[Image.Image,np.ndarray]], List[np.ndarray]]:
+    '''Given names mapped to images and a DataFrame of coordinates, 
+    returns coordinates as mask of the same shape as corresponding image.'''
+    matched = match_coordinates_to_images(targets, images, radius=radius, dims=2)
     ## unzip into matched lists
     images = []
     targets = []
@@ -29,11 +33,25 @@ def match_images_targets(images, targets, radius):
         these_images,these_targets = zip(*list(matched[key].values()))
         images.append(list(these_images))
         targets.append(list(these_targets))
-
     return images, targets
 
 
-def check_particle_image_bounds(images, targets, dims=2):
+def filter_targets_missing_images(images:pd.DataFrame, targets:pd.DataFrame):
+    '''Discard target coordinates for micrographs not in the set of images. Warn the user if any are discarded.'''
+    names = set()
+    for k,d in images.items():
+        for name in d.keys():
+            names.add(name)
+    check = targets.image_name.apply(lambda x: x in names)
+    missing = targets.image_name.loc[~check].unique().tolist()
+    if len(missing) > 0:
+        print(f'WARNING: {len(missing)} micrographs listed in the coordinates file are missing from the training images. Image names are listed below.', file=sys.stderr)
+        print(f'WARNING: missing micrographs are: {missing}', file=sys.stderr)
+    targets = targets.loc[check]    
+    return targets
+
+
+def check_particle_image_bounds(images:pd.DataFrame, targets:pd.DataFrame, dims=2):
     '''Check that the target particles roughly fit within the images/micrographs. If they don't, 
     prints a warning that images/particle coordinates may not have been scaled correctly.'''
     width, height, depth = 0, 0, 0
@@ -169,36 +187,25 @@ def load_data(train_images, train_targets, test_images, test_targets, radius, k_
     if 'source' not in train_images and 'source' not in train_targets:
         train_images['source'] = 0
         train_targets['source'] = 0
+        
     # load the images and create target masks from the particle coordinates
     train_images = load_images_from_list(train_images.image_name, train_images.path, sources=train_images.source, as_images=as_images)
 
-    # discard coordinates for micrographs not in the set of images
-    # and warn the user if any are discarded
-    names = set()
-    for k,d in train_images.items():
-        for name in d.keys():
-            names.add(name)
-    check = train_targets.image_name.apply(lambda x: x in names)
-    missing = train_targets.image_name.loc[~check].unique().tolist()
-    if len(missing) > 0:
-        print('WARNING: {} micrographs listed in the coordinates file are missing from the training images. Image names are listed below.'.format(len(missing)), file=sys.stderr)
-        print('WARNING: missing micrographs are: {}'.format(missing), file=sys.stderr)
-    train_targets = train_targets.loc[check]
+    # remove target coordinates missing corresponding images
+    train_targets = filter_targets_missing_images(train_images, train_targets)
 
-    # check that the particles roughly fit within the images
-    # if they don't, the user may not have scaled the particles/images correctly
+    # check that particles roughly fit in images; if don't, may not have scaled particles/images correctly
     check_particle_image_bounds(train_images, train_targets, dims=dims)
     
     num_micrographs = sum(len(train_images[k]) for k in train_images.keys())
     num_particles = len(train_targets)
-    report('Loaded {} training micrographs with {} labeled particles'.format(num_micrographs, num_particles))
+    report(f'Loaded {num_micrographs} training micrographs with {num_particles} labeled particles')
     if num_particles == 0:
         print('ERROR: no training particles specified. Check that micrograph names in the particles file match those in the micrographs file/directory.', file=sys.stderr)
         raise Exception('No training particles.')
 
-
+    #convert targets to masks of the same shape as their image
     train_images, train_targets = match_images_targets(train_images, train_targets, radius)
-
     
     if test_images is not None:
         if os.path.isdir(test_images):
