@@ -2,6 +2,7 @@ from __future__ import division, print_function
 
 import os
 import sys
+from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -10,20 +11,26 @@ import topaz.utils.star as star
 from topaz.utils.image import downsample
 
 
-def as_mask(shape, x_coord, y_coord, radii):
-
+def as_mask(shape:Tuple[int], radii:List[float], x_coord:List[float], y_coord:List[float], z_coord:List[float]=None) -> np.ndarray:
+    '''Given coordinates and bounding circle/sphere radii, return a binary mask about those points.'''
     ygrid = np.arange(shape[0])
     xgrid = np.arange(shape[1])
-    xgrid,ygrid = np.meshgrid(xgrid, ygrid, indexing='xy')
+    if z_coord is not None:
+        zgrid = np.arange(shape[2])
+        xgrid,ygrid,zgrid = np.meshgrid(xgrid, ygrid, zgrid, indexing='xy')
+    else:
+        xgrid,ygrid = np.meshgrid(xgrid, ygrid, indexing='xy')
 
     mask = np.zeros(shape, dtype=np.uint8)
     for i in range(len(x_coord)):
         x = x_coord[i]
         y = y_coord[i]
+        z = z_coord[i] if z_coord is not None else None
         radius = radii[i]
         threshold = radius**2
         
         d2 = (xgrid - x)**2 + (ygrid - y)**2
+        d2 += (zgrid - z)**2 if z is not None else 0
         mask += (d2 <= threshold)
 
     mask = np.clip(mask, 0, 1)
