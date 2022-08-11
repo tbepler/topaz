@@ -1,8 +1,9 @@
 from __future__ import print_function,division
-from typing import Any, Dict, Union
+from typing import Any, Dict, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from PIL import Image
 
 from topaz.utils.picks import as_mask
 
@@ -21,9 +22,24 @@ def coordinates_table_to_dict(coords:pd.DataFrame, dims:int=2) -> Union[Dict[str
             root[name] = xy_z
     return root
 
-def match_coordinates_to_images(coords, images, radius=-1, dims=2):
-    """If radius >= 0, convert the coordinates to an image mask"""
-    nested = 'source' in coords
+
+def make_coordinate_mask(image:Union[Image.Image, np.ndarray], coords:np.ndarray, radius:float):
+    if radius < 0:
+        return coords
+    radii = np.full(len(coords), radius).astype(np.int32)
+    shape = (image.height, image.width) if type(image) == Image.Image else image.shape
+    if len(shape) == 2:
+        coords = as_mask(shape, radii, coords[:,0], coords[:,1], z_coord=None)
+    elif len(shape) == 3:
+        coords = as_mask(shape, radii, coords[:,0], coords[:,1], z_coord=coords[:,2])
+    return coords
+
+
+def match_coordinates_to_images(coords:pd.DataFrame, images:dict, radius:float=-1, dims:int=2) -> \
+    Union[Dict[str,Tuple[Union[Image.Image, np.ndarray],np.ndarray]], \
+        Dict[Any,Dict[str,Tuple[Union[Image.Image, np.ndarray],np.ndarray]]]]:
+    """If radius >= 0, convert point coordinates to mask of circles/spheres."""
+    nested = ('source' in coords)
     coords = coordinates_table_to_dict(coords)
     null_coords = np.zeros((0,dims), dtype=np.int32)
 
@@ -36,19 +52,13 @@ def match_coordinates_to_images(coords, images, radius=-1, dims=2):
             for name in this_images.keys():
                 im = this_images[name]
                 xy = this_coords.get(name, null_coords)
-                if radius >= 0:
-                    radii = np.array([radius]*len(xy), dtype=np.int32)
-                    shape = (im.height, im.width)
-                    xy = as_mask(shape, xy[:,0], xy[:,1], radii)
+                xy = make_coordinate_mask(xy, radius) # make coord points into mask
                 this_matched[name] = (im,xy)
     else:
         for name in images.keys():
             im = images[name]
             xy = coords.get(name, null_coords)
-            if radius >= 0:
-                radii = np.array([radius]*len(xy), dtype=np.int32)
-                shape = (im.height, im.width)
-                xy = as_mask(shape, xy[:,0], xy[:,1], radii)
+            xy = make_coordinate_mask(xy, radius)
             matched[name] = (im,xy)
 
     return matched 
