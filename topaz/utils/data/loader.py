@@ -2,7 +2,7 @@ from __future__ import print_function, division
 
 import os
 import glob
-from typing import Any, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
 from PIL import Image
@@ -109,32 +109,38 @@ def load_image(path:str, standardize:bool=False, make_image:bool=True) -> Union[
     image = Image.fromarray(image) if make_image else image
     return (image,header,extended_header) if header else image
 
-def load_images_from_directory(names, rootdir, sources=None, standardize=False):
+def load_images_from_directory(names:List[str], rootdir:str, sources:List[Any]=None, standardize:bool=False, 
+                               as_images:bool=True) -> Union[Dict[str,str], Dict[Any,Dict[str,str]]]:
+    '''Returns a dictionary of images (PIL Images or numpy arrays), with file names mapped to their paths. 
+    If image sources are provided, returns a dictionary mapping sources to their maps of image names to paths.'''
     images = {}
     if sources is not None:
         for source,name in zip(sources, names):
             path = os.path.join(rootdir, source, name) + '.*'
             path = glob.glob(path)[0]
-            im = load_image(path, standardize=standardize)
+            im = load_image(path, standardize=standardize, make_image=as_images)
             images.setdefault(source, {})[name] = im
     else:
         for name in names:
             path = os.path.join(rootdir, name) + '.*'
             path = glob.glob(path)[0]
-            im = load_image(path, standardize=standardize)
+            im = load_image(path, standardize=standardize, make_image=as_images)
             images[name] = im
     return images 
 
 
-def load_images_from_list(names, paths, sources=None, standardize=False):
+def load_images_from_list(names:List[str], paths:List[str], sources:List[Any]=None, standardize:bool=False, 
+                          as_images:bool=True) -> Union[Dict[str,str], Dict[Any,Dict[str,str]]]:
+    '''Returns a dictionary of images (PIL Images or numpy arrays), with file names mapped to their paths. 
+    If image sources are provided, returns a dictionary mapping sources to their maps of image names to paths.'''
     images = {}
     if sources is not None:
         for source,name,path in zip(sources, names, paths):
-            im = load_image(path, standardize=standardize)
+            im = load_image(path, standardize=standardize, make_image=as_images)
             images.setdefault(source, {})[name] = im
     else:
         for name,path in zip(names, paths):
-            im = load_image(path, standardize=standardize)
+            im = load_image(path, standardize=standardize, make_image=as_images)
             images[name] = im
     return images
 

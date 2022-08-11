@@ -1,29 +1,31 @@
 from __future__ import print_function,division
+from typing import Any, Dict, Union
 
 import numpy as np
+import pandas as pd
 
 from topaz.utils.picks import as_mask
 
-def coordinates_table_to_dict(coords):
+def coordinates_table_to_dict(coords:pd.DataFrame, dims:int=2) -> Union[Dict[str,np.ndarray], Dict[Any,Dict[str,np.ndarray]]]:
+    '''Converts a pandas DataFrame to a dictionary mapping image names to their contained particle coordinates.
+    If source columns are included, sources are first mapped to image names.'''
     root = {}
+    columns = ['x_coord','y_coord', 'z_coord'] if dims == 3 else ['x_coord','y_coord']
     if 'source' in coords:
         for (source,name),df in coords.groupby(['source', 'image_name']):
-            xy = df[['x_coord','y_coord']].values.astype(np.int32)
-            root.setdefault(source,{})[name] = xy
+            xy_z = df[columns].values.astype(np.int32)
+            root.setdefault(source,{})[name] = xy_z
     else:
         for name,df in coords.groupby('image_name'):
-            xy = df[['x_coord','y_coord']].values.astype(np.int32)
-            root[name] = xy
+            xy_z = df[columns].values.astype(np.int32)
+            root[name] = xy_z
     return root
 
-def match_coordinates_to_images(coords, images, radius=-1):
-    """
-    If radius >= 0, then convert the coordinates to an image mask
-    """
-    
+def match_coordinates_to_images(coords, images, radius=-1, dims=2):
+    """If radius >= 0, convert the coordinates to an image mask"""
     nested = 'source' in coords
     coords = coordinates_table_to_dict(coords)
-    null_coords = np.zeros((0,2), dtype=np.int32)
+    null_coords = np.zeros((0,dims), dtype=np.int32)
 
     matched = {}
     if nested:
