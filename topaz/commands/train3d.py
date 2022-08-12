@@ -108,11 +108,11 @@ def main(args):
     if use_cuda:
         classifier.cuda()
         
-    ## load the data
+    ## load the data as lists of 3D numpy arrays
     train_images, train_targets, test_images, test_targets = \
             load_data(args.train_images, args.train_targets, args.test_images, args.test_targets,
                       args.radius, format_=args.format_, k_fold=args.k_fold, fold=args.fold,
-                      cross_validation_seed=args.cross_validation_seed, image_ext=args.image_ext)
+                      cross_validation_seed=args.cross_validation_seed, image_ext=args.image_ext, as_images=False)
             
     ## initialize the model
     if args.model == 'resnet8':

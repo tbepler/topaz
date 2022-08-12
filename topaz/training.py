@@ -36,7 +36,7 @@ def match_images_targets(images:dict, targets:pd.DataFrame, radius:float, dims:i
     return images, targets
 
 
-def filter_targets_missing_images(images:pd.DataFrame, targets:pd.DataFrame):
+def filter_targets_missing_images(images:pd.DataFrame, targets:pd.DataFrame, mode:str='training'):
     '''Discard target coordinates for micrographs not in the set of images. Warn the user if any are discarded.'''
     names = set()
     for k,d in images.items():
@@ -45,10 +45,54 @@ def filter_targets_missing_images(images:pd.DataFrame, targets:pd.DataFrame):
     check = targets.image_name.apply(lambda x: x in names)
     missing = targets.image_name.loc[~check].unique().tolist()
     if len(missing) > 0:
-        print(f'WARNING: {len(missing)} micrographs listed in the coordinates file are missing from the training images. Image names are listed below.', file=sys.stderr)
+        print(f'WARNING: {len(missing)} micrographs listed in the coordinates file are missing from the {mode} images. Image names are listed below.', file=sys.stderr)
         print(f'WARNING: missing micrographs are: {missing}', file=sys.stderr)
     targets = targets.loc[check]    
     return targets
+
+
+def load_image_set(images_path, targets_path, image_ext, radius, format_, as_images=True, mode='training', 
+                   dims=2) -> Tuple[List[Union[Image.Image,np.ndarray]], List[np.ndarray]]:
+    # if train_images is a directory path, map to all images in the directory
+    if os.path.isdir(images_path):
+        paths = glob.glob(images_path + os.sep + '*' + image_ext)
+        valid_paths, image_names = [], []
+        for path in paths:
+            name = os.path.basename(path)
+            name,ext = os.path.splitext(name)
+            if ext in ['.mrc', '.tiff', '.png']:
+                image_names.append(name)
+                valid_paths.append(path)
+        images = pd.DataFrame({'image_name': image_names, 'path': valid_paths})
+    else:
+        images = pd.read_csv(images_path, sep='\t') # training image file list
+    #train_targets = pd.read_csv(train_targets, sep='\t') # training particle coordinates file
+    targets = file_utils.read_coordinates(targets_path, format=format_)
+
+    # check for source columns
+    if 'source' not in images and 'source' not in targets:
+        images['source'] = 0
+        targets['source'] = 0
+        
+    # load the images and create target masks from the particle coordinates
+    images = load_images_from_list(images.image_name, images.path, sources=images.source, as_images=as_images)
+
+    # remove target coordinates missing corresponding images
+    targets = filter_targets_missing_images(images, targets, mode=mode)
+
+    # check that particles roughly fit in images; if don't, may not have scaled particles/images correctly
+    check_particle_image_bounds(images, targets, dims=dims)
+    
+    num_micrographs = sum(len(images[k]) for k in images.keys())
+    num_particles = len(targets)
+    report(f'Loaded {num_micrographs} {mode} micrographs with {num_particles} labeled particles')
+    if num_particles == 0 and mode == 'training':
+        print('ERROR: no training particles specified. Check that micrograph names in the particles file match those in the micrographs file/directory.', file=sys.stderr)
+        raise Exception('No training particles.')
+
+    #convert targets to masks of the same shape as their image
+    images, targets = match_images_targets(images, targets, radius, dims=dims)
+    return images, targets
 
 
 def check_particle_image_bounds(images:pd.DataFrame, targets:pd.DataFrame, dims=2):
@@ -163,90 +207,16 @@ def cross_validation_split(k, fold, images, targets, random=np.random):
     return train_images, train_targets, test_images, test_targets
 
 
-def load_data(train_images, train_targets, test_images, test_targets, radius, k_fold=0, fold=0, 
-              cross_validation_seed=42, format_='auto', image_ext='', as_images:bool=True, dims:int=2):
-
-    # if train_images is a directory path, map to all images in the directory
-    if os.path.isdir(train_images):
-        paths = glob.glob(train_images + os.sep + '*' + image_ext)
-        valid_paths = []
-        image_names = []
-        for path in paths:
-            name = os.path.basename(path)
-            name,ext = os.path.splitext(name)
-            if ext in ['.mrc', '.tiff', '.png']:
-                image_names.append(name)
-                valid_paths.append(path)
-        train_images = pd.DataFrame({'image_name': image_names, 'path': valid_paths})
-    else:
-        train_images = pd.read_csv(train_images, sep='\t') # training image file list
-    #train_targets = pd.read_csv(train_targets, sep='\t') # training particle coordinates file
-    train_targets = file_utils.read_coordinates(train_targets, format=format_)
-
-    # check for source columns
-    if 'source' not in train_images and 'source' not in train_targets:
-        train_images['source'] = 0
-        train_targets['source'] = 0
-        
-    # load the images and create target masks from the particle coordinates
-    train_images = load_images_from_list(train_images.image_name, train_images.path, sources=train_images.source, as_images=as_images)
-
-    # remove target coordinates missing corresponding images
-    train_targets = filter_targets_missing_images(train_images, train_targets)
-
-    # check that particles roughly fit in images; if don't, may not have scaled particles/images correctly
-    check_particle_image_bounds(train_images, train_targets, dims=dims)
-    
-    num_micrographs = sum(len(train_images[k]) for k in train_images.keys())
-    num_particles = len(train_targets)
-    report(f'Loaded {num_micrographs} training micrographs with {num_particles} labeled particles')
-    if num_particles == 0:
-        print('ERROR: no training particles specified. Check that micrograph names in the particles file match those in the micrographs file/directory.', file=sys.stderr)
-        raise Exception('No training particles.')
-
-    #convert targets to masks of the same shape as their image
-    train_images, train_targets = match_images_targets(train_images, train_targets, radius)
-    
+def load_data(train_images:str, train_targets:str, test_images:str, test_targets:str, radius:float, k_fold:int=0, fold:int=0, 
+              cross_validation_seed:int=42, format_:str='auto', image_ext:str='', as_images:bool=True, dims:int=2):
+    '''Load training and testing (if available) images and picked particles. May split training data for cross-validation if no testing data are given.'''
+    #load training images and target particles
+    train_images, train_targets = load_image_set(train_images, train_targets, image_ext=image_ext, radius=radius, 
+                                                 format_=format_, as_images=as_images, mode='training', dims=dims)
+    #load test images and target particles or split training
     if test_images is not None:
-        if os.path.isdir(test_images):
-            paths = glob.glob(test_images + os.sep + '*' + image_ext)
-            valid_paths = []
-            image_names = []
-            for path in paths:
-                name = os.path.basename(path)
-                name,ext = os.path.splitext(name)
-                if ext in ['.mrc', '.tiff', '.png']:
-                    image_names.append(name)
-                    valid_paths.append(path)
-            test_images = pd.DataFrame({'image_name': image_names, 'path': valid_paths})
-        else:
-            test_images = pd.read_csv(test_images, sep='\t')
-        #test_targets = pd.read_csv(test_targets, sep='\t')
-        test_targets = file_utils.read_coordinates(test_targets, format=format_)
-        # check for source columns
-        if 'source' not in test_images and 'source' not in test_targets:
-            test_images['source'] = 0
-            test_targets['source'] = 0
-        test_images = load_images_from_list(test_images.image_name, test_images.path, sources=test_images.source, as_images=as_images)
-
-        # discard coordinates for micrographs not in the set of images
-        # and warn the user if any are discarded
-        names = set()
-        for k,d in test_images.items():
-            for name in d.keys():
-                names.add(name)
-        check = test_targets.image_name.apply(lambda x: x in names)
-        missing = test_targets.image_name.loc[~check].unique().tolist()
-        if len(missing) > 0:
-            print('WARNING: {} micrographs listed in the coordinates file are missing from the test images. Image names are listed below.'.format(len(missing)), file=sys.stderr)
-            print('WARNING: missing micrographs are: {}'.format(missing), file=sys.stderr)
-        test_targets = test_targets.loc[check]
-
-        num_micrographs = sum(len(test_images[k]) for k in test_images.keys())
-        num_particles = len(test_targets)
-        report('Loaded {} test micrographs with {} labeled particles'.format(num_micrographs, num_particles))
-
-        test_images, test_targets = match_images_targets(test_images, test_targets, radius)
+        test_images, test_targets = load_image_set(test_images, test_targets, image_ext=image_ext, radius=radius, 
+                                                   format_=format_, as_images=as_images, mode='test', dims=dims)
     elif k_fold > 1:
         ## seed for partitioning the data
         random = np.random.RandomState(cross_validation_seed)
@@ -256,7 +226,6 @@ def load_data(train_images, train_targets, test_images, test_targets, radius, k_
         n_train = sum(len(images) for images in train_images)
         n_test = sum(len(images) for images in test_images)
         report('Split into {} train and {} test micrographs'.format(n_train, n_test))
-
     return train_images, train_targets, test_images, test_targets
 
 
