@@ -1,20 +1,19 @@
-from __future__ import print_function, division
+from __future__ import division, print_function
 
 import os
+from typing import List, Tuple
 
 import numpy as np
-from PIL import Image
-
 import torch
 import torch.utils.data
+from PIL import Image
+from topaz.utils.data.loader import LabeledImageCropDataset
 
-def enumerate_pn_coordinates(Y):
-    """
-    Given a list of 2d arrays containing labels, enumerate the positive and negative coordinates as (image,coordinate) pairs.
-    """
 
-    P_size = int(sum(y.sum() for y in Y)) # number of positive coordinates
-    N_size = sum(y.size for y in Y) - P_size # number of negative coordinates
+def enumerate_pn_coordinates(Y:List[np.ndarray]) -> Tuple[np.ndarray,np.ndarray]:
+    """Given a list of arrays containing labels, enumerate the positive and negative coordinates as (image,coordinate) pairs."""
+    P_size = int(sum(array.sum() for array in Y)) # number of positive coordinates
+    N_size = sum(array.size for array in Y) - P_size # number of negative coordinates
 
     P = np.zeros(P_size, dtype=[('image', np.uint32), ('coord', np.uint32)])
     N = np.zeros(N_size, dtype=[('image', np.uint32), ('coord', np.uint32)])
@@ -22,24 +21,21 @@ def enumerate_pn_coordinates(Y):
     i = 0 # P index
     j = 0 # N index
     for image in range(len(Y)):
-        y = Y[image].ravel()
-        for coord in range(len(y)):
-            if y[coord]:
+        flat_array = Y[image].ravel()
+        for coord in range(len(flat_array)):
+            if flat_array[coord]:
                 P[i] = (image, coord)
                 i += 1
             else:
                 N[j] = (image, coord)
                 j += 1
-
     return P, N
 
-def enumerate_pu_coordinates(Y):
-    """
-    Given a list of 2d arrays containing labels, enumerate the positive and unlabeled(all) coordinates as (image,coordinate) pairs.
-    """
 
-    P_size = int(sum(y.sum() for y in Y)) # number of positive coordinates
-    size = sum(y.size for y in Y)
+def enumerate_pu_coordinates(Y:List[np.ndarray]) -> Tuple[np.ndarray,np.ndarray]:
+    """Given a list of arrays containing labels, enumerate the positive and unlabeled(all) coordinates as (image,coordinate) pairs."""
+    P_size = int(sum(array.sum() for array in Y)) # number of positive coordinates
+    size = sum(array.size for array in Y)
 
     P = np.zeros(P_size, dtype=[('image', np.uint32), ('coord', np.uint32)])
     U = np.zeros(size, dtype=[('image', np.uint32), ('coord', np.uint32)])
@@ -47,18 +43,18 @@ def enumerate_pu_coordinates(Y):
     i = 0 # P index
     j = 0 # U index
     for image in range(len(Y)):
-        y = Y[image].ravel()
-        for coord in range(len(y)):
-            if y[coord]:
+        flat_array = Y[image].ravel()
+        for coord in range(len(flat_array)):
+            if flat_array[coord]:
                 P[i] = (image, coord)
                 i += 1
             U[j] = (image, coord)
             j += 1
-
     return P, U
 
+
 class ShuffledSampler(torch.utils.data.sampler.Sampler):
-    def __init__(self, x, random=np.random):
+    def __init__(self, x:np.ndarray, random=np.random):
         self.x = x
         self.random = random
         self.i = len(self.x)
@@ -68,6 +64,7 @@ class ShuffledSampler(torch.utils.data.sampler.Sampler):
 
     def __next__(self):
         if self.i >= len(self.x):
+            #if consumed entire array, shuffle and reset to beginning
             self.random.shuffle(self.x)
             self.i = 0
         sample = self.x[self.i]
@@ -79,6 +76,7 @@ class ShuffledSampler(torch.utils.data.sampler.Sampler):
 
     def __iter__(self):
         return self
+
 
 class StratifiedCoordinateSampler(torch.utils.data.sampler.Sampler):
     def __init__(self, labels, balance=0.5, size=None, random=np.random, split='pn'):
@@ -167,7 +165,8 @@ class StratifiedCoordinateSampler(torch.utils.data.sampler.Sampler):
 
 
 class RandomImageTransforms:
-    def __init__(self, data, rotate=True, flip=True, crop=None, resample=Image.BILINEAR, to_tensor=False):
+    def __init__(self, data:LabeledImageCropDataset, rotate:bool=True, flip:bool=True, crop:bool=None,
+                 resample:Image.Resampling=Image.BILINEAR, to_tensor:bool=False):
         self.data = data
         self.rotate = rotate
         self.flip = flip
@@ -223,11 +222,3 @@ class RandomImageTransforms:
                 Y = torch.from_numpy(np.array(Y, copy=False)).float()
 
         return X, Y
-
-
-
-
-
-        
-
-
