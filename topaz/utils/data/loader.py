@@ -39,12 +39,14 @@ class ImageDirectoryLoader:
                 image = (image - image.mean())/image.std()
         return Image.fromarray(image)
 
+
 class ImageTree:
     def __init__(self, images):
         self.images = images
 
     def get(self, source, name):
         return self.images[source][name]
+
 
 def load_mrc(path:str, standardize:bool=False) -> Tuple[np.ndarray, Any, Any]:
     with open(path, 'rb') as f:
@@ -57,6 +59,7 @@ def load_mrc(path:str, standardize:bool=False) -> Tuple[np.ndarray, Any, Any]:
         image /= header.rms
     return image, header, extended_header
 
+
 def load_tiff(path:str, standardize:bool=False) -> np.ndarray:
     image = Image.open(path)
     fp = image.fp
@@ -66,6 +69,7 @@ def load_tiff(path:str, standardize:bool=False) -> np.ndarray:
     if standardize:
         image = (image - image.mean())/image.std()
     return image
+
 
 def load_png(path:str, standardize:bool=False) -> np.ndarray:
     from topaz.utils.image import unquantize
@@ -79,6 +83,7 @@ def load_png(path:str, standardize:bool=False) -> np.ndarray:
         x = (x - x.mean())/x.std()
     return image
 
+
 def load_jpeg(path:str, standardize:bool=False) -> np.ndarray:
     from topaz.utils.image import unquantize
     image = Image.open(path)
@@ -91,12 +96,14 @@ def load_jpeg(path:str, standardize:bool=False) -> np.ndarray:
         x = (x - x.mean())/x.std()
     return image
 
+
 def load_pil(path:str, standardize=False):
     if path.endswith('.png'):
         return load_png(path, standardize=standardize)
     elif path.endswith('.jpeg') or path.endswith('.jpg'):
         return load_jpeg(path, standardize=standardize)
     return load_tiff(path, standardize=standardize)
+
 
 def load_image(path:str, standardize:bool=False, make_image:bool=True) -> Union[Union[np.ndarray,Image.Image], Tuple[Union[np.ndarray, Image.Image], Any, Any]]:
     '''Utility for reading images and tomograms of various formats. Includes header and extended header when available for mrc files. 
@@ -108,6 +115,7 @@ def load_image(path:str, standardize:bool=False, make_image:bool=True) -> Union[
     image, header, extended_header = data if type(data) == tuple else data, None, None
     image = Image.fromarray(image) if make_image else image
     return (image,header,extended_header) if header else image
+
 
 def load_images_from_directory(names:List[str], rootdir:str, sources:List[Any]=None, standardize:bool=False, 
                                as_images:bool=True) -> Union[Dict[str,str], Dict[Any,Dict[str,str]]]:
@@ -181,12 +189,12 @@ class LabeledRegionsDataset:
 
 
 class LabeledImageCropDataset:
-    def __init__(self, images, labels, crop):
+    def __init__(self, images:List[Union[Image.Image, np.ndarray]], labels:List[np.ndarray], crop:int):
         self.images = images
         self.labels = labels
         self.crop = crop
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx:int):
         # decode the hash...
         h = idx
 
@@ -197,8 +205,6 @@ class LabeledImageCropDataset:
         h = h - i*2**32
 
         coord = h
-
-        #g, (i, coord) = idx
 
         im = self.images[g][i]
         L = torch.from_numpy(self.labels[g][i].ravel()).unsqueeze(1)
@@ -214,6 +220,7 @@ class LabeledImageCropDataset:
         im = im.crop((xmi, ymi, xma, yma))
 
         return im, label
+
 
 class SegmentedImageDataset:
     def __init__(self, images, labels, to_tensor=False):
@@ -238,13 +245,3 @@ class SegmentedImageDataset:
             label = torch.from_numpy(np.array(label, copy=False)).float()
 
         return im, label
-
-
-
-
-
-
-
-
-
-

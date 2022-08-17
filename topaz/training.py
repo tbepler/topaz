@@ -5,20 +5,31 @@ import glob
 import multiprocessing as mp
 import os
 import sys
-from typing import List, Tuple, Union
+from typing import List, Literal, Tuple, Union
 
 import numpy as np
 import pandas as pd
 from PIL import Image
 
+import topaz.methods as methods
+import topaz.model.classifier as C
+import topaz.utils.data.partition
 import topaz.utils.files as file_utils
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from topaz.metrics import average_precision
+from topaz.model.factory import get_feature_extractor, load_model
+from topaz.model.generative import ConvGenerator
 from topaz.stats import calculate_pi
 from topaz.utils.data.coordinates import match_coordinates_to_images
-from topaz.utils.data.loader import load_images_from_list
+from topaz.utils.data.loader import (LabeledImageCropDataset,
+                                     SegmentedImageDataset,
+                                     load_images_from_list)
+from topaz.utils.data.sampler import (RandomImageTransforms,
+                                      StratifiedCoordinateSampler)
 from topaz.utils.printing import report
+from torch.utils.data.dataloader import DataLoader
 
 
 def match_images_targets(images:dict, targets:pd.DataFrame, radius:float, dims:int=2) \
@@ -126,39 +137,13 @@ def check_particle_image_bounds(images:pd.DataFrame, targets:pd.DataFrame, dims=
         print(output, file=sys.stderr)
 
 
-def make_traindataset(X, Y, crop):
-    from topaz.utils.data.loader import LabeledImageCropDataset
-    from topaz.utils.data.sampler import RandomImageTransforms
-    
-    size = int(np.ceil(crop*np.sqrt(2)))
-    if size % 2 == 0:
-        size += 1
-    dataset = LabeledImageCropDataset(X, Y, size)
-    transformed = RandomImageTransforms(dataset, crop=crop, to_tensor=True)
-
+def make_traindataset(X:List[Union[Image.Image, np.ndarray]], Y:List[np.ndarray], crop:int) -> RandomImageTransforms:
+    '''Extract and augment (via rotation, mirroring, and cropping) crops from the input arrays.'''
+    size = int(np.ceil(crop*np.sqrt(2))) #multiply square side by hypotenuse to ensure rotations dont remove corners
+    size += 1 if size % 2 == 0 else 0
+    dataset = LabeledImageCropDataset(X, Y, size) #TODO:make 3D
+    transformed = RandomImageTransforms(dataset, crop=crop, to_tensor=True) #TODO:make 3D
     return transformed
-
-
-def make_trainiterator(dataset, minibatch_size, epoch_size, balance=0.5, num_workers=0):
-    """ epoch_size in data points not minibatches """
-
-    from topaz.utils.data.sampler import StratifiedCoordinateSampler
-    from torch.utils.data.dataloader import DataLoader
-
-    labels = dataset.labels
-    sampler = StratifiedCoordinateSampler(labels, size=epoch_size, balance=balance)
-    loader = DataLoader(dataset, batch_size=minibatch_size, sampler=sampler
-                       , num_workers=num_workers)
-
-    return loader
-
-
-def make_testdataset(X, Y):
-    from topaz.utils.data.loader import SegmentedImageDataset
-
-    dataset = SegmentedImageDataset(X, Y, to_tensor=True)
-
-    return dataset
 
 
 def calculate_positive_fraction(targets):
@@ -170,9 +155,7 @@ def calculate_positive_fraction(targets):
     return np.mean(per_source)
 
 
-def cross_validation_split(k, fold, images, targets, random=np.random):
-    import topaz.utils.data.partition
-
+def cross_validation_split(k:int, fold:int, images:List[Union[Image.Image, np.ndarray]], targets:List[np.ndarray], random=np.random):
     ## calculate number of positives per image for stratified split
     source = []
     index = []
@@ -207,15 +190,15 @@ def cross_validation_split(k, fold, images, targets, random=np.random):
     return train_images, train_targets, test_images, test_targets
 
 
-def load_data(train_images:str, train_targets:str, test_images:str, test_targets:str, radius:float, k_fold:int=0, fold:int=0, 
+def load_data(train_images_path:str, train_targets_path:str, test_images_path:str, test_targets_path:str, radius:float, k_fold:int=0, fold:int=0, 
               cross_validation_seed:int=42, format_:str='auto', image_ext:str='', as_images:bool=True, dims:int=2):
     '''Load training and testing (if available) images and picked particles. May split training data for cross-validation if no testing data are given.'''
     #load training images and target particles
-    train_images, train_targets = load_image_set(train_images, train_targets, image_ext=image_ext, radius=radius, 
+    train_images, train_targets = load_image_set(train_images_path, train_targets_path, image_ext=image_ext, radius=radius, 
                                                  format_=format_, as_images=as_images, mode='training', dims=dims)
     #load test images and target particles or split training
     if test_images is not None:
-        test_images, test_targets = load_image_set(test_images, test_targets, image_ext=image_ext, radius=radius, 
+        test_images, test_targets = load_image_set(test_images_path, test_targets_path, image_ext=image_ext, radius=radius, 
                                                    format_=format_, as_images=as_images, mode='test', dims=dims)
     elif k_fold > 1:
         ## seed for partitioning the data
@@ -253,9 +236,6 @@ def report_data_stats(train_images, train_targets, test_images, test_targets):
 
 
 def make_model(args):
-    import topaz.model.classifier as C
-    from topaz.model.factory import get_feature_extractor
-
     report('Loading model:', args.model)
     if args.model.endswith('.sav'): # loading pretrained model
         model = torch.load(args.model)
@@ -285,7 +265,6 @@ def make_model(args):
             flag = 'resnet16_u64'
 
     if flag is not None:
-        from topaz.model.factory import load_model
         report('Loading pretrained model:', flag)
         classifier = load_model(flag)
         classifier.train()
@@ -297,7 +276,6 @@ def make_model(args):
     ## if the method is generative, create the generative model as well
     generative = None
     if args.autoencoder > 0:
-        from topaz.model.generative import ConvGenerator
         ngf = args.ngf
         depth = int(np.log2(classifier.width+1)-3)
         generative = ConvGenerator(classifier.latent_dim, units=ngf, depth=depth)
@@ -313,8 +291,6 @@ def make_model(args):
 def make_training_step_method(classifier, num_positive_regions, positive_fraction
                              , lr=1e-3, l2=0, method='GE-binomial', pi=0, slack=-1
                              , autoencoder=0):
-    import topaz.methods as methods
-
     criteria = nn.BCEWithLogitsLoss()
     optim = torch.optim.Adam
 
@@ -327,10 +303,9 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
     if pi <= p_observed and method in ['GE-KL', 'GE-binomial']:
         # if pi <= p_observed, then we think the unlabeled data is all negatives
         # report this to the user and switch method to 'PN' if it isn't already
-        print('WARNING: pi={} but the observed fraction of positives is {} and method is set to {}.'.format(pi, p_observed, method)
-             , file=sys.stderr) 
-        print('WARNING: setting method to PN with pi={} instead.'.format(p_observed), file=sys.stderr)
-        print('WARNING: if you meant to use {}, please set pi > {}.'.format(method, p_observed), file=sys.stderr)
+        print(f'WARNING: pi={pi} but the observed fraction of positives is {p_observed} and method is set to {method}.', file=sys.stderr) 
+        print(f'WARNING: setting method to PN with pi={p_observed} instead.', file=sys.stderr)
+        print(f'WARNING: if you meant to use {method}, please set pi > {p_observed}.', file=sys.stderr)
         pi = p_observed
         method = 'PN'
     elif method in ['GE-KL', 'GE-binomial']:
@@ -339,8 +314,7 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
     split = 'pn'
     if method == 'PN':
         optim = optim(classifier.parameters(), lr=lr)
-        trainer = methods.PN(classifier, optim, criteria, pi=pi, l2=l2
-                            , autoencoder=autoencoder)
+        trainer = methods.PN(classifier, optim, criteria, pi=pi, l2=l2, autoencoder=autoencoder)
 
     elif method == 'GE-KL':
         if slack < 0:
@@ -352,10 +326,7 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
         if slack < 0:
             slack = 1
         optim = optim(classifier.parameters(), lr=lr)
-        trainer = methods.GE_binomial(classifier, optim, criteria, pi
-                                     , l2=l2, slack=slack
-                                     , autoencoder=autoencoder
-                                     )
+        trainer = methods.GE_binomial(classifier, optim, criteria, pi, l2=l2, slack=slack, autoencoder=autoencoder)
 
     elif method == 'PU':
         split = 'pu'
@@ -368,49 +339,32 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
     return trainer, criteria, split
 
 
-def make_data_iterators(train_images, train_targets, test_images, test_targets
-                       , crop, split, args):
-    from topaz.utils.data.sampler import StratifiedCoordinateSampler
-    from torch.utils.data.dataloader import DataLoader
-
+def make_data_iterators(train_images:List[Union[Image.Image,np.ndarray]], train_targets:List[np.ndarray], 
+                        test_images:List[Union[Image.Image,np.ndarray]], test_targets:List[np.ndarray], 
+                        crop:int, split:Literal['pn','pu'], args):
     ## training parameters
     minibatch_size = args.minibatch_size
     epoch_size = args.epoch_size
     num_epochs = args.num_epochs
-    num_workers = args.num_workers
-    if num_workers < 0: # set num workers to use all CPUs
-        num_workers = mp.cpu_count()
-
+    num_workers = mp.cpu_count() if num_workers < 0 else args.num_workers # set num workers to use all CPUs 
     testing_batch_size = args.test_batch_size
-    balance = args.minibatch_balance # ratio of positive to negative in minibatch
-    if args.natural:
-        balance = None
-    report('minibatch_size={}, epoch_size={}, num_epochs={}'.format(
-           minibatch_size, epoch_size, num_epochs))
+    balance = None if args.natural else args.minibatch_balance # ratio of positive to negative in minibatch
+    report(f'minibatch_size={minibatch_size}, epoch_size={epoch_size}, num_epochs={num_epochs}')
 
     ## create augmented training dataset
     train_dataset = make_traindataset(train_images, train_targets, crop)
-    test_dataset = None
-    if test_targets is not None:
-        test_dataset = make_testdataset(test_images, test_targets)
+    test_dataset = SegmentedImageDataset(test_images, test_targets, to_tensor=True) if test_targets is not None else None
 
     ## create minibatch iterators
     labels = train_dataset.data.labels
-    sampler = StratifiedCoordinateSampler(labels, size=epoch_size*minibatch_size
-                                         , balance=balance, split=split)
-    train_iterator = DataLoader(train_dataset, batch_size=minibatch_size, sampler=sampler
-                               , num_workers=num_workers)
-
-    test_iterator = None
-    if test_dataset is not None:
-        test_iterator = DataLoader(test_dataset, batch_size=testing_batch_size, num_workers=0)
-
+    sampler = StratifiedCoordinateSampler(labels, size=epoch_size*minibatch_size, balance=balance, split=split)
+    
+    train_iterator = DataLoader(train_dataset, batch_size=minibatch_size, sampler=sampler, num_workers=num_workers)
+    test_iterator = DataLoader(test_dataset, batch_size=testing_batch_size, num_workers=0) if test_dataset is not None else None
     return train_iterator, test_iterator
 
 
 def evaluate_model(classifier, criteria, data_iterator, use_cuda=False):
-    from topaz.metrics import average_precision
-
     classifier.eval()
     classifier.fill()
 
