@@ -223,22 +223,29 @@ class LabeledImageCropDataset:
 
 
 class SegmentedImageDataset:
-    def __init__(self, images, labels, to_tensor=False):
+    """Container for images and targets, given as lists of lists of arrays. Can iterate over all backing data as if one iterable.
+    Supports any-dimensional arrays."""
+    def __init__(self, images:List[List[Union[Image.Image,np.ndarray]]], labels:List[List[Union[Image.Image,np.ndarray]]], to_tensor:bool=False):
         self.images = images
         self.labels = labels
-        self.size = sum(len(g) for g in images)
+        # images will be grouped according to their 'source', sum across all sources
+        self.size = sum(len(image_group) for image_group in images)
         self.to_tensor = to_tensor
 
     def __len__(self):
         return self.size
 
     def __getitem__(self, i):
-        j = 0
-        while i >= len(self.images[j]):
-            i -= len(self.images[j])
-            j += 1
-        im = self.images[j][i]
-        label = self.labels[j][i]
+        if i >= self.size:
+            raise IndexError(f'index {i} out of range for dataset of size {self.size}')
+        group_idx = 0
+        while i >= len(self.images[group_idx]):
+            #if index larger than current image list, move to next list and decrease index
+            #allows iterating over stored list of lists as a single list object 
+            i -= len(self.images[group_idx]) 
+            group_idx += 1
+        im = self.images[group_idx][i]
+        label = self.labels[group_idx][i]
 
         if self.to_tensor:
             im = torch.from_numpy(np.array(im, copy=False))
