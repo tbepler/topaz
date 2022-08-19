@@ -40,7 +40,7 @@ def match_coordinates_to_images(coords:pd.DataFrame, images:dict, radius:float=-
         Dict[Any,Dict[str,Tuple[Union[Image.Image, np.ndarray],np.ndarray]]]]:
     """If radius >= 0, convert point coordinates to mask of circles/spheres."""
     nested = ('source' in coords)
-    coords = coordinates_table_to_dict(coords)
+    coords = coordinates_table_to_dict(coords, dims=dims)
     null_coords = np.zeros((0,dims), dtype=np.int32)
 
     matched = {}
@@ -52,19 +52,14 @@ def match_coordinates_to_images(coords:pd.DataFrame, images:dict, radius:float=-
             for name in this_images.keys():
                 im = this_images[name]
                 xy = this_coords.get(name, null_coords)
-                xy = make_coordinate_mask(xy, radius) # make coord points into mask
+                xy = make_coordinate_mask(im, xy, radius) # make coord points into mask
                 this_matched[name] = (im,xy)
     else:
         for name in images.keys():
             im = images[name]
             xy = coords.get(name, null_coords)
-            xy = make_coordinate_mask(xy, radius)
+            xy = make_coordinate_mask(im, xy, radius)
             matched[name] = (im,xy)
 
     return matched 
     
-
-
-
-
-
