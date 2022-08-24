@@ -189,10 +189,11 @@ class LabeledRegionsDataset:
 
 
 class LabeledImageCropDataset:
-    def __init__(self, images:List[Union[Image.Image, np.ndarray]], labels:List[np.ndarray], crop:int):
+    def __init__(self, images:List[List[Union[Image.Image, np.ndarray]]], labels:List[List[np.ndarray]], crop:int, dims=2):
         self.images = images
         self.labels = labels
         self.crop = crop
+        self.dims = dims
 
     def __getitem__(self, idx:int):
         # decode the hash...
@@ -207,18 +208,49 @@ class LabeledImageCropDataset:
         coord = h
 
         im = self.images[g][i]
+        
+        # flattened torch.Tensor of shape (size,1)
         L = torch.from_numpy(self.labels[g][i].ravel()).unsqueeze(1)
-        label = L[coord].float()
+        label = L[coord].float() # label value at center of crop
 
-        ## crop the image
-        x = coord % im.width
-        y = coord // im.width
+        # ensure numpy style indexing
+        shape = im.size[::-1] if type(im) == Image.Image else im.shape
+        height, width = shape[0], shape[1]
+        depth = shape[2] if self.dims == 3 else None
+            
+        ## locate appropriate image coordinates
+        x = coord % width
+        y = coord // width
+        # TODO: WHAT TO DO ABOUT THE HASH WITH 3RD DIM
+        z = width // 2 if self.dims == 3 else None
+        
         xmi = x - self.crop//2
         xma = xmi + self.crop
         ymi = y - self.crop//2
         yma = ymi + self.crop
-        im = im.crop((xmi, ymi, xma, yma))
-
+        if z is not None:
+            zmi = z - self.crop//2
+            zma = zmi + self.crop
+        
+        ## crop the image        
+        if type(im) == Image.Image:
+            im = im.crop((xmi, ymi, xma, yma))
+            
+        elif type(im) == np.ndarray and self.dims==2:
+            pads = ((abs(min(0,ymi)), abs(min(0,height-yma))), #1st dim paddings
+                    (abs(min(0,xmi)), abs(min(0,width-xma)))) #2nd dim paddings
+            
+            im = im[max(0,ymi):yma, max(0,xmi):xma] #crop first to preserve indices
+            im = np.pad(im, pads)
+            
+        elif type(im) == np.ndarray and self.dims==3:
+            pads = ((abs(min(0,ymi)), abs(min(0,height-yma))), #1st dim paddings
+                    (abs(min(0,xmi)), abs(min(0,width-xma))), #2nd dim paddings
+                    (abs(min(0,zmi)), abs(min(0,depth-zma)))) #3rd dim paddings
+            
+            im = im[max(0,ymi):yma, max(0,xmi):xma, max(0,zmi):zma] #crop first to preserve indices
+            im = np.pad(im, pads)
+            
         return im, label
 
 
