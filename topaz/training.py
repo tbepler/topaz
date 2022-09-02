@@ -33,10 +33,10 @@ from torch.utils.data.dataloader import DataLoader
 
 
 def match_images_targets(images:dict, targets:pd.DataFrame, radius:float, dims:int=2) \
-    -> Tuple[List[Union[Image.Image,np.ndarray]], List[np.ndarray]]:
-    '''Given names mapped to images and a DataFrame of coordinates, 
-    returns coordinates as mask of the same shape as corresponding image.'''
-    matched = match_coordinates_to_images(targets, images, radius=radius, dims=2)
+    -> Tuple[List[List[Union[Image.Image,np.ndarray]]], List[List[np.ndarray]]]:
+    '''Given names mapped to images and a DataFrame of coordinates, returns coordinates as mask of the same shape 
+    as corresponding image. Returns lists of lists of arrays, each list of arrays corresponding to an input source.'''
+    matched = match_coordinates_to_images(targets, images, radius=radius, dims=dims)
     ## unzip into matched lists
     images = []
     targets = []
@@ -63,7 +63,7 @@ def filter_targets_missing_images(images:pd.DataFrame, targets:pd.DataFrame, mod
 
 
 def load_image_set(images_path, targets_path, image_ext, radius, format_, as_images=True, mode='training', 
-                   dims=2) -> Tuple[List[Union[Image.Image,np.ndarray]], List[np.ndarray]]:
+                   dims=2) -> Tuple[List[List[Union[Image.Image,np.ndarray]]], List[List[np.ndarray]]]:
     # if train_images is a directory path, map to all images in the directory
     if os.path.isdir(images_path):
         paths = glob.glob(images_path + os.sep + '*' + image_ext)
@@ -77,7 +77,6 @@ def load_image_set(images_path, targets_path, image_ext, radius, format_, as_ima
         images = pd.DataFrame({'image_name': image_names, 'path': valid_paths})
     else:
         images = pd.read_csv(images_path, sep='\t') # training image file list
-    #train_targets = pd.read_csv(train_targets, sep='\t') # training particle coordinates file
     targets = file_utils.read_coordinates(targets_path, format=format_)
 
     # check for source columns
@@ -137,12 +136,12 @@ def check_particle_image_bounds(images:pd.DataFrame, targets:pd.DataFrame, dims=
         print(output, file=sys.stderr)
 
 
-def make_traindataset(X:List[Union[Image.Image, np.ndarray]], Y:List[np.ndarray], crop:int) -> RandomImageTransforms:
+def make_traindataset(X:List[List[Union[Image.Image, np.ndarray]]], Y:List[List[np.ndarray]], crop:int, dims:int=2) -> RandomImageTransforms:
     '''Extract and augment (via rotation, mirroring, and cropping) crops from the input arrays.'''
     size = int(np.ceil(crop*np.sqrt(2))) #multiply square side by hypotenuse to ensure rotations dont remove corners
     size += 1 if size % 2 == 0 else 0
-    dataset = LabeledImageCropDataset(X, Y, size) #TODO:make 3D
-    transformed = RandomImageTransforms(dataset, crop=crop, to_tensor=True) #TODO:make 3D
+    dataset = LabeledImageCropDataset(X, Y, size, dims=dims)
+    transformed = RandomImageTransforms(dataset, crop=crop, dims=dims)
     return transformed
 
 
@@ -339,9 +338,9 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
     return trainer, criteria, split
 
 
-def make_data_iterators(train_images:List[Union[Image.Image,np.ndarray]], train_targets:List[np.ndarray], 
-                        test_images:List[Union[Image.Image,np.ndarray]], test_targets:List[np.ndarray], 
-                        crop:int, split:Literal['pn','pu'], args):
+def make_data_iterators(train_images:List[List[Union[Image.Image,np.ndarray]]], train_targets:List[List[np.ndarray]], 
+                        test_images:List[List[Union[Image.Image,np.ndarray]]], test_targets:List[List[np.ndarray]], 
+                        crop:int, split:Literal['pn','pu'], args, dims:int=2):
     ## training parameters
     minibatch_size = args.minibatch_size
     epoch_size = args.epoch_size
@@ -352,7 +351,7 @@ def make_data_iterators(train_images:List[Union[Image.Image,np.ndarray]], train_
     report(f'minibatch_size={minibatch_size}, epoch_size={epoch_size}, num_epochs={num_epochs}')
 
     ## create augmented training dataset
-    train_dataset = make_traindataset(train_images, train_targets, crop)
+    train_dataset = make_traindataset(train_images, train_targets, crop, dims=dims)
     test_dataset = SegmentedImageDataset(test_images, test_targets, to_tensor=True) if test_targets is not None else None
 
     ## create minibatch iterators
@@ -452,7 +451,7 @@ def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator,
                 classifier.cuda()
 
 
-def train_model(classifier, train_images, train_targets, test_images, test_targets, use_cuda, save_prefix, output, args):
+def train_model(classifier, train_images, train_targets, test_images, test_targets, use_cuda, save_prefix, output, args, dims:int=2):
     num_positive_regions, total_regions = report_data_stats(train_images, train_targets, test_images, test_targets)
 
     ## make the training step method
@@ -478,7 +477,7 @@ def train_model(classifier, train_images, train_targets, test_images, test_targe
     ## training parameters
     train_iterator,test_iterator = make_data_iterators(train_images, train_targets,
                                                        test_images, test_targets,
-                                                       classifier.width, split, args)
+                                                       classifier.width, split, args, dims=dims)
 
     fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs,
                save_prefix=save_prefix, use_cuda=use_cuda, output=output)
