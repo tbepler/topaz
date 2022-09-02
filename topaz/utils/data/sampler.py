@@ -201,14 +201,15 @@ class RandomImageTransforms:
                 rot_mat = torch.cat((rot_mat, torch.zeros(3,1)), axis=1) #append zero translation vector
                 rot_mat = rot_mat[None,...].type(torch.FloatTensor) #add singleton batch dimension
                 #grid is shape N x C x D x H x W
-                grid = F.affine_grid(rot_mat, X.shape, align_corners=False).type(torch.FloatTensor) 
-                X = F.grid_sample(X, grid, align_corners=False)
-                Y = F.grid_sample(Y, grid, align_corners=False) if Y.numel() > 1 else Y
+                grid_shape = (1,1) + X.shape
+                grid = F.affine_grid(rot_mat, grid_shape, align_corners=False).type(torch.FloatTensor) 
+                X = F.grid_sample(X[None,None,...], grid, align_corners=False).squeeze()
+                Y = F.grid_sample(Y[None,None,...], grid, align_corners=False).squeeze() if Y.numel() > 1 else Y
 
         ## crop down (to model's receptive field) if requested
         if self.crop is not None:
             from topaz.utils.image import crop_image
-            height,width,depth = X.size if self.dims == 3 else (X.size[0], X.size[1], None)
+            height,width,depth = X.shape if self.dims == 3 else (X.shape[0], X.shape[1], None)
             xmi = (width-self.crop)//2
             xma = xmi + self.crop
             ymi = (height-self.crop)//2
