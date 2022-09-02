@@ -1,12 +1,35 @@
 from __future__ import division, print_function
 
-import numpy as np
-from PIL import Image
 import os
 import sys
+from typing import Union
 
+import numpy as np
 import topaz.mrc as mrc
+import torch
+from PIL import Image
 from topaz.utils.data.loader import load_image
+
+
+def crop_image(arr:Union[np.ndarray,torch.Tensor], xmin:int, xmax:int, ymin:int, ymax:int, 
+               zmin:int=None, zmax:int=None) -> torch.Tensor:
+    """PIL-style cropping. Supports 3D arrays. 0-pads out-of-bounds indices."""
+    #convert input to torch Tensor to use torch.nn.functional padding (np.ndarray fails)
+    arr = torch.Tensor(arr)
+    #calculate necessary padding
+    height,width,depth = arr.shape if zmin else (arr.shape[0], arr.shape[1], None)
+    if depth:
+        pads = (abs(min(0,zmin)), abs(min(0,depth-zmax)), #3rd (last) dim before,after
+                abs(min(0,xmin)), abs(min(0,width-xmax)), #2nd (2nd last) dim
+                abs(min(0,ymin)), abs(min(0,height-ymax))) #1st 
+        #crop first to preserve indices 
+        arr = arr[max(0,ymin):ymax, max(0,xmin):xmax, max(0,zmin):zmax]
+    else:
+        pads = (abs(min(0,xmin)), abs(min(0,width-xmax)),
+                abs(min(0,ymin)), abs(min(0,height-ymax)))
+        arr = arr[max(0,ymin):ymax, max(0,xmin):xmax]
+    arr = torch.nn.functional.pad(arr, pads) #pads last dimension to first
+    return arr
 
 
 def downsample(x, factor=1, shape=None):
