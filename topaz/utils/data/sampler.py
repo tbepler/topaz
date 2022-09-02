@@ -1,39 +1,46 @@
 from __future__ import division, print_function
 
 import os
-from typing import List, Tuple
+from typing import List, Literal, Tuple
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 import torch.utils.data
 from PIL import Image
+from scipy.spatial.transform import Rotation
 from topaz.utils.data.loader import LabeledImageCropDataset
+from torchvision.transforms.functional import rotate as rotate2d
 
 
 def enumerate_pn_coordinates(Y:List[np.ndarray]) -> Tuple[np.ndarray,np.ndarray]:
-    """Given a list of arrays containing labels, enumerate the positive and negative coordinates as (image,coordinate) pairs."""
+    """Given a list of arrays containing pixel labels, enumerate the positive,negative coordinates as 
+    (index of array within list, index of coordinate within flattened array) pairs."""
     P_size = int(sum(array.sum() for array in Y)) # number of positive coordinates
     N_size = sum(array.size for array in Y) - P_size # number of negative coordinates
 
+    #initialize arrays of shape (P_size,) and (N_size,) respectively
     P = np.zeros(P_size, dtype=[('image', np.uint32), ('coord', np.uint32)])
     N = np.zeros(N_size, dtype=[('image', np.uint32), ('coord', np.uint32)])
 
     i = 0 # P index
     j = 0 # N index
-    for image in range(len(Y)):
-        flat_array = Y[image].ravel()
-        for coord in range(len(flat_array)):
-            if flat_array[coord]:
-                P[i] = (image, coord)
+    for image_idx in range(len(Y)):
+        flat_array = Y[image_idx].ravel()
+        for coord_idx in range(len(flat_array)):
+            if flat_array[coord_idx]:
+                P[i] = (image_idx, coord_idx)
                 i += 1
             else:
-                N[j] = (image, coord)
+                #N only accumulates 0/False coordinate pairs
+                N[j] = (image_idx, coord_idx)
                 j += 1
     return P, N
 
 
 def enumerate_pu_coordinates(Y:List[np.ndarray]) -> Tuple[np.ndarray,np.ndarray]:
-    """Given a list of arrays containing labels, enumerate the positive and unlabeled(all) coordinates as (image,coordinate) pairs."""
+    """Given a list of arrays containing pixel labels, enumerate the positive,unlabeled(all) coordinates as 
+    (index of array within list, index of coordinate within flattened array) pairs."""
     P_size = int(sum(array.sum() for array in Y)) # number of positive coordinates
     size = sum(array.size for array in Y)
 
@@ -42,18 +49,21 @@ def enumerate_pu_coordinates(Y:List[np.ndarray]) -> Tuple[np.ndarray,np.ndarray]
 
     i = 0 # P index
     j = 0 # U index
-    for image in range(len(Y)):
-        flat_array = Y[image].ravel()
-        for coord in range(len(flat_array)):
-            if flat_array[coord]:
-                P[i] = (image, coord)
+    for image_idx in range(len(Y)):
+        flat_array = Y[image_idx].ravel()
+        for coord_idx in range(len(flat_array)):
+            if flat_array[coord_idx]:
+                P[i] = (image_idx, coord_idx)
                 i += 1
-            U[j] = (image, coord)
+            # U accumulates all image,coord pairs
+            U[j] = (image_idx, coord_idx)
             j += 1
     return P, U
 
 
 class ShuffledSampler(torch.utils.data.sampler.Sampler):
+    '''Class for repeatedly shuffling and yielding from an array.
+    WARNING: never returns None/StopIteration, do not attempt to convert to iterable.'''
     def __init__(self, x:np.ndarray, random=np.random):
         self.x = x
         self.random = random
@@ -79,41 +89,32 @@ class ShuffledSampler(torch.utils.data.sampler.Sampler):
 
 
 class StratifiedCoordinateSampler(torch.utils.data.sampler.Sampler):
-    def __init__(self, labels, balance=0.5, size=None, random=np.random, split='pn'):
+    def __init__(self, labels:List[List[np.ndarray]], balance:float=0.5, size:int=None, random=np.random, split:Literal['pn', 'pu']='pn'):
 
         groups = []
         weights = np.zeros(len(labels)*2)
         proportions = np.zeros((len(labels), 2))
         i = 0
+        enum_method = enumerate_pn_coordinates if split == 'pn' else enumerate_pu_coordinates
         for group in labels:
+            P,other = enum_method(group) #other is set of negatives if PN method, else unlabeled 
+            P,other = ShuffledSampler(P, random=random), ShuffledSampler(other, random=random)
+            groups.append(P)
+            groups.append(other)      
             if split == 'pn':
-                P,N = enumerate_pn_coordinates(group)
-                P = ShuffledSampler(P, random=random)
-                N = ShuffledSampler(N, random=random)
-                groups.append(P)
-                groups.append(N)
-
-                proportions[i//2,0] = len(N)/(len(N)+len(P))
-                proportions[i//2,1] = len(P)/(len(N)+len(P))
+                proportions[i//2,0] = len(other)/(len(other)+len(P))
+                proportions[i//2,1] = len(P)/(len(other)+len(P))
             elif split  == 'pu':
-                P,U = enumerate_pu_coordinates(group)
-                P = ShuffledSampler(P, random=random)
-                U = ShuffledSampler(U, random=random)
-                groups.append(P)
-                groups.append(U)
+                proportions[i//2,0] = (len(other) - len(P))/len(other)
+                proportions[i//2,1] = len(P)/len(other)
 
-                proportions[i//2,0] = (len(U) - len(P))/len(U)
-                proportions[i//2,1] = len(P)/len(U)
-
-            p = balance
-            if balance is None:
-                p = proportions[i//2,1]
+            p = balance if balance is not None else proportions[i//2,1]
             weights[i] = p/len(labels)
             weights[i+1] = (1-p)/len(labels)
             i += 2
 
         if size is None:
-            sizes = np.array([len(g) for g in groups])
+            sizes = np.array([len(g) for g in groups]) #number micrographs in 
             size = int(np.round(np.min(sizes/weights)))
 
         self.groups = groups
@@ -127,7 +128,7 @@ class StratifiedCoordinateSampler(torch.utils.data.sampler.Sampler):
     def __len__(self):
         return self.size
 
-    def __next__(self):
+    def __next__(self) -> int:
         n = self.history.sum()
         weights = self.weights
         if n > 0:
@@ -150,11 +151,10 @@ class StratifiedCoordinateSampler(torch.utils.data.sampler.Sampler):
         i = i//2
         j,c = sample
 
-        # code as integer
-        # unfortunate hack required because pytorch converts index to integer...
+        # code as integer; unfortunate hack required because pytorch converts index to integer...
+        # allows storage of 3 integers in one int object
         h = i*2**56 + j*2**32 + c
         return h
-        #return i//2, sample
 
     # for python 2.7 compatability
     next = __next__
@@ -165,60 +165,74 @@ class StratifiedCoordinateSampler(torch.utils.data.sampler.Sampler):
 
 
 class RandomImageTransforms:
-    def __init__(self, data:LabeledImageCropDataset, rotate:bool=True, flip:bool=True, crop:bool=None,
-                 resample:Image.Resampling=Image.BILINEAR, to_tensor:bool=False):
+    """Container and iterator for image/label crops. Applies selected augmentations. Returns Torch Tensors."""
+    def __init__(self, data:LabeledImageCropDataset, rotate:bool=True, flip:bool=True, crop:int=None,
+                 resample=Image.BILINEAR, dims=2):
         self.data = data
         self.rotate = rotate
         self.flip = flip
         self.crop = crop
         self.resample = resample
-        self.to_tensor = to_tensor
         self.seeded = False
+        self.dims = dims
 
     def __len__(self):
         return len(self.data)
 
-    def __getitem__(self, i):
+    def __getitem__(self, i:int):
         if not self.seeded:
             seed = (os.getpid()*31) % (2**32)
             self.random = np.random.RandomState(seed)
             self.seeded = True
 
-        X, Y = self.data[i]
+        X, Y = self.data[i] # torch Tensors
+        #below generally not used for training; Y should be 1D Tensor with 1 item
+        if type(Y) is Image.Image: 
+            Y = torch.from_numpy(np.array(Y, copy=False)).float()
 
         ## random rotation
         if self.rotate:
-            angle = self.random.uniform(0, 360)
-            X = X.rotate(angle, resample=self.resample)
-            if type(Y) is Image.Image:
-                Y = Y.rotate(angle, resmaple=Image.NEAREST)
+            if self.dims == 2:
+                angle = self.random.uniform(0, 360)
+                X = rotate2d(X, angle)
+                Y = rotate2d(Y, angle) if Y.numel() > 1 else Y
+            elif self.dims == 3:
+                rot_mat = torch.Tensor(Rotation.random().as_matrix()) # 3x3
+                rot_mat = torch.cat((rot_mat, torch.zeros(3,1)), axis=1) #append zero translation vector
+                rot_mat = rot_mat[None,...].type(torch.FloatTensor) #add singleton batch dimension
+                #grid is shape N x C x D x H x W
+                grid = F.affine_grid(rot_mat, X.shape, align_corners=False).type(torch.FloatTensor) 
+                X = F.grid_sample(X, grid, align_corners=False)
+                Y = F.grid_sample(Y, grid, align_corners=False) if Y.numel() > 1 else Y
 
-        ## crop down if requested
+        ## crop down (to model's receptive field) if requested
         if self.crop is not None:
-            width,height = X.size
+            from topaz.utils.image import crop_image
+            height,width,depth = X.size if self.dims == 3 else (X.size[0], X.size[1], None)
             xmi = (width-self.crop)//2
-            xma = xmi+self.crop
+            xma = xmi + self.crop
             ymi = (height-self.crop)//2
-            yma = ymi+self.crop
+            yma = ymi + self.crop
+            zmi, zma = None, None
+            if depth:
+                zmi = (depth - self.crop)//2
+                zma = zmi + self.crop
+            X = crop_image(X, xmi, xma, ymi, yma, zmi, zma)
+            Y = crop_image(Y, xmi, ymi, xma, yma, zmi, zma)  if Y.numel() > 1 else Y
             
-            X = X.crop((xmi,ymi,xma,yma))
-            if type(Y) is Image.Image:
-                Y = Y.crop((xmi,ymi,xma,yma))
-
         ## random mirror of the image
         if self.flip:
             if self.random.uniform() > 0.5:
-                X = X.transpose(Image.FLIP_LEFT_RIGHT)
-                if type(Y) is Image.Image:
-                    Y = Y.transpose(Image.FLIP_LEFT_RIGHT)
+                #flip first dimension (Y axis)
+                X = X.flipud()
+                Y = Y.flipud() if len(Y.shape) >= 2 else Y 
             if self.random.uniform() > 0.5:
-                X = X.transpose(Image.FLIP_TOP_BOTTOM)
-                if type(Y) is Image.Image:
-                    Y = Y.transpose(Image.FLIP_TOP_BOTTOM)
-
-        if self.to_tensor:
-            X = torch.from_numpy(np.array(X, copy=False))
-            if type(Y) is Image.Image:
-                Y = torch.from_numpy(np.array(Y, copy=False)).float()
+                #flip second dimension (X axis)
+                X = X.fliplr()
+                Y = Y.fliplr() if len(Y.shape) >= 2 else Y 
+            if self.dims == 3 and self.random.uniform() > 0.5:
+                #flip third dimension (Z axis) if 3D
+                X = X.flip(2)
+                Y = Y.flip(2) if len(Y.shape) >= 3 else Y
 
         return X, Y
