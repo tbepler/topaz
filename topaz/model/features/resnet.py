@@ -206,7 +206,7 @@ class ResidA(nn.Module):
 # Sample architectures
 class ResNet(nn.Module):
     '''ResNet utility functions. Must be subclassed to define network architecture.'''
-    def __init__(self, dims=2, *args, **kwargs):
+    def __init__(self, dims=2, **kwargs):
         super(ResNet, self).__init__()
         self.dims = dims
 
