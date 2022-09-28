@@ -111,8 +111,10 @@ def load_image(path:str, standardize:bool=False, make_image:bool=True) -> Union[
     To load tomograms, ensure make_image=False.'''
     ## this might be more stable as path.endswith('.mrc')
     ext = os.path.splitext(path)[1]
+    
     data = load_mrc(path, standardize) if ext == '.mrc' else load_pil(path, standardize)
     image, header, extended_header = data if type(data) == tuple else data, None, None
+    
     image = Image.fromarray(image) if make_image else image
     return (image,header,extended_header) if header else image
 
@@ -145,10 +147,12 @@ def load_images_from_list(names:List[str], paths:List[str], sources:List[Any]=No
     if sources is not None:
         for source,name,path in zip(sources, names, paths):
             im = load_image(path, standardize=standardize, make_image=as_images)
+            im = im[0] if type(im) is tuple else im #remove mrc present headers
             images.setdefault(source, {})[name] = im
     else:
         for name,path in zip(names, paths):
             im = load_image(path, standardize=standardize, make_image=as_images)
+            im = im[0] if type(im) is tuple else im #remove mrc present headers
             images[name] = im
     return images
 

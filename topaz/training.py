@@ -196,7 +196,7 @@ def load_data(train_images_path:str, train_targets_path:str, test_images_path:st
     train_images, train_targets = load_image_set(train_images_path, train_targets_path, image_ext=image_ext, radius=radius, 
                                                  format_=format_, as_images=as_images, mode='training', dims=dims)
     #load test images and target particles or split training
-    if test_images is not None:
+    if test_images_path is not None:
         test_images, test_targets = load_image_set(test_images_path, test_targets_path, image_ext=image_ext, radius=radius, 
                                                    format_=format_, as_images=as_images, mode='test', dims=dims)
     elif k_fold > 1:
@@ -207,7 +207,10 @@ def load_data(train_images_path:str, train_targets_path:str, test_images_path:st
 
         n_train = sum(len(images) for images in train_images)
         n_test = sum(len(images) for images in test_images)
-        report('Split into {} train and {} test micrographs'.format(n_train, n_test))
+        report('Split into {} train and {} test micrographs'.format(n_train, n_test))       
+    else:
+        test_images, test_targets = None, None
+        
     return train_images, train_targets, test_images, test_targets
 
 
@@ -345,7 +348,7 @@ def make_data_iterators(train_images:List[List[Union[Image.Image,np.ndarray]]], 
     minibatch_size = args.minibatch_size
     epoch_size = args.epoch_size
     num_epochs = args.num_epochs
-    num_workers = mp.cpu_count() if num_workers < 0 else args.num_workers # set num workers to use all CPUs 
+    num_workers = mp.cpu_count() if args.num_workers < 0 else args.num_workers # set num workers to use all CPUs 
     testing_batch_size = args.test_batch_size
     balance = None if args.natural else args.minibatch_balance # ratio of positive to negative in minibatch
     report(f'minibatch_size={minibatch_size}, epoch_size={epoch_size}, num_epochs={num_epochs}')
@@ -429,13 +432,11 @@ def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator,
     for epoch in range(1,num_epochs+1):
         ## update the model
         classifier.train()
-        it = fit_epoch(step_method, train_iterator, epoch=epoch, it=it
-                      , use_cuda=use_cuda, output=output)
+        it = fit_epoch(step_method, train_iterator, epoch=epoch, it=it, use_cuda=use_cuda, output=output)
 
         ## measure validation performance
         if test_iterator is not None:
-            loss,precision,tpr,fpr,auprc = evaluate_model(classifier, criteria, test_iterator
-                                                         , use_cuda=use_cuda)
+            loss,precision,tpr,fpr,auprc = evaluate_model(classifier, criteria, test_iterator, use_cuda=use_cuda)
             line = '\t'.join([str(epoch), str(it), 'test', str(loss)] + ['-']*(len(header)-4) + [str(precision), str(tpr), str(fpr), str(auprc)])
             print(line, file=output)
             output.flush()
@@ -478,7 +479,7 @@ def train_model(classifier, train_images, train_targets, test_images, test_targe
     train_iterator,test_iterator = make_data_iterators(train_images, train_targets,
                                                        test_images, test_targets,
                                                        classifier.width, split, args, dims=dims)
-
+    
     fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs,
                save_prefix=save_prefix, use_cuda=use_cuda, output=output)
 
