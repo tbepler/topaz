@@ -170,9 +170,11 @@ def read_coordinates(path, format='auto'):
         box = read_box(path)
         image_name = os.path.basename(os.path.splitext(path)[0])
         particles = boxes_to_coordinates(box, image_name=image_name)
+    
     elif format == 'csv':
         # this is VIA CSV format
         particles = read_via_csv(path)
+    
     else: # default to coordiantes table format
         particles = pd.read_csv(path, sep='\t')
 

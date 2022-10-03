@@ -97,14 +97,24 @@ def main(args):
     from topaz.torch import set_num_threads
     set_num_threads(num_threads)
 
-    if args.describe: 
-        ## only print a description of the model and terminate
+    ## initialize the model
+    dims = 3
+    if args.model == 'resnet8':
+        feature_extractor = ResNet8(dims, pooling=args.pooling)
+    elif args.model == 'resnet16':
+        feature_extractor = ResNet16(dims, pooling=args.pooling)
+    else:
+        raise ValueError(f'Unsupported architecture: {args.model}. \
+            Current 3D support includes resnet8 and resnet16.')
+    classifier = LinearClassifier(feature_extractor, dims=3)
+    print('Model created') #width 71 pixels
+    if args.describe: ## print description of model and terminate
         print(classifier)
         sys.exit()
 
     ## set the device
     use_cuda = topaz.cuda.set_device(args.device)
-    report('Using device={} with cuda={}'.format(args.device, use_cuda))
+    report(f'Using device={args.device} with cuda={use_cuda}')
     if use_cuda:
         classifier.cuda()
         
@@ -112,22 +122,16 @@ def main(args):
     train_images, train_targets, test_images, test_targets = \
             load_data(args.train_images, args.train_targets, args.test_images, args.test_targets,
                       args.radius, format_=args.format_, k_fold=args.k_fold, fold=args.fold,
-                      cross_validation_seed=args.cross_validation_seed, image_ext=args.image_ext, as_images=False)
-            
-    ## initialize the model
-    if args.model == 'resnet8':
-        feature_extractor = ResNet8(args, dims=3)
-    elif args.model == 'resnet16':
-        feature_extractor = ResNet16(args, dims=3)
-    else:
-        raise ValueError(f'Unsupported architecture: {args.model}. Current 3D support includes resnet8 and resnet16.')
-    classifier = LinearClassifier(feature_extractor, dims=3)
-
+                      cross_validation_seed=args.cross_validation_seed, image_ext=args.image_ext, 
+                      as_images=False, dims=3)
+    
     ## fit the model, report train/test stats, save model if required
     output = sys.stdout if args.output is None else open(args.output, 'w')
     save_prefix = args.save_prefix
 
-    classifier = train_model(classifier, train_images, train_targets, test_images, test_targets, use_cuda, save_prefix, output, args)
+    print('Training...')
+    classifier = train_model(classifier, train_images, train_targets, test_images, test_targets, 
+                             use_cuda, save_prefix, output, args, dims=3)
     report('Done!')
     return classifier
 

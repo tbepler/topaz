@@ -111,6 +111,7 @@ class ResidA(nn.Module):
     def __init__(self, nin, nhidden, nout, dilation=1, stride=1, activation=nn.ReLU, bn=False, dims=2):
         super(ResidA, self).__init__()
 
+        self.dims = dims
         if dims == 2:
             conv = nn.Conv2d
             batch_norm = nn.BatchNorm2d
@@ -206,7 +207,7 @@ class ResidA(nn.Module):
 # Sample architectures
 class ResNet(nn.Module):
     '''ResNet utility functions. Must be subclassed to define network architecture.'''
-    def __init__(self, dims=2, *args, **kwargs):
+    def __init__(self, dims=2, **kwargs):
         super(ResNet, self).__init__()
         self.dims = dims
 
