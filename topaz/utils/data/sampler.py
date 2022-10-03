@@ -167,7 +167,7 @@ class StratifiedCoordinateSampler(torch.utils.data.sampler.Sampler):
 class RandomImageTransforms:
     """Container and iterator for image/label crops. Applies selected augmentations. Returns Torch Tensors."""
     def __init__(self, data:LabeledImageCropDataset, rotate:bool=True, flip:bool=True, crop:int=None,
-                 resample=Image.BILINEAR, dims=2):
+                 resample=Image.Resampling.BILINEAR, dims=2):
         self.data = data
         self.rotate = rotate
         self.flip = flip
