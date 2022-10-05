@@ -54,9 +54,10 @@ class LinearClassifier(nn.Module):
             z (np.ndarray): output of the classifer
         '''
         use_patches = top_level and self.patch_size and self.padding
-        exceeds_patch = all(size > self.patch_size for size in x.shape)
-        if use_patches and exceeds_patch:
-            y = self.classify_patches(x)
+        if use_patches:
+            exceeds_patch = all(size > self.patch_size for size in x.shape)
+            if exceeds_patch:
+                y = self.classify_patches(x)
         else:
             z = self.features(x)
             y = self.classifier(z)
