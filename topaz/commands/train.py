@@ -92,6 +92,8 @@ def add_arguments(parser=None):
     model.add_argument('--pooling', help='pooling method to use (default: none)')
     model.add_argument('--unit-scaling', default=2, type=int, help='scale the number of units up by this factor every pool/stride layer (default: 2)')
     model.add_argument('--ngf', default=32, type=int, help='scaled number of units per layer in generative model, only used if autoencoder > 0 (default: 32)')
+    model.add_argument('-s', '--patch-size', type=int, default=96, help='classify micrographs in patches of this size. not used if < 1 (default: 96)')
+    model.add_argument('-p', '--patch-padding', type=int, default=48, help='padding around each patch to remove edge artifacts (default: 48)')
 
     outputs = parser.add_argument_group('output file arguments (optional)')
     outputs.add_argument('--save-prefix', help='path prefix to save trained models each epoch')

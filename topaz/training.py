@@ -238,6 +238,7 @@ def report_data_stats(train_images, train_targets, test_images, test_targets):
 
 
 def make_model(args):
+    '''Load or create 2D models.'''
     report('Loading model:', args.model)
     if args.model.endswith('.sav'): # loading pretrained model
         model = torch.load(args.model)
@@ -273,7 +274,7 @@ def make_model(args):
     else:
         feature_extractor = get_feature_extractor(args.model, units, dropout=dropout, bn=bn
                                                  , unit_scaling=unit_scaling, pooling=pooling)
-        classifier = C.LinearClassifier(feature_extractor)
+        classifier = C.LinearClassifier(feature_extractor, dims=2, patch_size=args.patch_size, padding=args.patch_padding, batch_size=args.minibatch_size)
 
     ## if the method is generative, create the generative model as well
     generative = None
