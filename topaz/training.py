@@ -19,6 +19,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from topaz.metrics import average_precision
+from topaz.model.classifier import classify_patches
 from topaz.model.factory import get_feature_extractor, load_model
 from topaz.model.generative import ConvGenerator
 from topaz.stats import calculate_pi
@@ -102,6 +103,7 @@ def load_image_set(images_path, targets_path, image_ext, radius, format_, as_ima
 
     #convert targets to masks of the same shape as their image
     images, targets = match_images_targets(images, targets, radius, dims=dims)
+    report(f'Created target binary masks for {mode} micrographs.')
     return images, targets
 
 
@@ -136,13 +138,18 @@ def check_particle_image_bounds(images:pd.DataFrame, targets:pd.DataFrame, dims=
         print(output, file=sys.stderr)
 
 
-def make_traindataset(X:List[List[Union[Image.Image, np.ndarray]]], Y:List[List[np.ndarray]], crop:int, dims:int=2) -> RandomImageTransforms:
+def make_traindataset(X:List[List[Union[Image.Image, np.ndarray]]], Y:List[List[np.ndarray]], crop:int, 
+                      dims:int=2) -> Union[LabeledImageCropDataset, RandomImageTransforms]:
     '''Extract and augment (via rotation, mirroring, and cropping) crops from the input arrays.'''
     size = int(np.ceil(crop*np.sqrt(2))) #multiply square side by hypotenuse to ensure rotations dont remove corners
     size += 1 if size % 2 == 0 else 0
     dataset = LabeledImageCropDataset(X, Y, size, dims=dims)
-    transformed = RandomImageTransforms(dataset, crop=crop, dims=dims)
-    return transformed
+    if dims == 3: #don't augment 3D volumes
+        # transformed = RandomImageTransforms(dataset, crop=crop, dims=dims, flip=False, rotate=False)
+        return dataset
+    else:
+        transformed = RandomImageTransforms(dataset, crop=crop, dims=dims)
+        return transformed
 
 
 def calculate_positive_fraction(targets):
@@ -384,7 +391,8 @@ def evaluate_model(classifier, criteria, data_iterator, use_cuda=False):
                 X = X.cuda()
                 Y = Y.cuda()
 
-            score = classifier(X).view(-1)
+            # score = classifier(X).view(-1)
+            score = classify_patches(classifier, X, batch_size=data_iterator.batch_size).view(-1)
 
             scores.append(score.data.cpu().numpy())
             this_loss = criteria(score, Y).item()
