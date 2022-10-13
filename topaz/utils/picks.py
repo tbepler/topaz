@@ -13,28 +13,31 @@ from topaz.utils.image import downsample
 
 def as_mask(shape:Tuple[int], radii:List[float], x_coord:List[float], y_coord:List[float], z_coord:List[float]=None) -> np.ndarray:
     '''Given coordinates and bounding circle/sphere radii, return a binary mask about those points.'''
-    ygrid = np.arange(shape[0])
-    xgrid = np.arange(shape[1])
-    if z_coord is not None:
-        zgrid = np.arange(shape[2])
-        xgrid,ygrid,zgrid = np.meshgrid(xgrid, ygrid, zgrid, indexing='xy')
+    dims = 3 if z_coord is not None else 2
+    N = len(x_coord) #number of target coordinates
+
+    #expand dims for vectorization
+    x_coord = np.array(x_coord).reshape([1]*dims + [N]) 
+    y_coord = np.array(y_coord).reshape([1]*dims + [N])  
+
+    yrange = np.arange(shape[0])
+    xrange = np.arange(shape[1])
+    #create 2D or 3D meshgrids of all coordinates
+    if dims == 3:
+        z_coord = np.array(z_coord).reshape([1]*dims + [N])
+        zrange = np.arange(shape[2])
+        xgrid,ygrid,zgrid = np.meshgrid(xrange, yrange, zrange, indexing='xy')
+        zgrid = np.expand_dims(zgrid, axis=-1)
     else:
-        xgrid,ygrid = np.meshgrid(xgrid, ygrid, indexing='xy')
+        xgrid,ygrid = np.meshgrid(xrange, yrange, indexing='xy')
+    xgrid = np.expand_dims(xgrid, axis=-1)
+    ygrid = np.expand_dims(ygrid, axis=-1)
 
-    mask = np.zeros(shape, dtype=np.uint8)
-    for i in range(len(x_coord)):
-        x = x_coord[i]
-        y = y_coord[i]
-        z = z_coord[i] if z_coord is not None else None
-        radius = radii[i]
-        threshold = radius**2
-        
-        d2 = (xgrid - x)**2 + (ygrid - y)**2
-        d2 += (zgrid - z)**2 if z is not None else 0
-        mask += (d2 <= threshold)
-
-    mask = np.clip(mask, 0, 1)
-    return mask
+    #calculate distance tensor from each voxel to each target coordinate; X x Y x Z x N
+    d2 = (xgrid - x_coord)**2 + (ygrid - y_coord)**2
+    d2 += (zgrid - z_coord)**2 if dims == 3 else 0
+    mask = (d2 <= np.array(radii)**2).sum(axis=-1) #sum over particles w/in threshold radius, binarize
+    return np.clip(mask, 0, 1)
 
 
 def scale_coordinates(input_file:str, scale:float, output_file:str=None):
