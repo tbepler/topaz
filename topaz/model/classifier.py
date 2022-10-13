@@ -44,7 +44,7 @@ class LinearClassifier(nn.Module):
     def unfill(self):
         self.features.unfill()
 
-    def forward(self, x, top_level=True):
+    def forward(self, x):
         '''Applies the classifier to an input.
 
         Args:
@@ -53,29 +53,31 @@ class LinearClassifier(nn.Module):
         Returns:
             z (np.ndarray): output of the classifer
         '''
-        use_patches = top_level and self.patch_size and self.padding
-        if use_patches:
-            exceeds_patch = all(size > self.patch_size for size in x.shape)
+        # use_patches = top_level and self.patch_size and padding
+        # if use_patches:
+        #     exceeds_patch = all(size > self.patch_size for size in x.shape)
             
-        if use_patches and exceeds_patch:
-            y = self.classify_patches(x)
-        else:
-            z = self.features(x)
-            y = self.classifier(z)
+        # if use_patches and exceeds_patch:
+        #     y = self.classify_patches(x)
+        # else:
+        z = self.features(x)
+        y = self.classifier(z)
         return y
-       
-    def classify_patches(self, tomo, volume_num:int=1, total_volumes:int=1, verbose:bool=True):
-        '''Split tomogram into smaller 3D volumes for prediction.'''
-        print('classifying patches')
-        tomo = tomo.squeeze() #remove any channel or batch dims, 3D
-        patch_data = PatchDataset(tomo=tomo, patch_size=self.patch_size, padding=self.padding)
-        batch_iterator = DataLoader(patch_data, batch_size=self.batch_size)
+
+
+def classify_patches(classifier:LinearClassifier, tomo_stack:torch.Tensor, patch_size:int=48, padding:int=36, 
+                     batch_size:int=1, volume_num:int=1, total_volumes:int=1, verbose:bool=True):
+    '''Split tomogram batch into smaller 3D volumes for prediction.'''
+    # print(f'Classifying patches')
+    out_stack = torch.zeros_like(tomo_stack)
+    for tomo_idx,tomo in enumerate(tomo_stack): #removes batch dims, 3D
+        patch_data = PatchDataset(tomo=tomo, patch_size=patch_size, padding=padding)
+        batch_iterator = DataLoader(patch_data, batch_size=batch_size)
         count, total = 0, len(patch_data)
         
         classified = torch.zeros_like(tomo)
-        print('output shape: ', classified.shape)
         for index,x in batch_iterator:
-            x = self(x, top_level=False) #need normalizing?
+            x = classifier(x) #need normalizing?
 
             # stitch into total volume
             for b in range(len(x)):
@@ -83,15 +85,18 @@ class LinearClassifier(nn.Module):
                 i,j,k = index[b]
                 xb = x[b].squeeze()
 
-                patch = classified[i:i+self.patch_size, j:j+self.patch_size, k:k+self.patch_size]
+                patch = classified[i:i+patch_size, j:j+patch_size, k:k+patch_size]
                 pz,py,px = patch.shape
 
-                xb = xb[self.padding:self.padding+pz, self.padding:self.padding+py, self.padding:self.padding+px]
-                classified[i:i+self.patch_size, j:j+self.patch_size, k:k+self.patch_size] = xb
+                xb = xb[padding:padding+pz, padding:padding+py, padding:padding+px]
+                classified[i:i+patch_size, j:j+patch_size, k:k+patch_size] = xb
 
                 count += 1
                 if verbose:
-                    print(f'# [{volume_num}/{total_volumes}] {round(count*100/total)}', file=sys.stderr, end='\r')
-        print(' '*100, file=sys.stderr, end='\r')
+                    print(f'# [{volume_num}/{total_volumes}] {round(count*100/total)}%', file=sys.stderr, end='\r')
+        
+        out_stack[tomo_idx,...] = classified #place back into batch-wise stack
+        
+    print(' '*100, file=sys.stderr, end='\r')
 
-        return classified
+    return out_stack
