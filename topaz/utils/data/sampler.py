@@ -192,19 +192,24 @@ class RandomImageTransforms:
 
         ## random rotation
         if self.rotate:
+            angle = self.random.uniform(0, 360)
             if self.dims == 2:
-                angle = self.random.uniform(0, 360)
                 X = rotate2d(X, angle)
                 Y = rotate2d(Y, angle) if Y.numel() > 1 else Y
             elif self.dims == 3:
-                rot_mat = torch.Tensor(Rotation.random().as_matrix()) # 3x3
-                rot_mat = torch.cat((rot_mat, torch.zeros(3,1)), axis=1) #append zero translation vector
-                rot_mat = rot_mat[None,...].type(torch.FloatTensor) #add singleton batch dimension
-                #grid is shape N x C x D x H x W
-                grid_shape = (1,1) + X.shape
-                grid = F.affine_grid(rot_mat, grid_shape, align_corners=False).type(torch.FloatTensor) 
-                X = F.grid_sample(X[None,None,...], grid, align_corners=False).squeeze()
-                Y = F.grid_sample(Y[None,None,...], grid, align_corners=False).squeeze() if Y.numel() > 1 else Y
+                #rotate array to DHW -> rotate HW planes, return to HWD 
+                X = rotate2d(X.moveaxis(2,0), angle).moveaxis(0,2)
+                Y = rotate2d(Y.moveaxis(2,0), angle).moveaxis(0,2) if Y.numel() > 1 else Y
+ 
+                #below spherical sampling mixes in missing wedge so don't use
+                # rot_mat = torch.Tensor(Rotation.random().as_matrix()) # 3x3
+                # rot_mat = torch.cat((rot_mat, torch.zeros(3,1)), axis=1) #append zero translation vector
+                # rot_mat = rot_mat[None,...].type(torch.FloatTensor) #add singleton batch dimension
+                # #grid is shape N x C x D x H x W
+                # grid_shape = (1,1) + X.shape
+                # grid = F.affine_grid(rot_mat, grid_shape, align_corners=False).type(torch.FloatTensor) 
+                # X = F.grid_sample(X[None,None,...], grid, align_corners=False).squeeze()
+                # Y = F.grid_sample(Y[None,None,...], grid, align_corners=False).squeeze() if Y.numel() > 1 else Y
 
         ## crop down (to model's receptive field) if requested
         if self.crop is not None:
