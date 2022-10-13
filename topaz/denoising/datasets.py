@@ -410,7 +410,7 @@ class PairedTomograms(DenoiseDataset):
 
 
 class PatchDataset(DenoiseDataset):
-    def __init__(self, tomo:np.ndarray, patch_size:int=96, padding:int=48):
+    def __init__(self, tomo:Union[np.ndarray,torch.Tensor], patch_size:int=96, padding:int=48):
         self.tomo = tomo
         self.patch_size = patch_size
         self.padding = padding
@@ -438,7 +438,14 @@ class PatchDataset(DenoiseDataset):
 
         # make padded patch
         d = patch_size + 2*padding
-        x = np.zeros((d, d, d), dtype=np.float32)
+        
+        # ensure output is same type and device (if Tensor) as input
+        if type(tomo) == np.ndarray:
+            x = np.zeros((d, d, d), dtype=np.float32)
+        elif type(tomo) == torch.Tensor:
+            x = torch.zeros((d, d, d), dtype=torch.float32, device=tomo.device)
+        else:
+            raise ValueError()
 
         # index in tomogram
         si = max(0, i-padding)
