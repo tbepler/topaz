@@ -8,36 +8,43 @@ import numpy as np
 import pandas as pd
 import topaz.mrc as mrc
 import topaz.utils.star as star
+import torch
+from torch.nn.functional import conv2d, conv3d
 from topaz.utils.image import downsample
 
 
-def as_mask(shape:Tuple[int], radii:List[float], x_coord:List[float], y_coord:List[float], z_coord:List[float]=None) -> np.ndarray:
+def as_mask(shape:Tuple[int], radius:float, x_coord:List[float], y_coord:List[float], z_coord:List[float]=None, 
+            device='cpu') -> np.ndarray:
     '''Given coordinates and bounding circle/sphere radii, return a binary mask about those points.'''
+    mask = torch.zeros(shape)
     dims = 3 if z_coord is not None else 2
-    N = len(x_coord) #number of target coordinates
-
-    #expand dims for vectorization
-    x_coord = np.array(x_coord).reshape([1]*dims + [N]) 
-    y_coord = np.array(y_coord).reshape([1]*dims + [N])  
-
-    yrange = np.arange(shape[0])
-    xrange = np.arange(shape[1])
-    #create 2D or 3D meshgrids of all coordinates
-    if dims == 3:
-        z_coord = np.array(z_coord).reshape([1]*dims + [N])
-        zrange = np.arange(shape[2])
-        xgrid,ygrid,zgrid = np.meshgrid(xrange, yrange, zrange, indexing='xy')
-        zgrid = np.expand_dims(zgrid, axis=-1)
-    else:
-        xgrid,ygrid = np.meshgrid(xrange, yrange, indexing='xy')
-    xgrid = np.expand_dims(xgrid, axis=-1)
-    ygrid = np.expand_dims(ygrid, axis=-1)
-
-    #calculate distance tensor from each voxel to each target coordinate; X x Y x Z x N
-    d2 = (xgrid - x_coord)**2 + (ygrid - y_coord)**2
-    d2 += (zgrid - z_coord)**2 if dims == 3 else 0
-    mask = (d2 <= np.array(radii)**2).sum(axis=-1) #sum over particles w/in threshold radius, binarize
-    return np.clip(mask, 0, 1)
+    filter_width = int(np.floor(radius)) * 2 + 1
+    center = filter_width // 2
+    x_coord, y_coord = torch.Tensor(x_coord).long(), torch.Tensor(y_coord).long()
+    z_coord = torch.Tensor(z_coord).long() if dims == 3 else None
+    
+    # places ones at coordinate centers
+    coords = (x_coord, y_coord, z_coord) if dims == 3 else (x_coord, y_coord)
+    mask[coords] += 1
+    mask = mask.to(device)
+    mask = mask.unsqueeze(0).unsqueeze(0) # add batch and channel dims
+    
+    # create convolutional mask
+    filter_range = torch.arange(filter_width)
+    grid = torch.meshgrid([filter_range]*dims)
+    xgrid, ygrid = grid[0], grid[1]
+    zgrid = grid[2] if dims == 3 else None
+    filter = (xgrid-center)**2 + (ygrid-center)**2
+    filter += (zgrid-center)**2 if dims == 3 else 0
+    filter = (filter <= radius**2).float().to(device)
+    filter = filter.unsqueeze(0).unsqueeze(0) # add batch and channel dims
+    
+    # convolve filter with input
+    conv = conv3d if dims == 3 else conv2d
+    mask = conv(mask, filter, padding='same').squeeze()
+    mask = (mask > 0).float() # binarize
+    print(end)
+    return mask
 
 
 def scale_coordinates(input_file:str, scale:float, output_file:str=None):
