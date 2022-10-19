@@ -17,13 +17,13 @@ def crop_image(arr:Union[np.ndarray,torch.Tensor], xmin:int, xmax:int, ymin:int,
     #convert input to torch Tensor to use torch.nn.functional padding (np.ndarray fails)
     arr = torch.Tensor(arr)
     #calculate necessary padding
-    height,width,depth = arr.shape if zmin else (arr.shape[0], arr.shape[1], None)
+    depth,height,width = arr.shape if zmin else (None, arr.shape[0], arr.shape[1])
     if depth:
-        pads = (abs(min(0,zmin)), abs(min(0,depth-zmax)), #3rd (last) dim before,after
-                abs(min(0,xmin)), abs(min(0,width-xmax)), #2nd (2nd last) dim
-                abs(min(0,ymin)), abs(min(0,height-ymax))) #1st 
+        pads = (abs(min(0,xmin)), abs(min(0,width-xmax)), #3rd (last) dim before,after
+                abs(min(0,ymin)), abs(min(0,height-ymax)), #2nd (2nd last) dim
+                abs(min(0,zmin)), abs(min(0,depth-zmax))) #1st 
         #crop first to preserve indices 
-        arr = arr[max(0,ymin):ymax, max(0,xmin):xmax, max(0,zmin):zmax]
+        arr = arr[max(0,zmin):zmax, max(0,ymin):ymax, max(0,xmin):xmax]
     else:
         pads = (abs(min(0,xmin)), abs(min(0,width-xmax)),
                 abs(min(0,ymin)), abs(min(0,height-ymax)))
