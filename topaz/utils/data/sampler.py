@@ -13,11 +13,11 @@ from topaz.utils.data.loader import LabeledImageCropDataset
 from torchvision.transforms.functional import rotate as rotate2d
 
 
-def enumerate_pn_coordinates(Y:List[np.ndarray]) -> Tuple[np.ndarray,np.ndarray]:
+def enumerate_pn_coordinates(Y:List[torch.Tensor]) -> Tuple[np.ndarray,np.ndarray]:
     """Given a list of arrays containing pixel labels, enumerate the positive,negative coordinates as 
     (index of array within list, index of coordinate within flattened array) pairs."""
     P_size = int(sum(array.sum() for array in Y)) # number of positive coordinates
-    N_size = sum(array.size for array in Y) - P_size # number of negative coordinates
+    N_size = sum(array.numel() for array in Y) - P_size # number of negative coordinates
 
     #initialize arrays of shape (P_size,) and (N_size,) respectively
     P = np.zeros(P_size, dtype=[('image', np.uint32), ('coord', np.uint32)])
@@ -38,11 +38,11 @@ def enumerate_pn_coordinates(Y:List[np.ndarray]) -> Tuple[np.ndarray,np.ndarray]
     return P, N
 
 
-def enumerate_pu_coordinates(Y:List[np.ndarray]) -> Tuple[np.ndarray,np.ndarray]:
+def enumerate_pu_coordinates(Y:List[torch.Tensor]) -> Tuple[np.ndarray,np.ndarray]:
     """Given a list of arrays containing pixel labels, enumerate the positive,unlabeled(all) coordinates as 
     (index of array within list, index of coordinate within flattened array) pairs."""
     P_size = int(sum(array.sum() for array in Y)) # number of positive coordinates
-    size = sum(array.size for array in Y)
+    size = sum(array.numel() for array in Y)
 
     P = np.zeros(P_size, dtype=[('image', np.uint32), ('coord', np.uint32)])
     U = np.zeros(size, dtype=[('image', np.uint32), ('coord', np.uint32)])
@@ -89,7 +89,7 @@ class ShuffledSampler(torch.utils.data.sampler.Sampler):
 
 
 class StratifiedCoordinateSampler(torch.utils.data.sampler.Sampler):
-    def __init__(self, labels:List[List[np.ndarray]], balance:float=0.5, size:int=None, random=np.random, split:Literal['pn', 'pu']='pn'):
+    def __init__(self, labels:List[List[torch.Tensor]], balance:float=0.5, size:int=None, random=np.random, split:Literal['pn', 'pu']='pn'):
 
         groups = []
         weights = np.zeros(len(labels)*2)
@@ -201,20 +201,10 @@ class RandomImageTransforms:
                 X = rotate2d(X, angle)
                 Y = rotate2d(Y, angle) if Y.numel() > 1 else Y
  
-                #below spherical sampling mixes in missing wedge so don't use
-                # rot_mat = torch.Tensor(Rotation.random().as_matrix()) # 3x3
-                # rot_mat = torch.cat((rot_mat, torch.zeros(3,1)), axis=1) #append zero translation vector
-                # rot_mat = rot_mat[None,...].type(torch.FloatTensor) #add singleton batch dimension
-                # #grid is shape N x C x D x H x W
-                # grid_shape = (1,1) + X.shape
-                # grid = F.affine_grid(rot_mat, grid_shape, align_corners=False).type(torch.FloatTensor) 
-                # X = F.grid_sample(X[None,None,...], grid, align_corners=False).squeeze()
-                # Y = F.grid_sample(Y[None,None,...], grid, align_corners=False).squeeze() if Y.numel() > 1 else Y
-
         ## crop down (to model's receptive field) if requested
         if self.crop is not None:
             from topaz.utils.image import crop_image
-            height,width,depth = X.shape if self.dims == 3 else (X.shape[0], X.shape[1], None)
+            depth,height,width = X.shape if self.dims == 3 else (None, X.shape[0], X.shape[1])
             xmi = (width-self.crop)//2
             xma = xmi + self.crop
             ymi = (height-self.crop)//2

@@ -216,7 +216,8 @@ class LabeledImageCropDataset:
         im = self.images[g][i]
         
         # flattened torch.Tensor of shape (size,1)
-        L = torch.from_numpy(self.labels[g][i].ravel()).unsqueeze(1)
+        L = self.labels[g][i].ravel()
+        L = torch.from_numpy(L).unsqueeze(1) if type(L) is np.ndarray else L.unsqueeze(1)
         label = L[coord].float() # label value at center of crop
 
         # ensure numpy style indexing
