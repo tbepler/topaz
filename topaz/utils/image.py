@@ -13,15 +13,17 @@ from topaz.utils.data.loader import load_image
 
 def crop_image(arr:Union[np.ndarray,torch.Tensor], xmin:int, xmax:int, ymin:int, ymax:int, 
                zmin:int=None, zmax:int=None) -> torch.Tensor:
-    """PIL-style cropping. Supports 3D arrays. 0-pads out-of-bounds indices."""
+    """PIL-style cropping. Supports 3D arrays. 0-pads out-of-bounds indices. 
+    Expects range arguments in X,Y(,Z) order but a tensor of shape (Z x) Y x X."""
     #convert input to torch Tensor to use torch.nn.functional padding (np.ndarray fails)
     arr = torch.Tensor(arr)
     #calculate necessary padding
-    depth,height,width = arr.shape if zmin else (None, arr.shape[0], arr.shape[1])
-    if depth:
+    depth,height,width = arr.shape if zmin is not None else (None, arr.shape[0], arr.shape[1])
+    
+    if depth is not None:
         pads = (abs(min(0,xmin)), abs(min(0,width-xmax)), #3rd (last) dim before,after
                 abs(min(0,ymin)), abs(min(0,height-ymax)), #2nd (2nd last) dim
-                abs(min(0,zmin)), abs(min(0,depth-zmax))) #1st 
+                abs(min(0,zmin)), abs(min(0,depth-zmax))) #1st
         #crop first to preserve indices 
         arr = arr[max(0,zmin):zmax, max(0,ymin):ymax, max(0,xmin):xmax]
     else:
