@@ -24,14 +24,14 @@ def as_mask(shape:Tuple[int], radius:float, x_coord:List[float], y_coord:List[fl
     z_coord = torch.Tensor(z_coord).long() if dims == 3 else None
     
     # places ones at coordinate centers
-    coords = (x_coord, y_coord, z_coord) if dims == 3 else (x_coord, y_coord)
+    coords = (z_coord, y_coord, x_coord) if dims == 3 else (y_coord, x_coord)
     mask[coords] += 1
     mask = mask.to(device)
     mask = mask.unsqueeze(0).unsqueeze(0) # add batch and channel dims
     
     # create convolutional mask
     filter_range = torch.arange(filter_width)
-    grid = torch.meshgrid([filter_range]*dims)
+    grid = torch.meshgrid([filter_range]*dims, indexing='xy')
     xgrid, ygrid = grid[0], grid[1]
     zgrid = grid[2] if dims == 3 else None
     filter = (xgrid-center)**2 + (ygrid-center)**2
@@ -43,7 +43,6 @@ def as_mask(shape:Tuple[int], radius:float, x_coord:List[float], y_coord:List[fl
     conv = conv3d if dims == 3 else conv2d
     mask = conv(mask, filter, padding='same').squeeze()
     mask = (mask > 0).float() # binarize
-    print(end)
     return mask
 
 

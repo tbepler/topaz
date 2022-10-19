@@ -26,12 +26,12 @@ def coordinates_table_to_dict(coords:pd.DataFrame, dims:int=2) -> Union[Dict[str
 def make_coordinate_mask(image:Union[Image.Image, np.ndarray], coords:np.ndarray, radius:float):
     if radius < 0:
         return coords
-    radii = np.full(len(coords), radius).astype(np.int32)
+    # radii = np.full(len(coords), radius).astype(np.int32)
     shape = (image.height, image.width) if type(image) == Image.Image else image.shape
     if len(shape) == 2:
-        coords = as_mask(shape, radii, coords[:,0], coords[:,1], z_coord=None)
+        coords = as_mask(shape, radius, coords[:,0], coords[:,1], z_coord=None)
     elif len(shape) == 3:
-        coords = as_mask(shape, radii, coords[:,0], coords[:,1], z_coord=coords[:,2])
+        coords = as_mask(shape, radius, coords[:,0], coords[:,1], z_coord=coords[:,2])
     return coords
 
 

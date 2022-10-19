@@ -197,9 +197,9 @@ class RandomImageTransforms:
                 X = rotate2d(X, angle)
                 Y = rotate2d(Y, angle) if Y.numel() > 1 else Y
             elif self.dims == 3:
-                #rotate array to DHW -> rotate HW planes, return to HWD 
-                X = rotate2d(X.moveaxis(2,0), angle).moveaxis(0,2)
-                Y = rotate2d(Y.moveaxis(2,0), angle).moveaxis(0,2) if Y.numel() > 1 else Y
+                #array is ZYX so can directly rotate HW planes 
+                X = rotate2d(X, angle)
+                Y = rotate2d(Y, angle) if Y.numel() > 1 else Y
  
                 #below spherical sampling mixes in missing wedge so don't use
                 # rot_mat = torch.Tensor(Rotation.random().as_matrix()) # 3x3
