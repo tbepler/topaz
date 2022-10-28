@@ -297,7 +297,7 @@ class Normalize:
         # load the image
         image = load_image(path, make_image=False)
         # check if MRC with header and extender header 
-        image, header, extended_header = image if type(image) is tuple else image, None, None
+        (image, header, extended_header) = image if type(image) is tuple else (image, None, None)
         x = image.astype(np.float32)
 
         if self.scale > 1:

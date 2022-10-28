@@ -105,18 +105,19 @@ def load_pil(path:str, standardize=False):
     return load_tiff(path, standardize=standardize)
 
 
-def load_image(path:str, standardize:bool=False, make_image:bool=True) -> Union[Union[np.ndarray,Image.Image], Tuple[Union[np.ndarray, Image.Image], Any, Any]]:
-    '''Utility for reading images and tomograms of various formats. Includes header and extended header when available for mrc files. 
-    Returns PIL Images by default, but can return numpy arrays.
-    To load tomograms, ensure make_image=False.'''
+def load_image(path:str, standardize:bool=False, make_image:bool=True, return_header=True) -> \
+    Union[Union[np.ndarray,Image.Image], Tuple[Union[np.ndarray, Image.Image], Any, Any]]:
+    '''Utility for reading images and tomograms of various formats. Can include header and extended header when 
+    available for mrc files. Returns PIL Images by default, but can return numpy arrays. To load tomograms, 
+    ensure make_image=False.'''
     ## this might be more stable as path.endswith('.mrc')
     ext = os.path.splitext(path)[1]
     
     data = load_mrc(path, standardize) if ext == '.mrc' else load_pil(path, standardize)
-    image, header, extended_header = data if type(data) == tuple else data, None, None
+    (image, header, extended_header) = data if type(data) == tuple else (data, None, None)
     
     image = Image.fromarray(image) if make_image else image
-    return (image,header,extended_header) if header else image
+    return (image,header,extended_header) if (header and return_header) else image
 
 
 def load_images_from_directory(names:List[str], rootdir:str, sources:List[Any]=None, standardize:bool=False, 
@@ -128,13 +129,13 @@ def load_images_from_directory(names:List[str], rootdir:str, sources:List[Any]=N
         for source,name in zip(sources, names):
             path = os.path.join(rootdir, source, name) + '.*'
             path = glob.glob(path)[0]
-            im = load_image(path, standardize=standardize, make_image=as_images)
+            im = load_image(path, standardize=standardize, make_image=as_images, return_header=False)
             images.setdefault(source, {})[name] = im
     else:
         for name in names:
             path = os.path.join(rootdir, name) + '.*'
             path = glob.glob(path)[0]
-            im = load_image(path, standardize=standardize, make_image=as_images)
+            im = load_image(path, standardize=standardize, make_image=as_images, return_header=False)
             images[name] = im
     return images 
 
@@ -146,13 +147,11 @@ def load_images_from_list(names:List[str], paths:List[str], sources:List[Any]=No
     images = {}
     if sources is not None:
         for source,name,path in zip(sources, names, paths):
-            im = load_image(path, standardize=standardize, make_image=as_images)
-            im = im[0] if type(im) is tuple else im #remove mrc present headers
+            im = load_image(path, standardize=standardize, make_image=as_images, return_header=False)
             images.setdefault(source, {})[name] = im
     else:
         for name,path in zip(names, paths):
-            im = load_image(path, standardize=standardize, make_image=as_images)
-            im = im[0] if type(im) is tuple else im #remove mrc present headers
+            im = load_image(path, standardize=standardize, make_image=as_images, return_header=False)
             images[name] = im
     return images
 

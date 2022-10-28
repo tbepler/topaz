@@ -443,7 +443,7 @@ def denoise_stream(micrographs:List[str], output_path:str, format:str='mrc', suf
         name,_ = os.path.splitext(os.path.basename(path))
         image = load_image(path, make_image=False)
         # check if MRC with header and extender header 
-        image, header, extended_header = image if type(image) is tuple else image, None, None
+        (image, header, extended_header) = image if type(image) is tuple else (image, None, None)
 
         # process and denoise the micrograph
         mic = denoise_image(mic, models, lowpass=lowpass, cutoff=pixel_cutoff, gaus=gaus, 

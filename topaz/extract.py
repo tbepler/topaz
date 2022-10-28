@@ -184,7 +184,7 @@ def find_opt_radius(targets, target_scores, threshold, lo=0, hi=200, step=10
 
 def stream_images(paths):
     for path in paths:
-        image = load_image(path, make_image=False)
+        image = load_image(path, make_image=False, return_header=False)
         yield image
 
 
