@@ -219,15 +219,16 @@ class LabeledImageCropDataset:
         L = torch.from_numpy(L).unsqueeze(1) if type(L) is np.ndarray else L.unsqueeze(1)
         label = L[coord].float() # label value at center of crop
 
-        # ensure numpy style indexing
-        shape = im.size[::-1] if type(im) == Image.Image else im.shape
-        height, width = shape[0], shape[1]
-        depth = shape[2] if self.dims == 3 else None
-            
-        ## locate appropriate image coordinates
+        # ensure numpy style indexing, locate appropriate image coordinates
+        shape = im.size[::-1] if (type(im) == Image.Image) else im.shape
         coords = np.unravel_index(coord, shape=shape)
-        y,x,z = coords if self.dims == 3 else (coords[0], coords[1], None) 
-        
+        if self.dims == 2:
+            height, width = shape
+            z,y,x = (None, coords[0], coords[1])
+        elif self.dims == 3:
+            depth, height, width = shape
+            z,y,x = coords
+
         xmi = x - self.crop//2
         xma = xmi + self.crop
         ymi = y - self.crop//2

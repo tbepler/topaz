@@ -116,9 +116,9 @@ def check_particle_image_bounds(images:pd.DataFrame, targets:pd.DataFrame, dims=
         for image in d.values():
             if dims == 2:
                 # if numpy array (H, W), reverse height and width order to (W,H)
-                w,h = image.size if type(image) == Image.Image else image.shape[::-1]
+                w,h = image.size if type(image) == Image.Image else image.shape[1], image.shape[0]
             elif dims == 3:
-                h, w, d = image.shape #3D arrays can only be read as numpy arrays             
+                d, h, w = image.shape #3D arrays can only be read as numpy arrays             
             width, height = max(w, width), max(h, height)
             depth = max(d, depth) if dims==3 else 0        
     out_of_bounds = (targets.x_coord > width) | (targets.y_coord > height) | (dims==3 and targets.z_coord > depth)
@@ -145,11 +145,10 @@ def make_traindataset(X:List[List[Union[Image.Image, np.ndarray]]], Y:List[List[
     size += 1 if size % 2 == 0 else 0
     dataset = LabeledImageCropDataset(X, Y, size, dims=dims)
     if dims == 3: #don't augment 3D volumes
-        # transformed = RandomImageTransforms(dataset, crop=crop, dims=dims, flip=False, rotate=False)
-        return dataset
+        transformed = RandomImageTransforms(dataset, crop=crop, dims=dims, flip=False, rotate=False)
     else:
-        transformed = RandomImageTransforms(dataset, crop=crop, dims=dims)
-        return transformed
+        transformed = RandomImageTransforms(dataset, crop=crop, dims=dims, flip=True, rotate=True)
+    return transformed
 
 
 def calculate_positive_fraction(targets):
@@ -222,13 +221,14 @@ def load_data(train_images_path:str, train_targets_path:str, test_images_path:st
 
 
 def report_data_stats(train_images, train_targets, test_images, test_targets):
+    '''Assumes data are given as torch Tensors.'''
     report('source\tsplit\tp_observed\tnum_positive_regions\ttotal_regions')
     num_positive_regions = 0
     total_regions = 0
     for i in range(len(train_images)):
         p = sum(train_targets[i][j].sum() for j in range(len(train_targets[i])))
         p = int(p)
-        total = sum(train_targets[i][j].size for j in range(len(train_targets[i])))
+        total = sum(train_targets[i][j].numel() for j in range(len(train_targets[i])))
         num_positive_regions += p
         total_regions += total
         p_observed = p/total
@@ -237,7 +237,7 @@ def report_data_stats(train_images, train_targets, test_images, test_targets):
         if test_targets is not None:
             p = sum(test_targets[i][j].sum() for j in range(len(test_targets[i])))
             p = int(p)
-            total = sum(test_targets[i][j].size for j in range(len(test_targets[i])))
+            total = sum(test_targets[i][j].numel() for j in range(len(test_targets[i])))
             p_observed = p/total
             p_observed = '{:.3g}'.format(p_observed)
             report(str(i)+'\t'+'test'+'\t'+p_observed+'\t'+str(p)+'\t'+str(total))
