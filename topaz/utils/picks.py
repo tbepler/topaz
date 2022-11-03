@@ -40,7 +40,8 @@ def as_mask(shape:Tuple[int], radius:float, x_coord:List[float], y_coord:List[fl
     
     # if GPU available convolve there
     if use_cuda:
-        mask.cuda(), filter.cuda()
+        mask = mask.cuda() 
+        filter = filter.cuda()
     
     # convolve filter with input
     conv = conv3d if dims == 3 else conv2d
