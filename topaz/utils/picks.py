@@ -14,7 +14,7 @@ from topaz.utils.image import downsample
 
 
 def as_mask(shape:Tuple[int], radius:float, x_coord:List[float], y_coord:List[float], z_coord:List[float]=None, 
-            device='cpu') -> np.ndarray:
+            use_cuda:bool=False) -> np.ndarray:
     '''Given coordinates and bounding circle/sphere radii, return a binary mask about those points.'''
     mask = torch.zeros(shape)
     dims = 3 if z_coord is not None else 2
@@ -26,7 +26,6 @@ def as_mask(shape:Tuple[int], radius:float, x_coord:List[float], y_coord:List[fl
     # places ones at coordinate centers
     coords = (z_coord, y_coord, x_coord) if dims == 3 else (y_coord, x_coord)
     mask[coords] += 1
-    mask = mask.to(device)
     mask = mask.unsqueeze(0).unsqueeze(0) # add batch and channel dims
     
     # create convolutional mask
@@ -36,8 +35,12 @@ def as_mask(shape:Tuple[int], radius:float, x_coord:List[float], y_coord:List[fl
     zgrid = grid[2] if dims == 3 else None
     filter = (xgrid-center)**2 + (ygrid-center)**2
     filter += (zgrid-center)**2 if dims == 3 else 0
-    filter = (filter <= radius**2).float().to(device)
+    filter = (filter <= radius**2).float()
     filter = filter.unsqueeze(0).unsqueeze(0) # add batch and channel dims
+    
+    # if GPU available convolve there
+    if use_cuda:
+        mask.cuda(), filter.cuda()
     
     # convolve filter with input
     conv = conv3d if dims == 3 else conv2d

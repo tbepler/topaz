@@ -125,13 +125,13 @@ def main(args):
             load_data(args.train_images, args.train_targets, args.test_images, args.test_targets,
                       args.radius, format_=args.format_, k_fold=args.k_fold, fold=args.fold,
                       cross_validation_seed=args.cross_validation_seed, image_ext=args.image_ext, 
-                      as_images=False, dims=3)
+                      as_images=False, dims=3, use_cuda=use_cuda)
     
     ## fit the model, report train/test stats, save model if required
     output = sys.stdout if args.output is None else open(args.output, 'w')
     save_prefix = args.save_prefix
 
-    print('Training...')
+    report('Training...')
     classifier = train_model(classifier, train_images, train_targets, test_images, test_targets, 
                              use_cuda, save_prefix, output, args, dims=3)
     report('Done!')

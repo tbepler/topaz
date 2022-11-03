@@ -33,11 +33,11 @@ from topaz.utils.printing import report
 from torch.utils.data.dataloader import DataLoader
 
 
-def match_images_targets(images:dict, targets:pd.DataFrame, radius:float, dims:int=2) \
+def match_images_targets(images:dict, targets:pd.DataFrame, radius:float, dims:int=2, use_cuda:bool=False) \
     -> Tuple[List[List[Union[Image.Image,np.ndarray]]], List[List[np.ndarray]]]:
     '''Given names mapped to images and a DataFrame of coordinates, returns coordinates as mask of the same shape 
     as corresponding image. Returns lists of lists of arrays, each list of arrays corresponding to an input source.'''
-    matched = match_coordinates_to_images(targets, images, radius=radius, dims=dims)
+    matched = match_coordinates_to_images(targets, images, radius=radius, dims=dims, use_cuda=use_cuda)
     ## unzip into matched lists
     images = []
     targets = []
@@ -64,7 +64,7 @@ def filter_targets_missing_images(images:pd.DataFrame, targets:pd.DataFrame, mod
 
 
 def load_image_set(images_path, targets_path, image_ext, radius, format_, as_images=True, mode='training', 
-                   dims=2) -> Tuple[List[List[Union[Image.Image,np.ndarray]]], List[List[np.ndarray]]]:
+                   dims=2, use_cuda=False) -> Tuple[List[List[Union[Image.Image,np.ndarray]]], List[List[np.ndarray]]]:
     # if train_images is a directory path, map to all images in the directory
     if os.path.isdir(images_path):
         paths = glob.glob(images_path + os.sep + '*' + image_ext)
@@ -102,7 +102,7 @@ def load_image_set(images_path, targets_path, image_ext, radius, format_, as_ima
         raise Exception('No training particles.')
 
     #convert targets to masks of the same shape as their image
-    images, targets = match_images_targets(images, targets, radius, dims=dims)
+    images, targets = match_images_targets(images, targets, radius, dims=dims, use_cuda=use_cuda)
     report(f'Created target binary masks for {mode} micrographs.')
     return images, targets
 
@@ -196,15 +196,15 @@ def cross_validation_split(k:int, fold:int, images:List[Union[Image.Image, np.nd
 
 
 def load_data(train_images_path:str, train_targets_path:str, test_images_path:str, test_targets_path:str, radius:float, k_fold:int=0, fold:int=0, 
-              cross_validation_seed:int=42, format_:str='auto', image_ext:str='', as_images:bool=True, dims:int=2):
+              cross_validation_seed:int=42, format_:str='auto', image_ext:str='', as_images:bool=True, dims:int=2, use_cuda:bool=False):
     '''Load training and testing (if available) images and picked particles. May split training data for cross-validation if no testing data are given.'''
     #load training images and target particles
     train_images, train_targets = load_image_set(train_images_path, train_targets_path, image_ext=image_ext, radius=radius, 
-                                                 format_=format_, as_images=as_images, mode='training', dims=dims)
+                                                 format_=format_, as_images=as_images, mode='training', dims=dims, use_cuda=use_cuda)
     #load test images and target particles or split training
     if test_images_path is not None:
         test_images, test_targets = load_image_set(test_images_path, test_targets_path, image_ext=image_ext, radius=radius, 
-                                                   format_=format_, as_images=as_images, mode='test', dims=dims)
+                                                   format_=format_, as_images=as_images, mode='test', dims=dims, use_cuda=use_cuda)
     elif k_fold > 1:
         ## seed for partitioning the data
         random = np.random.RandomState(cross_validation_seed)
