@@ -5,7 +5,7 @@ import argparse
 import multiprocessing
 import os
 import sys
-from typing import List
+from typing import List, Union
 
 import numpy as np
 import pandas as pd
@@ -214,7 +214,7 @@ def stream_inputs(f):
             yield line
 
 
-def extract_particles(paths:List[str], model:torch.nn.Module, device:int, batch_size:int, threshold:float, radius:int, num_workers:int, targets:str, min_radius:int, max_radius:int, step:int, match_radius:int,
+def extract_particles(paths:List[str], model:Union[torch.nn.Module, str], device:int, batch_size:int, threshold:float, radius:int, num_workers:int, targets:str, min_radius:int, max_radius:int, step:int, match_radius:int,
                       only_validate:bool, output:str, per_micrograph:bool, suffix:str, out_format:str, up_scale:float, down_scale:float):
     # score the images lazily with a generator
     paths = stream_inputs(sys.stdin) if len(paths) == 0 else paths # no paths, read from stdin
