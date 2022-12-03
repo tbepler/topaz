@@ -71,7 +71,8 @@ def downsample_file(path:str, scale:int, output:str, verbose:bool):
     if header:
         # update image size (pixels) in header if present
         new_height, new_width = small.shape
-        header.ny, header.nx = new_height, new_width
+        header = header._replace(ny=new_height)
+        header = header._replace(nx=new_width)
 
     if verbose:
         print('Downsample image:', path, file=sys.stderr)
