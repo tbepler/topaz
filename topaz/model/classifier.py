@@ -24,6 +24,7 @@ class LinearClassifier(nn.Module):
         '''
         super(LinearClassifier, self).__init__()
         self.features = features
+        self.dims = dims
         conv = nn.Conv3d if dims == 3 else nn.Conv2d
         self.classifier = conv(features.latent_dim, 1, 1)
         self.patch_size = patch_size
