@@ -15,10 +15,7 @@ from topaz.utils.image import downsample, save_image
 
 
 def calculate_pi(expected_num_particles, num_micrographs, radius, total_regions):
-    # expected particles in training set rather than per micrograph
-    expected_num_particles *= num_micrographs
-    
-    # given the expected number of particles and the radius
+    # given the expected number of particles in dataset and the radius
     # calculate what pi should be
     # pi = pixels_per_particle*expected_number_of_particles/pixels_in_dataset
     grid = np.linspace(-radius, radius, 2*radius+1)
