@@ -13,60 +13,36 @@ from topaz.utils.data.loader import LabeledImageCropDataset
 from torchvision.transforms.functional import rotate as rotate2d
 
 
-def enumerate_pn_coordinates(Y:List[torch.Tensor]) -> Tuple[np.ndarray,np.ndarray]:
-    """Given a list of arrays containing pixel labels, enumerate the positive,negative coordinates as 
-    (index of array within list, index of coordinate within flattened array) pairs."""
-    P_size = int(sum(array.sum() for array in Y)) # number of positive coordinates
-    N_size = sum(array.numel() for array in Y) - P_size # number of negative coordinates
-
-    #initialize arrays of shape (P_size,) and (N_size,) respectively
-    P = np.zeros(P_size, dtype=[('image', np.uint32), ('coord', np.uint32)])
-    N = np.zeros(N_size, dtype=[('image', np.uint32), ('coord', np.uint32)])
-
-    i = 0 # P index
-    j = 0 # N index
+def enumerate_coordinates(Y, split):
+    """Given a list of arrays containing pixel labels, enumerate the positive and negative or unlabeled 
+    (all) coordinates as (index of array within list, index of coordinate within flattened array) pairs."""
+    Ps = []
+    UorNs = []
     for image_idx in range(len(Y)):
-        flat_array = Y[image_idx].ravel()
-        for coord_idx in range(len(flat_array)):
-            if flat_array[coord_idx]:
-                P[i] = (image_idx, coord_idx)
-                i += 1
-            else:
-                #N only accumulates 0/False coordinate pairs
-                N[j] = (image_idx, coord_idx)
-                j += 1
-    return P, N
-
-
-def enumerate_pu_coordinates(Y:List[torch.Tensor]) -> Tuple[np.ndarray,np.ndarray]:
-    """Given a list of arrays containing pixel labels, enumerate the positive,unlabeled(all) coordinates as 
-    (index of array within list, index of coordinate within flattened array) pairs."""
-    P_size = int(sum(array.sum() for array in Y)) # number of positive coordinates
-    size = sum(array.numel() for array in Y)
-
-    P = np.zeros(P_size, dtype=[('image', np.uint32), ('coord', np.uint32)])
-    U = np.zeros(size, dtype=[('image', np.uint32), ('coord', np.uint32)])
-
-    i = 0 # P index
-    j = 0 # U index
-    for image_idx in range(len(Y)):
-        flat_array = Y[image_idx].ravel()
-        for coord_idx in range(len(flat_array)):
-            if flat_array[coord_idx]:
-                P[i] = (image_idx, coord_idx)
-                i += 1
-            # U accumulates all image,coord pairs
-            U[j] = (image_idx, coord_idx)
-            j += 1
-    return P, U
+        bool_array = Y[image_idx].ravel().to(bool)
+        #get boolean mask
+        indices = torch.arange(bool_array.numel(), device=bool_array.device).reshape(1,-1)
+        img_idx = torch.zeros_like(indices).fill_(image_idx)
+        indices = torch.cat([img_idx, indices], dim=0)
+        #collect indices in order (follows from masking), format for return
+        pos = indices[:,bool_array].T
+        Ps.append(pos)
+        if split == 'pn':
+            N = indices[:,bool_array.logical_not()].T
+            UorNs.append(N)
+        elif split == 'pu':
+            UorNs.append(indices.T)
+            
+    P = torch.cat(Ps, axis=0)
+    UorN = torch.cat(UorNs, axis=0)
+    return P, UorN
 
 
 class ShuffledSampler(torch.utils.data.sampler.Sampler):
-    '''Class for repeatedly shuffling and yielding from an array.
+    '''Class for repeatedly shuffling and yielding from an Nx2 tensor.
     WARNING: never returns None/StopIteration, do not attempt to convert to iterable.'''
-    def __init__(self, x:np.ndarray, random=np.random):
+    def __init__(self, x:torch.Tensor):
         self.x = x
-        self.random = random
         self.i = len(self.x)
 
     def __len__(self):
@@ -75,7 +51,8 @@ class ShuffledSampler(torch.utils.data.sampler.Sampler):
     def __next__(self):
         if self.i >= len(self.x):
             #if consumed entire array, shuffle and reset to beginning
-            self.random.shuffle(self.x)
+            rand_idx = torch.randperm(len(self.x))
+            self.x = self.x[rand_idx]
             self.i = 0
         sample = self.x[self.i]
         self.i += 1
@@ -89,34 +66,34 @@ class ShuffledSampler(torch.utils.data.sampler.Sampler):
 
 
 class StratifiedCoordinateSampler(torch.utils.data.sampler.Sampler):
-    def __init__(self, labels:List[List[torch.Tensor]], balance:float=0.5, size:int=None, random=np.random, split:Literal['pn', 'pu']='pn'):
-
+    def __init__(self, labels:List[List[torch.Tensor]], balance:float=0.5, size:int=None, random=np.random, split='pn'):
+        # labels = List[List[Tensor]]
         groups = []
         weights = np.zeros(len(labels)*2)
         proportions = np.zeros((len(labels), 2))
         i = 0
-        enum_method = enumerate_pn_coordinates if split == 'pn' else enumerate_pu_coordinates
         for group in labels:
-            P,other = enum_method(group) #other is set of negatives if PN method, else unlabeled 
+            P,other = enumerate_coordinates(group, split=split) #other is set of negatives if PN method, else unlabeled 
             P,other = ShuffledSampler(P, random=random), ShuffledSampler(other, random=random)
             groups.append(P)
             groups.append(other)      
             if split == 'pn':
-                proportions[i//2,0] = len(other)/(len(other)+len(P))
-                proportions[i//2,1] = len(P)/(len(other)+len(P))
+                total_len = (len(other)+len(P))
+                proportions[i//2,0] = len(other)/total_len
+                proportions[i//2,1] = len(P)/total_len
             elif split  == 'pu':
                 proportions[i//2,0] = (len(other) - len(P))/len(other)
                 proportions[i//2,1] = len(P)/len(other)
-
+                
             p = balance if balance is not None else proportions[i//2,1]
             weights[i] = p/len(labels)
             weights[i+1] = (1-p)/len(labels)
             i += 2
-
+            
         if size is None:
             sizes = np.array([len(g) for g in groups]) #number micrographs in 
             size = int(np.round(np.min(sizes/weights)))
-
+            
         self.groups = groups
         self.weights = weights
         self.proportions = proportions
@@ -154,14 +131,14 @@ class StratifiedCoordinateSampler(torch.utils.data.sampler.Sampler):
         # code as integer; unfortunate hack required because pytorch converts index to integer...
         # allows storage of 3 integers in one int object
         h = i*2**56 + j*2**32 + c
-        return h
-
+        return h.item()
+    
     # for python 2.7 compatability
     next = __next__
-
+    
     def __iter__(self):
         for _ in range(self.size):
-            yield next(self)
+            yield next(self)  
 
 
 class RandomImageTransforms:
@@ -193,13 +170,9 @@ class RandomImageTransforms:
         ## random rotation
         if self.rotate:
             angle = self.random.uniform(0, 360)
-            if self.dims == 2:
-                X = rotate2d(X, angle)
-                Y = rotate2d(Y, angle) if Y.numel() > 1 else Y
-            elif self.dims == 3:
-                #array is ZYX so can directly rotate HW planes 
-                X = rotate2d(X, angle)
-                Y = rotate2d(Y, angle) if Y.numel() > 1 else Y
+            # 3D arrays are ZYX so can directly rotate HW planes, adding dim has no effect
+            X = rotate2d(X[None,...], angle).squeeze()
+            Y = rotate2d(Y[None,...], angle).squeeze() if Y.numel() > 1 else Y
  
         ## crop down (to model's receptive field) if requested
         if self.crop is not None:
