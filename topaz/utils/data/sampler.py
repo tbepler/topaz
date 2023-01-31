@@ -74,7 +74,7 @@ class StratifiedCoordinateSampler(torch.utils.data.sampler.Sampler):
         i = 0
         for group in labels:
             P,other = enumerate_coordinates(group, split=split) #other is set of negatives if PN method, else unlabeled 
-            P,other = ShuffledSampler(P, random=random), ShuffledSampler(other, random=random)
+            P,other = ShuffledSampler(P), ShuffledSampler(other)
             groups.append(P)
             groups.append(other)      
             if split == 'pn':
