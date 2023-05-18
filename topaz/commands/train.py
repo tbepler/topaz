@@ -189,17 +189,17 @@ def cross_validation_split(k, fold, images, targets, random=np.random):
 
     test_images = [[]*len(images)]
     test_targets = [[]*len(targets)]
-    for _,row in validate_table.iterrows():
-        i = row['source']
-        j = row['image_name']
+    for row in validate_table.itertuples():
+        i = row.source
+        j = row.image_name
         test_images[i].append(images[i][j])
         test_targets[i].append(targets[i][j])
 
     train_images = [[]*len(images)]
     train_targets = [[]*len(targets)]
-    for _,row in train_table.iterrows():
-        i = row['source']
-        j = row['image_name']
+    for row in train_table.itertuples():
+        i = row.source
+        j = row.image_name
         train_images[i].append(images[i][j])
         train_targets[i].append(targets[i][j])
 
