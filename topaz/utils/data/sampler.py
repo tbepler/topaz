@@ -9,15 +9,15 @@ import torch.nn.functional as F
 import torch.utils.data
 from PIL import Image
 from scipy.spatial.transform import Rotation
+from sklearn.neighbors import KDTree
 from topaz.utils.data.loader import LabeledImageCropDataset
 from torchvision.transforms.functional import rotate as rotate2d
 
 
-def enumerate_coordinates(Y, split):
+def enumerate_coordinates(Y):
     """Given a list of arrays containing pixel labels, enumerate the positive and negative or unlabeled 
     (all) coordinates as (index of array within list, index of coordinate within flattened array) pairs."""
     Ps = []
-    UorNs = []
     for image_idx in range(len(Y)):
         bool_array = Y[image_idx].ravel().to(bool)
         #get boolean mask
@@ -27,16 +27,7 @@ def enumerate_coordinates(Y, split):
         #collect indices in order (follows from masking), format for return
         pos = indices[:,bool_array].T
         Ps.append(pos)
-        if split == 'pn':
-            N = indices[:,bool_array.logical_not()].T
-            UorNs.append(N)
-        elif split == 'pu':
-            UorNs.append(indices.T)
-            
-    P = torch.cat(Ps, axis=0)
-    UorN = torch.cat(UorNs, axis=0)
-    return P, UorN
-
+    return torch.cat(Ps, axis=0)
 
 class ShuffledSampler(torch.utils.data.sampler.Sampler):
     '''Class for repeatedly shuffling and yielding from an Nx2 tensor.
@@ -65,6 +56,79 @@ class ShuffledSampler(torch.utils.data.sampler.Sampler):
         return self
 
 
+class USampler(torch.utils.data.sampler.Sampler):
+    def __init__(self, num_images:int, shape:tuple):
+        self.num_images = num_images
+        self.shape = tuple(shape) # currently assume all images are the same shape
+        self.size = torch.IntTensor(self.shape).prod().item() # total pixels in image
+
+    def __len__(self):
+        # number of pixels in image
+        return self.size
+
+    def __next__(self):
+        # sample a tomogram uniformly
+        idx = np.random.randint(self.num_images)
+        # sample random point, convert to coords
+        point = np.random.randint(self.size)
+        return idx, point
+
+    # for python 2.7 compatability
+    next = __next__
+
+    def __iter__(self):
+        return self
+
+
+class NSampler(torch.utils.data.sampler.Sampler):
+    '''Given an Nx2 tensor of positive labels, sample unlabeled posts.'''
+    def __init__(self, P:torch.Tensor, num_images:int, shape:tuple):
+        self.P = P
+        self.num_images = num_images
+        self.shape = tuple(shape) # currently assume all images are the same shape
+        self.size = torch.IntTensor(self.shape).prod().item() # total pixels in image
+        self.trees = self._build_trees()  
+        
+    def _build_trees(self):
+        trees = {}
+        # move to CPU for unravel index function
+        P = self.P.cpu()
+        for img_idx in P[:,0].unique().tolist():
+            coord_subset = P[P[:,0]==img_idx]
+            coords = coord_subset[:,1] #1D raveled coordinates
+            coords = np.stack(np.unravel_index(coords, self.shape), axis=1) #Nx3 spatial coords
+            tree = KDTree(coords) # create spatial data structure to query against
+            trees[img_idx] = tree
+        return trees
+
+    def __len__(self):
+        # number of N pixels in image
+        size = self.size - len(self.P)
+        return size
+
+    def __next__(self):
+        while True:
+            # sample a tomogram uniformly
+            idx = np.random.randint(self.num_images)
+            tree = self.trees[idx] if idx in self.trees.keys() else None
+            # sample random point, convert to coord
+            point = np.random.randint(self.size)
+            # if no labels on a given image, return any pixel
+            if tree is None:
+                return idx,point
+            unraveled = np.stack(np.unravel_index(point, self.shape)).reshape(1,-1)
+            # check if point is in tree
+            ind, dist = tree.query(unraveled)
+            if dist > 0:
+                return idx, point
+
+    # for python 2.7 compatability
+    next = __next__
+
+    def __iter__(self):
+        return self
+
+
 class StratifiedCoordinateSampler(torch.utils.data.sampler.Sampler):
     def __init__(self, labels:List[List[torch.Tensor]], balance:float=0.5, size:int=None, random=np.random, split='pn'):
         # labels = List[List[Tensor]]
@@ -73,10 +137,12 @@ class StratifiedCoordinateSampler(torch.utils.data.sampler.Sampler):
         proportions = np.zeros((len(labels), 2))
         i = 0
         for group in labels:
-            P,other = enumerate_coordinates(group, split=split) #other is set of negatives if PN method, else unlabeled 
-            P,other = ShuffledSampler(P), ShuffledSampler(other)
+            P = enumerate_coordinates(group) # P only
+            other = USampler(len(group), group[0].shape) if split=='pu' else NSampler(P, len(group), group[0].shape)
+            P = ShuffledSampler(P)
             groups.append(P)
-            groups.append(other)      
+            groups.append(other)
+            
             if split == 'pn':
                 total_len = (len(other)+len(P))
                 proportions[i//2,0] = len(other)/total_len
@@ -131,7 +197,8 @@ class StratifiedCoordinateSampler(torch.utils.data.sampler.Sampler):
         # code as integer; unfortunate hack required because pytorch converts index to integer...
         # allows storage of 3 integers in one int object
         h = i*2**56 + j*2**32 + c
-        return h.item()
+        h = h.item() if type(h) is torch.Tensor else h
+        return h
     
     # for python 2.7 compatability
     next = __next__
