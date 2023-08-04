@@ -108,7 +108,8 @@ def main(args):
     else:
         raise ValueError(f'Unsupported architecture: {args.model}. \
             Current 3D support includes resnet8 and resnet16.')
-    classifier = LinearClassifier(feature_extractor, dims=3, patch_size=args.patch_size, padding=args.patch_padding, batch_size=args.minibatch_size)
+    classifier = LinearClassifier(feature_extractor, dims=3, patch_size=feature_extractor.width, 
+                                  padding=feature_extractor.width//2, batch_size=args.minibatch_size)
     print('Model created') #width 71 pixels
     if args.describe: ## print description of model and terminate
         print(classifier)
@@ -119,6 +120,9 @@ def main(args):
     report(f'Using device={args.device} with cuda={use_cuda}')
     if use_cuda:
         classifier.cuda()
+        if args.num_workers != 0: 
+            report('When using GPU to load data, we only load in this process. Setting num_workers = 0.')
+            args.num_workers = 0
         
     ## load the data as lists of 3D numpy arrays
     train_images, train_targets, test_images, test_targets = \

@@ -125,6 +125,9 @@ def main(args):
     report('Using device={} with cuda={}'.format(args.device, use_cuda))
     if use_cuda:
         classifier.cuda()
+        if args.num_workers != 0: 
+            report('When using GPU to load data, we only load in this process. Setting num_workers = 0.')
+            args.num_workers = 0
     
     ## load the data
     train_images, train_targets, test_images, test_targets = \
