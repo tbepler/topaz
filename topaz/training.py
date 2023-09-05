@@ -116,7 +116,7 @@ def check_particle_image_bounds(images:pd.DataFrame, targets:pd.DataFrame, dims=
         for image in d.values():
             if dims == 2:
                 # if numpy array (H, W), reverse height and width order to (W,H)
-                w,h = image.size if type(image) == Image.Image else image.shape[1], image.shape[0]
+                w,h = image.size if (type(image) == Image.Image) else (image.shape[1], image.shape[0])
             elif dims == 3:
                 d, h, w = image.shape #3D arrays can only be read as numpy arrays             
             width, height = max(w, width), max(h, height)
@@ -351,7 +351,7 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
 
 def make_data_iterators(train_images:List[List[Union[Image.Image,np.ndarray]]], train_targets:List[List[np.ndarray]], 
                         test_images:List[List[Union[Image.Image,np.ndarray]]], test_targets:List[List[np.ndarray]], 
-                        crop:int, split:Literal['pn','pu'], args, dims:int=2):
+                        crop:int, split:Literal['pn','pu'], args, dims:int=2, to_tensor=True):
     ## training parameters
     minibatch_size = args.minibatch_size
     epoch_size = args.epoch_size
@@ -363,7 +363,7 @@ def make_data_iterators(train_images:List[List[Union[Image.Image,np.ndarray]]], 
 
     ## create augmented training dataset
     train_dataset = make_traindataset(train_images, train_targets, crop, dims=dims)
-    test_dataset = SegmentedImageDataset(test_images, test_targets, to_tensor=True) if test_targets is not None else None
+    test_dataset = SegmentedImageDataset(test_images, test_targets, to_tensor=to_tensor) if test_targets is not None else None
 
     ## create minibatch iterators
     labels = train_dataset.data.labels
@@ -386,13 +386,16 @@ def evaluate_model(classifier, criteria, data_iterator, use_cuda=False):
     with torch.no_grad():
         for X,Y in data_iterator:
             Y = Y.view(-1)
-            Y_true.append(Y.numpy())
+            Y_true.append(Y.cpu().numpy())
             if use_cuda:
                 X = X.cuda()
                 Y = Y.cuda()
 
-            # score = classifier(X).view(-1)
-            score = classify_patches(classifier, X, batch_size=data_iterator.batch_size).view(-1)
+            if classifier.dims == 2:
+                score = classifier(X).view(-1)
+            elif classifier.dims == 3:
+                score = classify_patches(classifier, X, batch_size=data_iterator.batch_size, 
+                                        patch_size=classifier.patch_size, padding=classifier.padding).view(-1)
 
             scores.append(score.data.cpu().numpy())
             this_loss = criteria(score, Y).item()
@@ -461,7 +464,7 @@ def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator,
                 classifier.cuda()
 
 
-def train_model(classifier, train_images, train_targets, test_images, test_targets, use_cuda, save_prefix, output, args, dims:int=2):
+def train_model(classifier, train_images, train_targets, test_images, test_targets, use_cuda, save_prefix, output, args, dims:int=2, to_tensor=True):
     num_positive_regions, total_regions = report_data_stats(train_images, train_targets, test_images, test_targets)
 
     ## make the training step method
@@ -487,7 +490,7 @@ def train_model(classifier, train_images, train_targets, test_images, test_targe
     ## training parameters
     train_iterator,test_iterator = make_data_iterators(train_images, train_targets,
                                                        test_images, test_targets,
-                                                       classifier.width, split, args, dims=dims)
+                                                       classifier.width, split, args, dims=dims, to_tensor=to_tensor)
     
     fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs,
                save_prefix=save_prefix, use_cuda=use_cuda, output=output)
