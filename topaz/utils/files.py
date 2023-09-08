@@ -166,7 +166,7 @@ def read_coordinates(path, format='auto'):
         # this is VIA CSV format
         particles = read_via_csv(path)
     else: # default to coordiantes table format
-        particles = pd.read_csv(path, sep='\t')
+        particles = pd.read_csv(path, sep='\t', dtype={'image_name':str})
 
     return particles
 
