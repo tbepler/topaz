@@ -192,7 +192,7 @@ class RandomImageTransforms:
             angle = self.random.uniform(0, 360)
             X = X.rotate(angle, resample=self.resample)
             if type(Y) is Image.Image:
-                Y = Y.rotate(angle, resmaple=Image.NEAREST)
+                Y = Y.rotate(angle, resample=Image.NEAREST)
 
         ## crop down if requested
         if self.crop is not None:
