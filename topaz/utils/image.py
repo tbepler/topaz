@@ -16,7 +16,8 @@ def crop_image(arr:Union[np.ndarray,torch.Tensor], xmin:int, xmax:int, ymin:int,
     """PIL-style cropping. Supports 3D arrays. 0-pads out-of-bounds indices. 
     Expects range arguments in X,Y(,Z) order but a tensor of shape (Z x) Y x X."""
     #convert input to torch Tensor to use torch.nn.functional padding (np.ndarray fails)
-    arr = torch.Tensor(arr)
+    if type(arr) == np.ndarray:
+        arr = torch.from_numpy(arr.copy()) 
     #calculate necessary padding
     depth,height,width = arr.shape if zmin is not None else (None, arr.shape[0], arr.shape[1])
     
