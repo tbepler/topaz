@@ -109,8 +109,8 @@ def main(args):
         image_names_train.append(image_names[j])
         groups_train.append(groups[j])
     
-    targets_train = pd.concat(groups_train, 0)
-    targets_test = pd.concat(groups_test, 0)
+    targets_train = pd.concat(groups_train, axis=0)
+    targets_test = pd.concat(groups_test, axis=0)
 
 
     ## if the image-dir is specified, make the image list files
