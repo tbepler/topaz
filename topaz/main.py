@@ -55,7 +55,7 @@ def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter)
 
     import topaz
-    parser.add_argument('--version', action='version', version='TOPAZ '+topaz.__version__)
+    parser.add_argument('--version', action='version', version=topaz.__version__)
 
     import topaz.commands.train
     import topaz.commands.segment
