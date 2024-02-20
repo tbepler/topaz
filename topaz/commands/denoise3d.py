@@ -19,7 +19,11 @@ import torch.nn.functional as F
 from topaz.utils.data.loader import load_image
 from topaz.utils.image import downsample
 import topaz.mrc as mrc
-import topaz.cuda
+import topaz.gpu
+try:
+    import intel_extension_for_pytorch as ipex
+except:
+    pass
 
 from topaz.denoise import UDenoiseNet3D
 from topaz.filters import GaussianDenoise
@@ -73,19 +77,20 @@ def add_arguments(parser=None):
 
     return parser
 
-def train_epoch(iterator, model, cost_func, optim, epoch=1, num_epochs=1, N=1, use_cuda=False):
+def train_epoch(iterator, model, cost_func, optim, epoch=1, num_epochs=1, N=1, device='cpu'):
     
     c = 0
     loss_accum = 0    
     model.train()
+#    if 'ipex' in dir():
+#        model, optim = ipex.optimize(model, optimizer=optim)
 
     for batch_idx , (source,target), in enumerate(iterator):
         
         b = source.size(0)        
         loss_mb = 0
-        if use_cuda:
-            source = source.cuda()
-            target = target.cuda()
+        source = source.to(device)
+        target = target.to(device)
             
         denoised_source = model(source)
         loss = cost_func(denoised_source,target)
@@ -108,7 +113,7 @@ def train_epoch(iterator, model, cost_func, optim, epoch=1, num_epochs=1, N=1, u
     return loss_accum
 
 
-def eval_model(iterator, model, cost_func, epoch=1, num_epochs=1, N=1, use_cuda=False):
+def eval_model(iterator, model, cost_func, epoch=1, num_epochs=1, N=1, device='cpu'):
     
     c = 0
     loss_accum = 0
@@ -119,9 +124,8 @@ def eval_model(iterator, model, cost_func, epoch=1, num_epochs=1, N=1, use_cuda=
             
             b = source.size(0)        
             loss_mb = 0
-            if use_cuda:
-                source = source.cuda()
-                target = target.cuda()
+            source = source.to(device)
+            target = target.to(device)
                 
             denoised_source = model(source)
             loss = cost_func(denoised_source,target)
@@ -408,7 +412,7 @@ def train_model(even_path, odd_path, save_prefix, save_interval, device
     # initialize the model
     print('# initializing model...', file=log)
     model_base = UDenoiseNet3D(base_width=base_kernel_width)
-    model,use_cuda,num_devices = set_device(model_base, device)
+    model,use_device,num_devices = set_device(model_base, device)
     
     if cost_func == 'L2':
         cost_func = nn.MSELoss()
@@ -469,7 +473,7 @@ def train_model(even_path, odd_path, save_prefix, save_interval, device
                                        epoch=epoch,
                                        num_epochs=num_epochs,
                                        N=N_train,
-                                       use_cuda=use_cuda)
+                                       device=use_device)
 
         line = '\t'.join([str(epoch+1), 'train', str(epoch_loss_accum)])
         print(line, file=output)
@@ -482,7 +486,7 @@ def train_model(even_path, odd_path, save_prefix, save_interval, device
                                    epoch=epoch,
                                    num_epochs=num_epochs,
                                    N=N_test,
-                                   use_cuda=use_cuda)
+                                   device=use_device)
     
         line = '\t'.join([str(epoch+1), 'test', str(epoch_loss_accum)])
         print(line, file=output)
@@ -491,8 +495,7 @@ def train_model(even_path, odd_path, save_prefix, save_interval, device
         if save_prefix is not None and (epoch+1)%save_interval == 0:
             model.eval().cpu()
             save_model(model, epoch+1, save_prefix, digits=digits)
-            if use_cuda:
-                model.cuda()
+            model.to(use_device)
 
     print('# training completed!', file=log)
 
@@ -557,17 +560,29 @@ def load_model(path, base_kernel_width=11):
 def set_device(model, device, log=sys.stderr):
     # set the device or devices
     d = device
-    use_cuda = (d != -1) and torch.cuda.is_available()
+    use_device = 'cpu'
+    if d != -1:
+        if torch.cuda.is_available():
+            import torch.cuda as acc
+            use_device = 'cuda'
+        elif hasattr(torch,'xpu'):
+            if torch.xpu.is_available():
+                import torch.xpu as acc
+                use_device = 'xpu'
+            else:
+                import torch.cpu as acc
+        else:
+            import torch.cpu as acc
     num_devices = 1
-    if use_cuda:
-        device_count = torch.cuda.device_count()
+    if use_device != 'cpu':
+        device_count = acc.device_count()
         try:
             if d >= 0:
                 assert d < device_count
-                torch.cuda.set_device(d)
-                print('# using CUDA device:', d, file=log)
+                acc.set_device(d)
+                print('# using GPU device:', d, file=log)
             elif d == -2:
-                print('# using all available CUDA devices:', device_count, file=log)
+                print('# using all available GPU devices:', device_count, file=log)
                 num_devices = device_count
                 model = nn.DataParallel(model)
             else:
@@ -579,10 +594,9 @@ def set_device(model, device, log=sys.stderr):
             print('ERROR: Something went wrong with setting the compute device', file=log)
             sys.exit(2)
 
-    if use_cuda:
-        model.cuda()
+        model.to(use_device)
 
-    return model, use_cuda, num_devices
+    return model, use_device, num_devices
 
 
 class PatchDataset:
@@ -756,7 +770,9 @@ def main(args):
             model = nn.Sequential(model, GaussianDenoise(gaussian_sigma, dims=3))
         model.eval()
         
-        model, use_cuda, num_devices = set_device(model, args.device)
+        model, use_device, num_devices = set_device(model, args.device)
+#        if 'ipex' in dir():
+#            model = ipex.optimize(model)
 
         #batch_size = args.batch_size
         #batch_size *= num_devices
