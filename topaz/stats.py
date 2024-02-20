@@ -4,10 +4,13 @@ import numpy as np
 import scipy.stats
 
 import torch
-
+try:
+    import intel_extension_for_pytorch as ipex
+except:
+    pass
 
 def normalize(x, alpha=900, beta=1, num_iters=100, sample=1
-             , method='gmm', use_cuda=False, verbose=False):
+             , method='gmm', device='cpu', verbose=False):
     if method == 'affine':
         mu = x.mean()
         std = x.std()
@@ -32,7 +35,7 @@ def normalize(x, alpha=900, beta=1, num_iters=100, sample=1
 
     mu, std, pi, logp, mus, stds, pis, logps = norm_fit(x_sample, alpha=alpha, beta=beta
                                                        , scale=scale
-                                                       , num_iters=num_iters, use_cuda=use_cuda
+                                                       , num_iters=num_iters, device=device
                                                        , verbose=verbose)
 
     # normalize the data
@@ -57,7 +60,7 @@ def normalize(x, alpha=900, beta=1, num_iters=100, sample=1
 
 
 def norm_fit(x, alpha=900, beta=1, scale=1
-            , num_iters=100, use_cuda=False, verbose=False):
+            , num_iters=100, device='cpu', verbose=False):
     
     # try multiple initializations of pi
     pis = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.98, 1])
@@ -68,8 +71,7 @@ def norm_fit(x, alpha=900, beta=1, scale=1
     stds = np.zeros(len(pis))
 
     x = torch.from_numpy(x)
-    if use_cuda:
-        x = x.cuda()
+    x = x.to(device)
     
     for i in range(len(pis)):
         pi = pis[i]

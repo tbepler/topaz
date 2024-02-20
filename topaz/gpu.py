@@ -2,6 +2,10 @@ from __future__ import absolute_import, print_function, division
 
 import warnings
 import torch
+try:
+    import intel_extension_for_pytorch as ipex
+except:
+    pass
 
 def _format(message, category, filename, lineno, line=None):
     w = '{}: {}\n'.format(category.__name__, message)
@@ -9,16 +13,26 @@ def _format(message, category, filename, lineno, line=None):
 warnings.formatwarning = _format
 
 
-class CudaWarning(UserWarning):
+class GpuWarning(UserWarning):
     pass
 
 
 def set_device(device, error=False, warn=True):
-    use_cuda = False
+    use_device = 'cpu'
     if device >= 0: # try to set GPU when device >= 0
-        use_cuda = torch.cuda.is_available()
+        if torch.cuda.is_available():
+            import torch.cuda as acc
+            use_device = 'cuda'
+        elif hasattr(torch,'xpu'):
+            if torch.xpu.is_available():
+                import torch.xpu as acc
+                use_device = 'xpu'
+            else:
+                import torch.cpu as acc
+        else:
+            import torch.cpu as acc
         try:
-            torch.cuda.set_device(device)
+            acc.set_device(device)
         except Exception as e:
             ## setting the device failed
             if error:
@@ -26,7 +40,8 @@ def set_device(device, error=False, warn=True):
             if warn:
                 # warn the user
                 message = str(e) + '\nFalling back to CPU.'
-                warnings.warn(message, CudaWarning)
+                warnings.warn(message, GpuWarning)
             # fallback to CPU
-            use_cuda = False
-    return use_cuda
+            use_device = 'cpu'
+    return use_device
+

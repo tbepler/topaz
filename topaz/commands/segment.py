@@ -12,7 +12,11 @@ import argparse
 import torch
 
 from topaz.utils.data.loader import load_image
-import topaz.cuda
+import topaz.gpu
+try:
+    import intel_extension_for_pytorch as ipex
+except:
+    pass
 
 name = 'segment'
 help = 'segment images using a trained region classifier'
@@ -43,7 +47,7 @@ def main(args):
     set_num_threads(num_threads)
 
     ## set the device
-    use_cuda = topaz.cuda.set_device(args.device)
+    device = topaz.gpu.set_device(args.device)
 
     ## load the model
     from topaz.model.factory import load_model
@@ -51,8 +55,9 @@ def main(args):
     model.eval()
     model.fill()
 
-    if use_cuda:
-        model.cuda()
+    model.to(device)
+#    if 'ipex' in dir():
+#        model = ipex.optimize(model)
 
     ## make output directory if doesn't exist
     destdir = args.destdir 
@@ -68,8 +73,7 @@ def main(args):
         ## process image with the model
         with torch.no_grad():
             X = torch.from_numpy(np.array(image, copy=False)).unsqueeze(0).unsqueeze(0)
-            if use_cuda:
-                X = X.cuda()
+            X = X.to(device)
             score = model(X).data[0,0].cpu().numpy()
         
         im = Image.fromarray(score) 

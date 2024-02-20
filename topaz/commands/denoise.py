@@ -16,7 +16,11 @@ import torch.nn.functional as F
 from topaz.utils.data.loader import load_image
 from topaz.utils.image import downsample
 import topaz.mrc as mrc
-import topaz.cuda
+import topaz.gpu
+try:
+    import intel_extension_for_pytorch as ipex
+except:
+    pass
 
 name = 'denoise'
 help = 'denoise micrographs with various denoising algorithms'
@@ -265,13 +269,12 @@ def make_hdf5_datasets(path, paired=True, preload=False, holdout=0.1, cutoff=0):
 
 def denoise_image(mic, models, lowpass=1, cutoff=0, gaus=None, inv_gaus=None, deconvolve=False
                  , deconv_patch=1, patch_size=-1, padding=0, normalize=False
-                 , use_cuda=False):
+                 , device='cpu'):
     if lowpass > 1:
         mic = dn.lowpass(mic, lowpass)
 
     mic = torch.from_numpy(mic)
-    if use_cuda:
-        mic = mic.cuda()
+    mic = mic.to(device)
 
     # normalize and remove outliers
     mu = mic.mean()
@@ -316,8 +319,8 @@ def main(args):
     set_num_threads(num_threads)
 
     ## set the device
-    use_cuda = topaz.cuda.set_device(args.device)
-    print('# using device={} with cuda={}'.format(args.device, use_cuda), file=sys.stderr)
+    device = topaz.gpu.set_device(args.device)
+    print('# Using device={} with GPU={}'.format(args.device, device), file=sys.stderr)
 
     cutoff = args.pixel_cutoff # pixel truncation limit
 
@@ -393,8 +396,7 @@ def main(args):
         else:
             raise Exception('Unknown architecture: ' + arch)
 
-        if use_cuda:
-            model = model.cuda()
+        model = model.to(device)
 
         # train
         optim = args.optim
@@ -417,7 +419,7 @@ def main(args):
                                            , criteria=criteria
                                            , num_epochs=num_epochs
                                            , dataset_val=dataset_val
-                                           , use_cuda=use_cuda
+                                           , device=device
                                            , num_workers=num_workers
                                            , shuffle=shuffle
                                            )
@@ -428,7 +430,7 @@ def main(args):
                                             , criteria=criteria
                                             , num_epochs=num_epochs
                                             , dataset_val=dataset_val
-                                            , use_cuda=use_cuda
+                                            , device=device
                                             , num_workers=num_workers
                                             , shuffle=shuffle
                                             )
@@ -446,8 +448,7 @@ def main(args):
                 model.cpu()
                 model.eval()
                 torch.save(model, path)
-                if use_cuda:
-                    model.cuda()
+                model.to(device)
                     
         models = [model]
 
@@ -461,8 +462,7 @@ def main(args):
             model = dn.load_model(arg)
 
             model.eval()
-            if use_cuda:
-                model.cuda()
+            model.to(device)
 
             models.append(model)
 
@@ -481,15 +481,13 @@ def main(args):
     gaus = args.gaussian
     if gaus > 0:
         gaus = dn.GaussianDenoise(gaus)
-        if use_cuda:
-            gaus.cuda()
+        gaus.to(device)
     else:
         gaus = None
     inv_gaus = args.inv_gaussian
     if inv_gaus > 0:
         inv_gaus = dn.InvGaussianFilter(inv_gaus)
-        if use_cuda:
-            inv_gaus.cuda()
+        inv_gaus.to(device)
     else:
         inv_gaus = None
     deconvolve = args.deconvolve
@@ -516,7 +514,7 @@ def main(args):
                                , inv_gaus=inv_gaus, deconvolve=deconvolve
                                , deconv_patch=deconv_patch
                                , patch_size=ps, padding=padding, normalize=normalize
-                               , use_cuda=use_cuda
+                               , device=device
                                )
             denoised[i] = mic
 
@@ -538,7 +536,7 @@ def main(args):
             return
 
         # make the output directory if it doesn't exist
-        if not os.path.exists(args.output):
+        if args.output and (not os.path.exists(args.output)):
             os.makedirs(args.output)
 
         for path in args.micrographs:
@@ -550,7 +548,7 @@ def main(args):
                                , inv_gaus=inv_gaus, deconvolve=deconvolve
                                , deconv_patch=deconv_patch
                                , patch_size=ps, padding=padding, normalize=normalize
-                               , use_cuda=use_cuda
+                               , device=device
                                )
 
             # write the micrograph

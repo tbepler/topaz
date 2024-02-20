@@ -7,6 +7,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
+try:
+    import intel_extension_for_pytorch as ipex
+except:
+    pass
 
 def autoencoder_loss(model, X):
     X = X.unsqueeze(1)
@@ -123,8 +127,7 @@ class GE_binomial:
         ## KL of w from the binomial distribution with pi
         log_binom = scipy.stats.binom.logpmf(np.arange(0,N+1),N,self.pi)
         log_binom = torch.from_numpy(log_binom).float()
-        if q_var.is_cuda:
-            log_binom = log_binom.cuda()
+        log_binom = log_binom.to(q_var.device)
         log_binom = Variable(log_binom)
 
         ge_penalty = -torch.sum(log_binom*q_discrete)
