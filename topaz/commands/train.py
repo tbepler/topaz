@@ -19,7 +19,11 @@ import topaz.utils.files as file_utils
 from topaz.utils.printing import report
 from topaz.utils.data.loader import load_images_from_list
 from topaz.utils.data.coordinates import match_coordinates_to_images
-import topaz.cuda
+import topaz.gpu
+try:
+    import intel_extension_for_pytorch as ipex
+except:
+    pass
 
 name = 'train'
 help = 'train region classifier from images with labeled coordinates'
@@ -508,7 +512,7 @@ def make_data_iterators(train_images, train_targets, test_images, test_targets
     return train_iterator, test_iterator
 
 
-def evaluate_model(classifier, criteria, data_iterator, use_cuda=False):
+def evaluate_model(classifier, criteria, data_iterator, device='cpu'):
     from topaz.metrics import average_precision
 
     classifier.eval()
@@ -523,9 +527,8 @@ def evaluate_model(classifier, criteria, data_iterator, use_cuda=False):
         for X,Y in data_iterator:
             Y = Y.view(-1)
             Y_true.append(Y.numpy())
-            if use_cuda:
-                X = X.cuda()
-                Y = Y.cuda()
+            X = X.to(device)
+            Y = Y.to(device)
 
             score = classifier(X).view(-1)
 
@@ -551,12 +554,11 @@ def evaluate_model(classifier, criteria, data_iterator, use_cuda=False):
     return loss, precision, tpr, fpr, auprc
 
 
-def fit_epoch(step_method, data_iterator, epoch=1, it=1, use_cuda=False, output=sys.stdout):
+def fit_epoch(step_method, data_iterator, epoch=1, it=1, device='cpu', output=sys.stdout):
     for X,Y in data_iterator:
         Y = Y.view(-1)
-        if use_cuda:
-            X = X.cuda()
-            Y = Y.cuda()
+        X = X.to(device)
+        Y = Y.to(device)
         metrics = step_method.step(X, Y)
         line = '\t'.join([str(epoch), str(it), 'train'] + [str(metric) for metric in metrics] + ['-'])
         print(line, file=output)
@@ -566,7 +568,7 @@ def fit_epoch(step_method, data_iterator, epoch=1, it=1, use_cuda=False, output=
 
 
 def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator, num_epochs
-              , save_prefix=None, use_cuda=False, output=sys.stdout):
+              , save_prefix=None, device='cpu', output=sys.stdout):
     ## fit the model, report train/test stats, save model if required
     header = step_method.header
     line = '\t'.join(['epoch', 'iter', 'split'] + header + ['auprc'])
@@ -576,13 +578,15 @@ def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator,
     for epoch in range(1,num_epochs+1):
         ## update the model
         classifier.train()
+#        if 'ipex' in dir():
+#            classifier, step_method.optim = ipex.optimize(classifier, optimizer=step_method.optim)
         it = fit_epoch(step_method, train_iterator, epoch=epoch, it=it
-                      , use_cuda=use_cuda, output=output)
+                      , device=device, output=output)
 
         ## measure validation performance
         if test_iterator is not None:
             loss,precision,tpr,fpr,auprc = evaluate_model(classifier, criteria, test_iterator
-                                                         , use_cuda=use_cuda)
+                                                         , device=device)
             line = '\t'.join([str(epoch), str(it), 'test', str(loss)] + ['-']*(len(header)-4) + [str(precision), str(tpr), str(fpr), str(auprc)])
             print(line, file=output)
             output.flush()
@@ -594,8 +598,7 @@ def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator,
             path = prefix + ('_epoch{:0'+str(digits)+'}.sav').format(epoch) 
             classifier.cpu()
             torch.save(classifier, path)
-            if use_cuda:
-                classifier.cuda()
+            classifier.to(device)
 
 
 def main(args):
@@ -614,20 +617,18 @@ def main(args):
 
     ## set the device
     """
-    use_cuda = False
     if args.device >= 0:
-        use_cuda = torch.cuda.is_available()
-        if use_cuda:
-            torch.cuda.set_device(args.device)
+        use_gpu = torch.[cuda|xpu].is_available()
+        if use_gpu:
+            torch.[cuda|xpu].set_device(args.device)
         else:
-            print('WARNING: you specified GPU (device={}) but no GPUs were detected. This may mean there is a mismatch between your system CUDA version and your pytorch CUDA version.'.format(args.device), file=sys.stderr)
+            print('WARNING: you specified GPU (device={}) but no GPUs were detected. This may mean there is a mismatch between your system GPU and your pytorch GPU version.'.format(args.device), file=sys.stderr)
     """
 
-    use_cuda = topaz.cuda.set_device(args.device)
-    report('Using device={} with cuda={}'.format(args.device, use_cuda))
+    device = topaz.gpu.set_device(args.device)
+    report('Using device={} with GPU={}'.format(args.device, device))
 
-    if use_cuda:
-        classifier.cuda()
+    classifier.to(device)
     
     ## load the data
     radius = args.radius # number of pixels around coordinates to label as positive
@@ -695,7 +696,7 @@ def main(args):
     #if not os.path.exists(os.path.dirname(save_prefix)):
     #    os.makedirs(os.path.dirname(save_prefix))
     fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs
-              , save_prefix=save_prefix, use_cuda=use_cuda, output=output)
+              , save_prefix=save_prefix, device=device, output=output)
 
     report('Done!')
 

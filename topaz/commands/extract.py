@@ -18,7 +18,11 @@ import topaz.utils.files as file_utils
 from topaz.algorithms import non_maximum_suppression, match_coordinates
 from topaz.metrics import average_precision
 import topaz.predict
-import topaz.cuda
+import topaz.gpu
+try:
+    import intel_extension_for_pytorch as ipex
+except:
+    pass
 
 name = 'extract'
 help = 'extract particles from segmented images or segment and extract in one step with a trained classifier'
@@ -187,15 +191,16 @@ def stream_images(paths):
 def score_images(model, paths, device=-1, batch_size=1):
     if model is not None and model != 'none': # score each image with the model
         ## set the device
-        use_cuda = topaz.cuda.set_device(device)
+        device = topaz.gpu.set_device(device)
         ## load the model
         from topaz.model.factory import load_model
         model = load_model(model)
         model.eval()
         model.fill()
-        if use_cuda:
-            model.cuda()
-        scores = topaz.predict.score_stream(model, stream_images(paths), use_cuda=use_cuda
+        model.to(device)
+#        if 'ipex' in dir():
+#            model = ipex.optimize(model)
+        scores = topaz.predict.score_stream(model, stream_images(paths), device=device
                                            , batch_size=batch_size)
     else: # load scores directly
         scores = stream_images(paths)

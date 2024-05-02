@@ -11,6 +11,10 @@ import torch.utils.data
 
 from topaz.utils.data.loader import load_image
 from topaz.filters import AffineFilter, AffineDenoise, GaussianDenoise, gaussian_filter, inverse_filter
+try:
+    import intel_extension_for_pytorch as ipex
+except:
+    pass
 
 
 def load_model(name):
@@ -100,15 +104,14 @@ def denoise_patches(model, x, patch_size, padding=128):
 
     return y
 
-def denoise_stack(model, stack, batch_size=20, use_cuda=False):
+def denoise_stack(model, stack, batch_size=20, device='cpu'):
     denoised = np.zeros_like(stack)
     with torch.no_grad():
         stack = torch.from_numpy(stack).float()
 
         for i in range(0, len(stack), batch_size):
             x = stack[i:i+batch_size]
-            if use_cuda:
-                x = x.cuda()
+            x = x.to(device)
             mu = x.view(x.size(0), -1).mean(1)
             std = x.view(x.size(0), -1).std(1)
             x = (x - mu.unsqueeze(1).unsqueeze(2))/std.unsqueeze(1).unsqueeze(2)
@@ -1017,7 +1020,7 @@ class L0Loss:
 
 
 def eval_noise2noise(model, dataset, criteria, batch_size=10
-                    , use_cuda=False, num_workers=0):
+                    , device='cpu', num_workers=0):
     data_iterator = torch.utils.data.DataLoader(dataset, batch_size=batch_size
                                                , num_workers=num_workers)
 
@@ -1025,12 +1028,13 @@ def eval_noise2noise(model, dataset, criteria, batch_size=10
     loss = 0
 
     model.eval()
+#    if 'ipex' in dir():
+#        model = ipex.optimize(model)
         
     with torch.no_grad():
         for x1,x2 in data_iterator:
-            if use_cuda:
-                x1 = x1.cuda()
-                x2 = x2.cuda()
+            x1 = x1.to(device)
+            x2 = x2.to(device)
 
             x1 = x1.unsqueeze(1)
             y = model(x1).squeeze(1)
@@ -1047,7 +1051,7 @@ def eval_noise2noise(model, dataset, criteria, batch_size=10
 
 def train_noise2noise(model, dataset, lr=0.001, optim='adagrad', batch_size=10, num_epochs=100
                      , criteria=nn.MSELoss(), dataset_val=None
-                     , use_cuda=False, num_workers=0, shuffle=True):
+                     , device='cpu', num_workers=0, shuffle=True):
 
     gamma = None
     if criteria == 'L0':
@@ -1072,6 +1076,8 @@ def train_noise2noise(model, dataset, lr=0.001, optim='adagrad', batch_size=10, 
 
     for epoch in range(1, num_epochs+1):
         model.train()
+#        if 'ipex' in dir():
+#            model, optim = ipex.optimize(model, optimizer=optim)
         
         n = 0
         loss_accum = 0
@@ -1081,9 +1087,8 @@ def train_noise2noise(model, dataset, lr=0.001, optim='adagrad', batch_size=10, 
             criteria.gamma = 2 - (epoch-1)*2/num_epochs
 
         for x1,x2 in data_iterator:
-            if use_cuda:
-                x1 = x1.cuda()
-                x2 = x2.cuda()
+            x1 = x1.to(device)
+            x2 = x2.to(device)
 
             x1 = x1.unsqueeze(1)
             y = model(x1).squeeze(1)
@@ -1109,7 +1114,7 @@ def train_noise2noise(model, dataset, lr=0.001, optim='adagrad', batch_size=10, 
             loss_val = eval_noise2noise(model, dataset_val, criteria
                                        , batch_size=batch_size
                                        , num_workers=num_workers
-                                       , use_cuda=use_cuda
+                                       , device=device
                                        )
             yield epoch, loss_accum, loss_val
         else:
@@ -1117,7 +1122,7 @@ def train_noise2noise(model, dataset, lr=0.001, optim='adagrad', batch_size=10, 
 
 
 def eval_mask_denoise(model, dataset, criteria, p=0.01 # masking rate
-                     , batch_size=10, use_cuda=False, num_workers=0):
+                     , batch_size=10, device='cpu', num_workers=0):
     data_iterator = torch.utils.data.DataLoader(dataset, batch_size=batch_size
                                                , num_workers=num_workers)
 
@@ -1125,6 +1130,8 @@ def eval_mask_denoise(model, dataset, criteria, p=0.01 # masking rate
     loss = 0
 
     model.eval()
+#    if 'ipex' in dir():
+#        model = ipex.optimize(model)
         
     with torch.no_grad():
         for x in data_iterator:
@@ -1132,10 +1139,9 @@ def eval_mask_denoise(model, dataset, criteria, p=0.01 # masking rate
             mask = (torch.rand(x.size()) < p)
             r = torch.randn(x.size())
 
-            if use_cuda:
-                x = x.cuda()
-                mask = mask.cuda()
-                r = r.cuda()
+            x = x.to(device)
+            mask = mask.to(device)
+            r = r.to(device)
 
             # mask out x by replacing from N(0,1)
             x_ = mask.float()*r + (1-mask.float())*x
@@ -1159,7 +1165,7 @@ def eval_mask_denoise(model, dataset, criteria, p=0.01 # masking rate
 
 def train_mask_denoise(model, dataset, p=0.01, lr=0.001, optim='adagrad', batch_size=10, num_epochs=100
                       , criteria=nn.MSELoss(), dataset_val=None
-                      , use_cuda=False, num_workers=0, shuffle=True):
+                      , device='cpu', num_workers=0, shuffle=True):
 
     gamma = None
     if criteria == 'L0':
@@ -1184,6 +1190,8 @@ def train_mask_denoise(model, dataset, p=0.01, lr=0.001, optim='adagrad', batch_
 
     for epoch in range(1, num_epochs+1):
         model.train()
+#        if 'ipex' in dir():
+#            model, optim = ipex.optimize(model, optimizer=optim)
         
         n = 0
         loss_accum = 0
@@ -1199,10 +1207,9 @@ def train_mask_denoise(model, dataset, p=0.01, lr=0.001, optim='adagrad', batch_
             mask = (torch.rand(x.size()) < p)
             r = torch.randn(x.size())
 
-            if use_cuda:
-                x = x.cuda()
-                mask = mask.cuda()
-                r = r.cuda()
+            x = x.to(device)
+            mask = mask.to(device)
+            r = r.to(device)
 
             # mask out x by replacing from N(0,1)
             x_ = mask.float()*r + (1-mask.float())*x
@@ -1233,7 +1240,7 @@ def train_mask_denoise(model, dataset, p=0.01, lr=0.001, optim='adagrad', batch_
             loss_val = eval_mask_denoise(model, dataset_val, criteria, p=p
                                         , batch_size=batch_size
                                         , num_workers=num_workers
-                                        , use_cuda=use_cuda
+                                        , device=device
                                         )
             yield epoch, loss_accum, loss_val
         else:
@@ -1266,18 +1273,16 @@ def lowpass(x, factor=1, dims=2):
     return f
 
 
-def gaussian(x, sigma=1, scale=5, use_cuda=False, dims=2):
+def gaussian(x, sigma=1, scale=5, device='cpu', dims=2):
     """
     Apply Gaussian filter with sigma to image. Truncates the kernel at scale times sigma pixels
     """
 
     f = GaussianDenoise(sigma, scale=scale, dims=dims)
-    if use_cuda:
-        f.cuda()
+    f.to(device)
 
     with torch.no_grad():
         x = torch.from_numpy(x).unsqueeze(0).unsqueeze(0)
-        if use_cuda:
-            x = x.cuda()
+        x = x.to(device)
         y = f(x).squeeze().cpu().numpy()
     return y

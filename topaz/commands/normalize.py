@@ -12,7 +12,11 @@ import argparse
 from topaz.stats import normalize
 from topaz.utils.data.loader import load_image
 from topaz.utils.image import downsample, save_image
-import topaz.cuda
+import topaz.gpu
+try:
+    import intel_extension_for_pytorch as ipex
+except:
+    pass
 
 name = 'normalize'
 help = 'normalize a set of images using the 2-component Gaussian mixture model'
@@ -48,7 +52,7 @@ def add_arguments(parser=None):
 
 class Normalize:
     def __init__(self, dest, scale, affine, num_iters, alpha, beta
-                , sample, metadata, formats, use_cuda):
+                , sample, metadata, formats, device):
         self.dest = dest
         self.scale = scale
         self.affine = affine
@@ -58,7 +62,7 @@ class Normalize:
         self.sample = sample
         self.metadata = metadata
         self.formats = formats
-        self.use_cuda = use_cuda
+        self.device = device
 
     def __call__(self, path):
         # load the image
@@ -72,7 +76,7 @@ class Normalize:
         if self.affine:
             method = 'affine'
         x,metadata = normalize(x, alpha=self.alpha, beta=self.beta, num_iters=self.num_iters
-                              , method=method, sample=self.sample, use_cuda=self.use_cuda)
+                              , method=method, sample=self.sample, device=self.device)
 
         # save the image and the metadata
         name,_ = os.path.splitext(os.path.basename(path))
@@ -116,9 +120,9 @@ def main(args):
     from topaz.torch import set_num_threads
     set_num_threads(num_threads)
 
-    # set CUDA device
-    use_cuda = topaz.cuda.set_device(args.device)
-    if use_cuda:
+    # set GPU device
+    device = topaz.gpu.set_device(args.device)
+    if device != 'cpu':
         # when using GPU, turn off multiple processes
         num_workers = 0
 
@@ -126,7 +130,7 @@ def main(args):
         os.makedirs(dest)
 
     process = Normalize(dest, scale, affine, num_iters, alpha, beta
-                       , sample, metadata, formats, use_cuda)
+                       , sample, metadata, formats, device)
 
     if num_workers > 1:
         pool = mp.Pool(num_workers)
