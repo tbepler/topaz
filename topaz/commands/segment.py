@@ -24,6 +24,7 @@ def add_arguments(parser=None):
 
     parser.add_argument('-d', '--device', default=0, type=int, help='which device to use, <0 corresponds to CPU (default: GPU if available)')
     parser.add_argument('-j', '--num-threads', type=int, default=0, help='number of threads for pytorch, 0 uses pytorch defaults, <0 uses all cores (default: 0)')
+    parser.add_argument('-p', '--patch-size', type=int, default=None, help='size of patches to predict on, None will predict on the whole image (default: None)')
 
     parser.add_argument('-v', '--verbose', action='store_true', help='verbose mode')
 
@@ -48,7 +49,11 @@ def main(args):
     if use_cuda:
         model.cuda()
 
-    segment_images(model, args.paths, args.destdir, use_cuda, verbose)
+    patch_size = args.patch_size
+    if (patch_size is not None) and (patch_size <= 0):
+        raise ValueError('patch size must be positive')
+
+    segment_images(model, args.paths, args.destdir, use_cuda, verbose, args.patch_size)
 
 
 if __name__ == '__main__':
