@@ -14,19 +14,17 @@ from topaz.utils.data.loader import load_image
 from topaz.utils.image import downsample, save_image
 
 
-def calculate_pi(expected_num_particles, num_micrographs, radius, total_regions):
-    # given the expected number of particles in dataset and the radius
-    # calculate what pi should be
-    # pi = pixels_per_particle*expected_number_of_particles/pixels_in_dataset
+def calculate_pi(expected_num_particles, radius, total_pixels, dims=2):
+    '''Given the expected number of particles in dataset and radius, calculate what pi should be.'''
     grid = np.linspace(-radius, radius, 2*radius+1)
-    xx = np.zeros((2*radius+1, 2*radius+1)) + grid[:,np.newaxis]
-    yy = np.zeros((2*radius+1, 2*radius+1)) + grid[np.newaxis]
+    xx,yy,zz = np.meshgrid(grid, grid, grid)
     d2 = xx**2 + yy**2
+    if dims == 3:
+        d2 += zz**2
     mask = (d2 <= radius**2).astype(int)
     pixels_per_particle = mask.sum()
-
-    # total_regions is number of regions in the data
-    pi = pixels_per_particle*expected_num_particles/total_regions
+    # total_regions is number of pixels in the data
+    pi = pixels_per_particle*expected_num_particles / total_pixels
     return pi
 
 

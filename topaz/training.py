@@ -473,7 +473,7 @@ def train_model(classifier, train_images, train_targets, test_images, test_targe
         # expected particles in training set rather than per micrograph
         expected_num_particles = args.num_particles * num_micrographs
         
-        pi = calculate_pi(expected_num_particles, num_micrographs, args.radius, total_regions)
+        pi = calculate_pi(expected_num_particles, args.radius, total_regions, dims)
 
         report('Specified expected number of particle per micrograph = {}'.format(args.num_particles))
         report('With radius = {}'.format(args.radius))
