@@ -53,14 +53,14 @@ class MemoryMappedImage():
     
     def get_crop(self, center_indices):
         z,y,x = center_indices
-
         # set crop index ranges and any necessary 0-padding
-        xmin, xmax, ymin, ymax = x-self.size//2, x+self.size//2, y-self.size//2, y+self.size//2
-        xpad = abs(min(0,xmin)), abs(min(0,self.size-xmax))
-        ypad = abs(min(0,ymin)), abs(min(0,self.size-ymax))
+        xmin, xmax, ymin, ymax = x-self.size//2, x+self.size//2+1, y-self.size//2, y+self.size//2+1
+        xpad = abs(min(0,xmin)), abs(min(0,self.shape[-1]-xmax))
+        ypad = abs(min(0,ymin)), abs(min(0,self.shape[-2]-ymax))
+        
         if z is not None:
-            zmin, zmax = z-self.size//2, z+self.size//2
-            zpad = abs(min(0,zmin)), abs(min(0,self.size-zmax))
+            zmin, zmax = z-self.size//2, z+self.size//2+1
+            zpad = abs(min(0,zmin)), abs(min(0,self.shape[-3]-zmax))
 
         with open(self.image_path, 'rb') as f:
             array = np.memmap(f, shape=self.shape, dtype=self.dtype, mode='r', offset=self.offset)
