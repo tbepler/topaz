@@ -98,7 +98,7 @@ class MemoryMappedImage():
 
 
 class MultipleImageSetDataset(torch.utils.data.Dataset):
-    def __init__(self, paths:List[List[str]], targets:pd.DataFrame, number_samples:int, crop_size:int, image_set_balance:List[float]=None, positive_balance:float=0.5, mode:str='pn'):
+    def __init__(self, paths:List[List[str]], targets:pd.DataFrame, number_samples:int, crop_size:int, image_set_balance:List[float]=None, positive_balance:float=0.5, mode:str='pn', rotate:bool=False, flip:bool=False):
         # convert float coords to ints, regardless of 2d/3d
         names = targets['image_name']
         targets = targets.drop(columns=['image_name']).round().astype(int)
@@ -122,6 +122,8 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
         self.mode = mode
         self.image_set_balance = image_set_balance # probabilties or uniform
         self.rng = np.random.default_rng()
+        self.rotate = rotate
+        self.flip = flip
         
     def __len__(self):
         return self.number_samples # how many crops we want in each epoch
@@ -134,5 +136,15 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
         # sample a random crop and label from the image
         img = self.images[img_set_idx][img_idx]
         crop, label = img[i]
+        
+        # apply random transformations (2D only)
+        if self.rotate:
+            angle = self.rng.uniform(0, 360)
+            crop = torchvision.transforms.functional.rotate2d(crop, angle)
+        if self.flip:
+            if self.rng.random() < 0.5:
+                crop = torchvision.transforms.functional.hflip(crop)
+            if self.rng.random() < 0.5:
+                crop = torchvision.transforms.functional.vflip(crop)
         
         return crop,label
