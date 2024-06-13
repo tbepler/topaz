@@ -22,6 +22,7 @@ from topaz.metrics import average_precision
 from topaz.model.classifier import classify_patches
 from topaz.model.factory import get_feature_extractor, load_model
 from topaz.model.generative import ConvGenerator
+from topaz.mrc import parse_header
 from topaz.stats import calculate_pi
 from topaz.utils.data.coordinates import match_coordinates_to_images
 from topaz.utils.data.loader import (LabeledImageCropDataset,
@@ -61,6 +62,31 @@ def filter_targets_missing_images(images:pd.DataFrame, targets:pd.DataFrame, mod
         print(f'WARNING: missing micrographs are: {missing}', file=sys.stderr)
     targets = targets.loc[check]    
     return targets
+
+
+def convert_path_to_grouped_list(images_path:str, targets:pd.DataFrame) -> List[List[str]]:
+    '''Find image paths under a given path and group them by source.'''
+    if os.path.isdir(images_path):
+        glob_base = images_path + os.sep + '*' # only get mrc files, need the header
+        image_paths = glob.glob(glob_base+'.mrc')# + glob.glob(glob_base+'.tiff') + glob.glob(glob_base+'.png')
+        image_name = [os.path.splitext(os.path.basename(x))[0] for x in image_paths]
+        image_paths = pd.DataFrame({'image_path': image_paths, 'image_name': image_name})
+    else:
+        image_paths = pd.read_csv(path, sep='\s+') # training image file list
+    
+    if 'source' not in image_paths.columns:
+        if 'source' not in targets.columns:
+            image_paths['source'] = 0
+            targets['source'] = 0
+        else:
+            # Ensure 'image_name' is unique in 'targets'
+            targets_grouped = targets.groupby('image_name')['source'].first()  # or .last(), or .agg(lambda x: x.value_counts().index[0])
+            # Map the 'source' from 'targets' to 'image_paths'
+            image_paths['source'] = image_paths['image_name'].map(targets_grouped)
+    
+    # group by source
+    grouped = image_paths.groupby('source')['image_path'].apply(list).tolist()
+    return grouped
 
 
 def load_image_set(images_path, targets_path, image_ext, radius, format_, as_images=True, mode='training', 
@@ -220,7 +246,7 @@ def load_data(train_images_path:str, train_targets_path:str, test_images_path:st
     return train_images, train_targets, test_images, test_targets
 
 
-def report_data_stats(train_images, train_targets, test_images, test_targets):
+def report_data_stats_old(train_images, train_targets, test_images, test_targets):
     '''Assumes data are given as torch Tensors.'''
     report('source\tsplit\tp_observed\tnum_positive_regions\ttotal_regions')
     num_positive_regions = 0
@@ -241,6 +267,41 @@ def report_data_stats(train_images, train_targets, test_images, test_targets):
             p_observed = p/total
             p_observed = '{:.3g}'.format(p_observed)
             report(str(i)+'\t'+'test'+'\t'+p_observed+'\t'+str(p)+'\t'+str(total))
+    return num_positive_regions, total_regions
+
+
+from topaz.mrc import read
+
+def report_data_stats(train_image_path:str, train_targets_path:str, test_image_path:str=None, test_targets_path:str=None):
+    print('source\tsplit\tp_observed\tnum_positive_regions\ttotal_regions')
+    num_positive_regions = 0
+    total_regions = 0
+    # Convert paths to grouped lists
+    train_grouped = convert_path_to_grouped_list(images_path, targets)
+    test_grouped = convert_path_to_grouped_list(test_images_path, test_targets) if test_images_path is not None else None
+    for i, image_paths in enumerate(train_grouped):
+        for image_path in image_paths:
+            # Read the image and its header
+            header = parse_header(image_path)
+            total_regions_image = header.nz * header.ny * header.nx
+            # Read the corresponding target
+            target = targets[targets['image_name'] == os.path.splitext(os.path.basename(image_path))[0]]
+            num_positive_regions_image = len(target[target == 1])
+            p_observed = num_positive_regions_image / total_regions_image
+            report(f'{i}\ttrain\t{p_observed:.2f}\t{num_positive_regions_image}\t{total_regions_image}')
+            num_positive_regions += num_positive_regions_image
+            total_regions += total_regions_image
+    if test_grouped is not None:
+        for i, image_paths in enumerate(test_grouped):
+            for image_path in image_paths:
+                header = parse_header(image_path)
+                total_regions_image = header.nz * header.ny * header.nx
+                target = test_targets[test_targets['image_name'] == os.path.splitext(os.path.basename(image_path))[0]]
+                num_positive_regions_image = len(target[target == 1])
+                p_observed = num_positive_regions_image / total_regions_image
+                report(f'{i}\ttest\t{p_observed:.2f}\t{num_positive_regions_image}\t{total_regions_image}')
+                num_positive_regions += num_positive_regions_image
+                total_regions += total_regions_image
     return num_positive_regions, total_regions
 
 
@@ -349,7 +410,7 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
     return trainer, criteria, split
 
 
-def make_data_iterators(train_images:List[List[Union[Image.Image,np.ndarray]]], train_targets:List[List[np.ndarray]], 
+def make_data_iterators_old(train_images:List[List[Union[Image.Image,np.ndarray]]], train_targets:List[List[np.ndarray]], 
                         test_images:List[List[Union[Image.Image,np.ndarray]]], test_targets:List[List[np.ndarray]], 
                         crop:int, split:Literal['pn','pu'], args, dims:int=2, to_tensor=True):
     ## training parameters
@@ -372,6 +433,35 @@ def make_data_iterators(train_images:List[List[Union[Image.Image,np.ndarray]]], 
     train_iterator = DataLoader(train_dataset, batch_size=minibatch_size, sampler=sampler, num_workers=num_workers)
     test_iterator = DataLoader(test_dataset, batch_size=testing_batch_size, num_workers=0) if test_dataset is not None else None
     return train_iterator, test_iterator
+
+
+def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, split:Literal['pn','pu'], minibatch_size:int, epoch_size:int, 
+                        test_image_path:str=None, test_targets_path:str=None, testing_batch_size:int=256, num_workers:int=0, balance:float=0.5, dims:int=2):
+    '''make train and test dataloaders'''
+    train_targets = file_utils.read_coordinates(train_targets_path)    
+    if len(train_targets) == 0:
+        report('ERROR: no training particles specified. Check that micrograph names in the particles file match those in the micrographs file/directory.', file=sys.stderr)
+        raise Exception('No training particles.')
+    
+    train_image_paths = convert_path_to_grouped_list(train_image_path, train_targets)
+
+    train_dataset = MultipleImageSetDataset(train_image_paths, train_targets, epoch_size, crop, positive_balance=balance, split=split, 
+                                            rotate=(dims==2), flip=(dims==2), mode='training',
+                                            dims=dims)
+    train_dataloader = DataLoader(train_dataset, batch_size=minibatch_size, shuffle=True, num_workers=num_workers)
+    report(f'Loaded {train_dataset.num_images} training micrographs with {train_dataset.num_particles} labeled particles')
+
+    if test_targets_path is not None:
+        test_targets = file_utils.read_coordinates(test_targets_path)
+        test_image_paths = convert_path_to_grouped_list(test_image_path, test_targets)
+        # TODO: should the epoch size be the same for testing?
+        test_dataset  = MultipleImageSetDataset(test_image_paths,  test_targets,  epoch_size, crop, positive_balance=None, split=split, 
+                                                rotate=(dims==2), flip=(dims==2), mode='testing', dims=dims)
+        test_dataloader = DataLoader(test_dataset, batch_size=testing_batch_size, shuffle=False, num_workers=num_workers)
+        report(f'Loaded {test_dataset.num_images} testing micrographs with {test_dataset.num_particles} labeled particles')
+        return train_dataloader, test_dataloader
+    else:
+        return train_dataloader, None
 
 
 def evaluate_model(classifier, criteria, data_iterator, use_cuda=False):
@@ -464,7 +554,7 @@ def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator,
                 classifier.cuda()
 
 
-def train_model(classifier, train_images, train_targets, test_images, test_targets, use_cuda, save_prefix, output, args, dims:int=2, to_tensor=True):
+def train_model_old(classifier, train_images, train_targets, test_images, test_targets, use_cuda, save_prefix, output, args, dims:int=2, to_tensor=True):
     num_positive_regions, total_regions = report_data_stats(train_images, train_targets, test_images, test_targets)
 
     ## make the training step method
@@ -487,10 +577,56 @@ def train_model(classifier, train_images, train_targets, test_images, test_targe
                                                          lr=args.learning_rate, l2=args.l2,
                                                          method=args.method, pi=pi, slack=args.slack,
                                                          autoencoder=args.autoencoder)
+    
     ## training parameters
+    report(f'minibatch_size={args.minibatch_size}, epoch_size={args.epoch_size}, num_epochs={args.num_epochs}')
+    num_workers = mp.cpu_count() if args.num_workers < 0 else args.num_workers # set num workers to use all CPUs 
+    balance = None if args.natural else args.minibatch_balance # ratio of positive to negative in minibatch
+    
     train_iterator,test_iterator = make_data_iterators(train_images, train_targets,
                                                        test_images, test_targets,
                                                        classifier.width, split, args, dims=dims, to_tensor=to_tensor)
+    
+    fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs,
+               save_prefix=save_prefix, use_cuda=use_cuda, output=output)
+
+    return classifier
+
+
+def train_model(classifier, train_image_path:str, train_targets_path:str, test_image_path:str, test_targets_path:str, use_cuda:bool, 
+                save_prefix:str, output, args, dims:int=2):
+    num_positive_regions, total_regions = report_data_stats(train_image_path, train_targets_path, test_image_path, test_targets_path)
+
+    ## make the training step method
+    if args.num_particles > 0:
+        num_micrographs = sum(len(images) for images in train_images)
+        # expected particles in training set rather than per micrograph
+        expected_num_particles = args.num_particles * num_micrographs
+        
+        pi = calculate_pi(expected_num_particles, args.radius, total_regions, dims)
+
+        report('Specified expected number of particle per micrograph = {}'.format(args.num_particles))
+        report('With radius = {}'.format(args.radius))
+        report('Setting pi = {}'.format(pi))
+    else: 
+        pi = args.pi
+        report('pi = {}'.format(pi))
+    
+    trainer, criteria, split = make_training_step_method(classifier, num_positive_regions,
+                                                         num_positive_regions/total_regions,
+                                                         lr=args.learning_rate, l2=args.l2,
+                                                         method=args.method, pi=pi, slack=args.slack,
+                                                         autoencoder=args.autoencoder)
+    
+    ## training parameters
+    report(f'minibatch_size={args.minibatch_size}, epoch_size={args.epoch_size}, num_epochs={args.num_epochs}')
+    num_workers = mp.cpu_count() if args.num_workers < 0 else args.num_workers # set num workers to use all CPUs 
+    balance = None if args.natural else args.minibatch_balance # ratio of positive to negative in minibatch
+    
+    train_iterator,test_iterator = make_data_iterators(train_image_path, train_targets_path, crop, split, args.minibatch_size, args.epoch_size, 
+                        test_image_path=test_image_path, test_targets_path=test_targets_path, testing_batch_size=args.test_batch_size, 
+                        num_workers=0, balance=balance, dims=dims)
+    
     
     fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs,
                save_prefix=save_prefix, use_cuda=use_cuda, output=output)

@@ -1,21 +1,24 @@
+import os
+import sys
 import numpy as np
 import pandas as pd
 import torch
 import torchvision
-from topaz.utils.data.loader import load_mrc
 from topaz.mrc import parse_header, get_mode_from_header
-from typing import List
+from typing import List, Literal
 from sklearn.neighbors import KDTree
+from topaz.stats import calculate_pi
+from topaz.utils.printing import report
 
 class MemoryMappedImage():
     '''Class for memory mapping an MRC file and sampling random crops from it.'''
-    def __init__(self, image_path:str, targets:pd.DataFrame, crop_size:int, balance:float=0.5, mode='pn'):
+    def __init__(self, image_path:str, targets:pd.DataFrame, crop_size:int, balance:float=None, split:str='pn', radius:int=3, dims:int=2):
         self.image_path = image_path
         self.targets = targets
         self.size = crop_size
-        self.balance = balance
-        self.mode = mode
+        self.split = split
         self.rng = np.random.default_rng()
+        self.num_particles = len(targets)  
         
         # read image information from header
         with open(self.image_path, 'rb') as f:
@@ -24,11 +27,19 @@ class MemoryMappedImage():
         self.shape = (self.header.nz, self.header.ny, self.header.nx)
         self.dtype = get_mode_from_header(self.header)
         self.offset = 1024 + self.header.next # array beginning
+        self.dims = dims
+        
+        self.check_particle_image_bounds()
+        
+        if balance is None:
+            self.balance = calculate_pi(len(targets), radius, np.prod(self.shape))
+        else:
+            self.balance = balance
         
         # build a KDTree for the targets
-        if mode == 'pn' and len(self.shape)==3:
+        if split == 'pn' and dims==3:
             self.positive_tree = KDTree(targets[['z_coord', 'y_coord', 'x_coord']].values) 
-        elif mode == 'pn' and len(self.shape)==2:
+        elif split == 'pn' and dims==2:
             self.positive_tree = KDTree(targets[['y_coord', 'x_coord']].values) 
         else:
             self.positive_tree = None
@@ -39,12 +50,13 @@ class MemoryMappedImage():
         if self.rng.random() < self.balance:
             # sample a positive target
             target = self.targets.sample()
-            z, y, x = target['z_coord'].item(), target['y_coord'].item(), target['x_coord'].item() #TODO: need to round, why float in the first place
+            y, x = target['y_coord'].item(), target['x_coord'].item()
+            z = target['z_coord'].item() if self.dims==3 else None
             label = 1
-        elif self.mode == 'pn':
+        elif self.split == 'pn':
             # sample a negative target
             z, y, x = self.get_random_negative_crop_indices()
-        elif self.mode == 'pu':
+        elif self.split == 'pu':
             # sample any crop
             z, y, x = self.get_random_crop_indices()
             
@@ -64,10 +76,10 @@ class MemoryMappedImage():
 
         with open(self.image_path, 'rb') as f:
             array = np.memmap(f, shape=self.shape, dtype=self.dtype, mode='r', offset=self.offset)
-            if len(self.shape) == 3:
+            if self.dims == 3:
                 crop = array[max(0,zmin):zmax, max(0,ymin):ymax, max(0,xmin):xmax]
                 crop = np.pad(crop, (zpad, ypad, xpad))
-            elif len(self.shape) == 2:
+            elif self.dims == 2:
                 crop = array[max(0,ymin):ymax, max(0,xmin):xmax]
                 crop = np.pad(crop, (ypad, xpad))
 
@@ -78,7 +90,7 @@ class MemoryMappedImage():
         '''Return indices for any random pixel in image.'''
         x = self.rng.choice(self.shape[-1])
         y = self.rng.choice(self.shape[-2])
-        z = self.rng.choice(self.shape[-3]) if len(self.shape) == 3 else None
+        z = self.rng.choice(self.shape[-3]) if self.dims == 3 else None
         return z, y, x
 
     def get_random_negative_crop_indices(self):
@@ -87,7 +99,7 @@ class MemoryMappedImage():
             x = self.rng.choice(self.shape[-1])
             y = self.rng.choice(self.shape[-2])
             if len(self.shape) == 3:
-                z = self.rng.choice(self.shape[-2]) 
+                z = self.rng.choice(self.shape[-3]) 
                 idx, dist = self.positive_tree.query([[z, y, x]])
             else:
                 z = None
@@ -96,29 +108,67 @@ class MemoryMappedImage():
             if dist > 0: # not in one of the nodes
                 return z, y, x
 
+    def check_particle_image_bounds(self):
+        '''Check that particles are within the image bounds.'''
+        if self.dims == 3:
+            out_of_bounds = (self.targets['x_coord'] < 0) | (self.targets['y_coord'] < 0) | (self.targets['z_coord'] < 0) | \
+                            (self.targets['x_coord'] >= self.shape[-1]) | (self.targets['y_coord'] >= self.shape[-2]) | (self.targets['z_coord'] >= self.shape[-3])
+        else:
+            out_of_bounds = (self.targets['x_coord'] < 0) | (self.targets['y_coord'] < 0) | \
+                            (self.targets['x_coord'] >= self.shape[-1]) | (self.targets['y_coord'] >= self.shape[-2])
+        if out_of_bounds.any():
+            report(f'WARNING: {out_of_bounds.sum()} particles are out of bounds for image {self.image_path}. Did you scale the micrographs and particle coordinates correctly?', file=sys.stderr)
+            self.targets = self.targets[~out_of_bounds]
+            self.num_particles -= out_of_bounds.sum()
+            
+        # also check that the coordinates fill most of the micrograph, cutoffs arbitrary
+        x_max, y_max = self.targets.x_coord.max(), self.targets.y_coord.max()
+        z_max = self.targets.z_coord.max() if self.dims==3 else None
+        
+        xy_below_cutoff = (x_max < 0.7 * self.shape[-1]) and (y_max < 0.7 * self.shape[-2])
+        z_below_cutoff = (z_max < 0.7 * self.shape[-3]) if self.dims==3 else False
+        if xy_below_cutoff or z_below_cutoff:        
+            z_output = f'or z_coord > {z_max}' if (self.dims == 3) else ''
+            output = f'WARNING: no coordinates are observed with x_coord > {x_max} or y_coord > {y_max} {z_output}. \
+                    Did you scale the micrographs and particle coordinates correctly?'
+            report(output, file=sys.stderr)
+            
 
 class MultipleImageSetDataset(torch.utils.data.Dataset):
-    def __init__(self, paths:List[List[str]], targets:pd.DataFrame, number_samples:int, crop_size:int, image_set_balance:List[float]=None, positive_balance:float=0.5, mode:str='pn', rotate:bool=False, flip:bool=False):
-        # convert float coords to ints, regardless of 2d/3d
-        names = targets['image_name']
-        targets = targets.drop(columns=['image_name']).round().astype(int)
-        targets['image_name'] = names
+    def __init__(self, paths:List[List[str]], targets:pd.DataFrame, number_samples:int, crop_size:int, image_set_balance:List[float]=None, 
+                 positive_balance:float=.5, split:str='pn', rotate:bool=False, flip:bool=False, dims:int=2, mode:str='training', radius:int=3):
+        # convert float coords to ints
+        targets[['y_coord', 'x_coord']] = targets[['y_coord', 'x_coord']].round().astype(int)
+        if dims == 3:
+            targets[['z_coord']] = targets[['z_coord']].round().astype(int)
         
         self.paths = paths
+        self.num_particles = len(targets) # remove unmatched particles later
         self.images = []
+        self.num_images = 0
         for group in paths:
             group_list = []
             for path in group:
                 #get image name without file extension
-                img_name = path.split('/')[-1].replace('.mrc','')
-                img_targets = targets[targets['image_name']==img_name]
-                group_list.append(MemoryMappedImage(path, img_targets, crop_size, positive_balance, mode))
+                img_name = os.path.splitext(path.split('/')[-1])[0]
+                image_name_matches = targets['image_name']==img_name
+                img_targets = targets[image_name_matches]
+                group_list.append(MemoryMappedImage(path, img_targets, crop_size, positive_balance, split, radius=radius, dims=dims))
+                self.num_images += 1
+                targets = targets[~image_name_matches] # remove targets already processed
             self.images.append(group_list)
+        
+        self.num_particles -= len(targets) # remove any remaining particles (only consider particles in images)
+        if len(targets) > 0:
+            missing = targets.image_name.unique().tolist()
+            report(f'WARNING: {len(missing)} micrographs listed in the coordinates file are missing from the {mode} images. Image names are listed below.', file=sys.stderr)
+            report(f'WARNING: missing micrographs are: {missing}', file=sys.stderr)
             
         self.number_samples = number_samples # per epoch
         self.crop_size = crop_size
         self.image_set_balance = image_set_balance
         self.positive_balance = positive_balance
+        self.split = split
         self.mode = mode
         self.image_set_balance = image_set_balance # probabilties or uniform
         self.rng = np.random.default_rng()
@@ -140,7 +190,7 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
         # apply random transformations (2D only)
         if self.rotate:
             angle = self.rng.uniform(0, 360)
-            crop = torchvision.transforms.functional.rotate2d(crop, angle)
+            crop = torchvision.transforms.functional.rotate(crop, angle)
         if self.flip:
             if self.rng.random() < 0.5:
                 crop = torchvision.transforms.functional.hflip(crop)
