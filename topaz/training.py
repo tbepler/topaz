@@ -31,6 +31,7 @@ from topaz.utils.data.loader import (LabeledImageCropDataset,
 from topaz.utils.data.sampler import (RandomImageTransforms,
                                       StratifiedCoordinateSampler)
 from topaz.utils.printing import report
+from topaz.utils.data.memory_mapped_data import MultipleImageSetDataset
 from torch.utils.data.dataloader import DataLoader
 
 
@@ -280,7 +281,9 @@ def extract_image_stats(image_paths:List[List[str]], targets:pd.DataFrame, mode:
         source_total_regions = 0
         # Read each image's header and sum the total number of regions
         for path in source_paths:
-            header = parse_header(path)
+            with open(path, 'rb') as f:
+                header_bytes = f.read(1024)
+            header = parse_header(header_bytes)
             source_total_regions += header.nz * header.ny * header.nx
             # Read image's positives from targets
             image_name = os.path.splitext(os.path.basename(path))[0]
@@ -295,13 +298,15 @@ def extract_image_stats(image_paths:List[List[str]], targets:pd.DataFrame, mode:
     return num_positive_regions, total_regions
 
 
-def report_data_stats(train_images_path:str, train_targets_path:str, test_images_path:str=None, test_targets_path:str=None, radius:int=3, dims:int=2):
+def report_data_stats(train_images_path:str, train_targets_path:str, test_images_path:str=None, test_targets_path:str=None, 
+                      radius:int=3, dims:int=2) -> Tuple[int,int,int]:
     '''Report number of positive regions and total regions in the training and testing data.'''
     report('source\tsplit\tp_observed\tnum_positive_regions\ttotal_regions')
     # Read targets into dataframe
     train_targets = file_utils.read_coordinates(train_targets_path)
     # Convert paths to grouped lists of paths
     train_grouped = convert_path_to_grouped_list(train_images_path, train_targets)
+    num_train_images = sum(len(group) for group in train_grouped)
     # Calculate the number of positive and total regions
     num_positive_regions, total_regions = extract_image_stats(train_grouped, train_targets, mode='train')
     # Repeat on testing set if given
@@ -311,7 +316,7 @@ def report_data_stats(train_images_path:str, train_targets_path:str, test_images
         test_positive, test_total = extract_image_stats(test_grouped, test_targets, mode='test')
         num_positive_regions += test_positive
         total_regions += test_total
-    return num_positive_regions, total_regions
+    return num_positive_regions, total_regions, num_train_images
 
 
 def make_model(args):
@@ -564,7 +569,7 @@ def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator,
 
 
 def train_model_old(classifier, train_images, train_targets, test_images, test_targets, use_cuda, save_prefix, output, args, dims:int=2, to_tensor=True):
-    num_positive_regions, total_regions = report_data_stats(train_images, train_targets, test_images, test_targets)
+    num_positive_regions, total_regions = report_data_stats_old(train_images, train_targets, test_images, test_targets)
 
     ## make the training step method
     if args.num_particles > 0:
@@ -592,7 +597,7 @@ def train_model_old(classifier, train_images, train_targets, test_images, test_t
     num_workers = mp.cpu_count() if args.num_workers < 0 else args.num_workers # set num workers to use all CPUs 
     balance = None if args.natural else args.minibatch_balance # ratio of positive to negative in minibatch
     
-    train_iterator,test_iterator = make_data_iterators(train_images, train_targets, test_images, test_targets,
+    train_iterator,test_iterator = make_data_iterators_old(train_images, train_targets, test_images, test_targets,
                                                        classifier.width, split, args, dims=dims, to_tensor=to_tensor)
     
     fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs,
@@ -603,14 +608,13 @@ def train_model_old(classifier, train_images, train_targets, test_images, test_t
 
 def train_model(classifier, train_image_path:str, train_targets_path:str, test_image_path:str, test_targets_path:str, use_cuda:bool, 
                 save_prefix:str, output, args, dims:int=2):
-    num_positive_regions, total_regions = report_data_stats(train_image_path, train_targets_path, test_image_path, test_targets_path, 
+    num_positive_regions, total_regions, num_images = report_data_stats(train_image_path, train_targets_path, test_image_path, test_targets_path, 
                                                             radius=args.radius, dims=dims)
 
     ## make the training step method
     if args.num_particles > 0:
-        num_micrographs = sum(len(images) for images in train_images)
         # expected particles in training set rather than per micrograph
-        expected_num_particles = args.num_particles * num_micrographs
+        expected_num_particles = args.num_particles * num_images
         pi = calculate_pi(expected_num_particles, args.radius, total_regions, dims)
         report('Specified expected number of particle per micrograph = {}'.format(args.num_particles))
         report('With radius = {}'.format(args.radius))
@@ -630,7 +634,7 @@ def train_model(classifier, train_image_path:str, train_targets_path:str, test_i
     num_workers = mp.cpu_count() if args.num_workers < 0 else args.num_workers # set num workers to use all CPUs 
     balance = None if args.natural else args.minibatch_balance # ratio of positive to negative in minibatch
     
-    train_iterator,test_iterator = make_data_iterators(train_image_path, train_targets_path, crop, split, args.minibatch_size, args.epoch_size, 
+    train_iterator,test_iterator = make_data_iterators(train_image_path, train_targets_path, classifier.width, split, args.minibatch_size, args.epoch_size, 
                         test_image_path=test_image_path, test_targets_path=test_targets_path, testing_batch_size=args.test_batch_size, 
                         num_workers=0, balance=balance, dims=dims)
     

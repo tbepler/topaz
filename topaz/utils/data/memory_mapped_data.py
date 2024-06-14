@@ -46,13 +46,13 @@ class MemoryMappedImage():
         
     def __getitem__(self, i):
         '''Randomly sample a target and the associated crop of given size'''
-        label = 0
+        label = 0.
         if self.rng.random() < self.balance:
             # sample a positive target
             target = self.targets.sample()
             y, x = target['y_coord'].item(), target['x_coord'].item()
             z = target['z_coord'].item() if self.dims==3 else None
-            label = 1
+            label = 1.
         elif self.split == 'pn':
             # sample a negative target
             z, y, x = self.get_random_negative_crop_indices()

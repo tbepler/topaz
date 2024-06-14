@@ -27,7 +27,7 @@ def pixels_given_radius(radius, dims=2):
 
 def calculate_pi(expected_num_particles, radius, total_pixels, dims=2):
     '''Given the expected number of particles in dataset and radius, calculate what pi should be.'''
-    pixels_per_particle = pixels_per_particle(radius, dims=dims)
+    pixels_per_particle = pixels_given_radius(radius, dims=dims)
     # total_regions is number of pixels in the data
     pi = pixels_per_particle*expected_num_particles / total_pixels
     return pi

@@ -124,23 +124,27 @@ def main(args):
             report('When using GPU to load data, we only load in this process. Setting num_workers = 0.')
             args.num_workers = 0
         
-    # ## load the data as lists of 3D numpy arrays
-    # train_images, train_targets, test_images, test_targets = \
-    #         load_data(args.train_images, args.train_targets, args.test_images, args.test_targets,
-    #                   args.radius, format_=args.format_, k_fold=args.k_fold, fold=args.fold,
-    #                   cross_validation_seed=args.cross_validation_seed, image_ext=args.image_ext, 
-    #                   as_images=False, dims=3, use_cuda=use_cuda)
     
     ## fit the model, report train/test stats, save model if required
     output = sys.stdout if args.output is None else open(args.output, 'w')
     save_prefix = args.save_prefix
 
-    report('Training...')
-    # classifier = train_model(classifier, train_images, train_targets, test_images, test_targets, 
-    #                          use_cuda, save_prefix, output, args, dims=3)
-    classifier = train_model(classifier, args.train_images, args.train_targets, args.test_images, args.test_targets, 
-                             use_cuda, save_prefix, output, args, dims=3)
-    report('Done!')
+    if False:
+        from topaz.training import train_model_old
+        ## load the data as lists of 3D numpy arrays
+        train_images, train_targets, test_images, test_targets = \
+                load_data(args.train_images, args.train_targets, args.test_images, args.test_targets,
+                        args.radius, format_=args.format_, k_fold=args.k_fold, fold=args.fold,
+                        cross_validation_seed=args.cross_validation_seed, image_ext=args.image_ext, 
+                        as_images=False, dims=3, use_cuda=use_cuda)
+        report('training with old functions...')
+        classifier = train_model_old(classifier, train_images, train_targets, test_images, test_targets, 
+                                use_cuda, save_prefix, output, args, dims=3)
+    else:
+        report('Training...')
+        classifier = train_model(classifier, args.train_images, args.train_targets, args.test_images, args.test_targets, 
+                                use_cuda, save_prefix, output, args, dims=3)
+        report('Done!')
     return classifier
 
 
