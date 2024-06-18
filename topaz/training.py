@@ -500,7 +500,7 @@ def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, 
     train_image_paths = convert_path_to_grouped_list(train_image_path, train_targets)
 
     train_dataset = MultipleImageSetDataset(train_image_paths, train_targets, epoch_size, crop, positive_balance=balance, split=split, 
-                                            rotate=(dims==2), flip=(dims==2), mode='training', dims=dims)
+                                            rotate=(dims==2), flip=(dims==2), mode='training', dims=dims, radius=radius, use_cuda=use_cuda)
     train_dataloader = DataLoader(train_dataset, batch_size=minibatch_size, shuffle=True, num_workers=num_workers)
     report(f'Loaded {train_dataset.num_images} training micrographs with {train_dataset.num_particles} labeled particles')
 
@@ -672,7 +672,7 @@ def train_model(classifier, train_images_path:str, train_targets_path:str, test_
     
     train_iterator,test_iterator = make_data_iterators(train_images_path, train_targets_path, classifier.width, split, args.minibatch_size, args.epoch_size, 
                         test_image_path=test_images_path, test_targets_path=test_targets_path, testing_batch_size=args.test_batch_size, 
-                        num_workers=0, balance=balance, dims=dims, use_cuda=use_cuda)
+                        num_workers=0, balance=balance, dims=dims, use_cuda=use_cuda, radius=args.radius)
     
     fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs,
                save_prefix=save_prefix, use_cuda=use_cuda, output=output)
