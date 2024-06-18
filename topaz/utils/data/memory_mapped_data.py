@@ -37,10 +37,11 @@ class MemoryMappedImage():
             self.balance = balance
         
         # build a KDTree for the targets
-        if split == 'pn' and dims==3:
-            self.positive_tree = KDTree(targets[['z_coord', 'y_coord', 'x_coord']].values) 
-        elif split == 'pn' and dims==2:
-            self.positive_tree = KDTree(targets[['y_coord', 'x_coord']].values) 
+        if split == 'pn':
+            if dims==3:
+                self.positive_tree = KDTree(targets[['z_coord', 'y_coord', 'x_coord']].values) 
+            elif dims==2:
+                self.positive_tree = KDTree(targets[['y_coord', 'x_coord']].values) 
         else:
             self.positive_tree = None
         
@@ -117,7 +118,7 @@ class MemoryMappedImage():
             out_of_bounds = (self.targets['x_coord'] < 0) | (self.targets['y_coord'] < 0) | \
                             (self.targets['x_coord'] >= self.shape[-1]) | (self.targets['y_coord'] >= self.shape[-2])
         if out_of_bounds.any():
-            report(f'WARNING: {out_of_bounds.sum()} particles are out of bounds for image {self.image_path}. Did you scale the micrographs and particle coordinates correctly?', file=sys.stderr)
+            report(f'WARNING: {out_of_bounds.sum()} particles are out of bounds for image {self.image_path}. Did you scale the micrographs and particle coordinates correctly?')
             self.targets = self.targets[~out_of_bounds]
             self.num_particles -= out_of_bounds.sum()
             
@@ -131,7 +132,7 @@ class MemoryMappedImage():
             z_output = f'or z_coord > {z_max}' if (self.dims == 3) else ''
             output = f'WARNING: no coordinates are observed with x_coord > {x_max} or y_coord > {y_max} {z_output}. \
                     Did you scale the micrographs and particle coordinates correctly?'
-            report(output, file=sys.stderr)
+            report(output)
             
 
 class MultipleImageSetDataset(torch.utils.data.Dataset):
