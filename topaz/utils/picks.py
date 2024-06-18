@@ -14,7 +14,7 @@ from topaz.utils.image import downsample
 
 
 def as_mask(shape:Tuple[int], radius:float, x_coord:List[float], y_coord:List[float], z_coord:List[float]=None, 
-            use_cuda:bool=False) -> np.ndarray:
+            use_cuda:bool=False) -> torch.Tensor:
     '''Given coordinates and bounding circle/sphere radii, return a binary mask about those points.'''
     mask = torch.zeros(shape)
     dims = 3 if z_coord is not None else 2
