@@ -12,7 +12,7 @@ from topaz.utils.printing import report
 
 class MemoryMappedImage():
     '''Class for memory mapping an MRC file and sampling random crops from it.'''
-    def __init__(self, image_path:str, targets:pd.DataFrame, crop_size:int, balance:float=None, split:str='pn', radius:int=3, dims:int=2):
+    def __init__(self, image_path:str, targets:pd.DataFrame, crop_size:int, balance:float=None, split:str='pn', radius:int=3, dims:int=2, use_cuda:bool=False):
         self.image_path = image_path
         self.targets = targets
         self.size = crop_size
@@ -28,6 +28,7 @@ class MemoryMappedImage():
         self.dtype = get_mode_from_header(self.header)
         self.offset = 1024 + self.header.next # array beginning
         self.dims = dims
+        self.use_cuda = use_cuda
         
         self.check_particle_image_bounds()
         
@@ -62,6 +63,10 @@ class MemoryMappedImage():
             z, y, x = self.get_random_crop_indices()
             
         crop = self.get_crop((z, y, x))
+        
+        if self.use_cuda:
+            crop = crop.cuda()
+        
         return crop, label
     
     def get_crop(self, center_indices):
