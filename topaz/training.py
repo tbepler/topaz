@@ -18,6 +18,7 @@ import topaz.utils.files as file_utils
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data.dataloader import DataLoader
 from topaz.metrics import average_precision
 from topaz.model.classifier import classify_patches
 from topaz.model.factory import get_feature_extractor, load_model
@@ -27,12 +28,12 @@ from topaz.stats import pixels_given_radius, calculate_pi
 from topaz.utils.data.coordinates import match_coordinates_to_images
 from topaz.utils.data.loader import (LabeledImageCropDataset,
                                      SegmentedImageDataset,
-                                     load_images_from_list)
+                                     load_images_from_list, load_image)
 from topaz.utils.data.sampler import (RandomImageTransforms,
                                       StratifiedCoordinateSampler)
-from topaz.utils.printing import report
 from topaz.utils.data.memory_mapped_data import MultipleImageSetDataset
-from torch.utils.data.dataloader import DataLoader
+from topaz.utils.printing import report
+from topaz.utils.picks import as_mask
 
 
 def match_images_targets(images:dict, targets:pd.DataFrame, radius:float, dims:int=2, use_cuda:bool=False) \
@@ -449,8 +450,47 @@ def make_data_iterators_old(train_images:List[List[Union[Image.Image,np.ndarray]
     return train_iterator, test_iterator
 
 
+class TestingImageDataset():
+    def __init__(self, images_path:str, targets:pd.DataFrame, radius:int=3, dims:int=2, use_cuda:bool=False):
+        # get list of paths only (names not needed)
+        if os.path.isdir(images_path):
+            glob_base = images_path + os.sep + '*' # only get mrc files, need the header
+            image_paths = glob.glob(glob_base+'.mrc')# + glob.glob(glob_base+'.tiff') + glob.glob(glob_base+'.png')
+        else:
+            image_paths = pd.read_csv(images_path, sep='\s+')['image_name'].tolist()
+        self.image_paths = image_paths
+        self.targets = targets
+        self.radius = radius
+        self.dims = dims
+        self.use_cuda = use_cuda
+        
+    def __len__(self):
+        return len(self.image_paths)
+    
+    def __getitem__(self, i):
+        path = self.image_paths[i]
+        # load the entire image
+        img = load_image(path, make_image=False, return_header=False)
+        img = torch.from_numpy(img.copy())
+        # create the target's binary mask
+        img_name = os.path.splitext(path.split('/')[-1])[0]
+        image_name_matches = self.targets['image_name']==img_name
+        img_targets = self.targets[image_name_matches]
+        x = img_targets['x_coord'].values
+        y = img_targets['y_coord'].values
+        z = img_targets['z_coord'].values if self.dims==3  else None
+        mask = as_mask(img.shape, self.radius, x, y, z_coord=z, use_cuda=self.use_cuda)
+        
+        if self.use_cuda:
+            # move img to device, targets there already
+            img = img.cuda()
+            
+        return img,mask
+    
+
 def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, split:Literal['pn','pu'], minibatch_size:int, epoch_size:int, 
-                        test_image_path:str=None, test_targets_path:str=None, testing_batch_size:int=256, num_workers:int=0, balance:float=0.5, dims:int=2):
+                        test_image_path:str=None, test_targets_path:str=None, testing_batch_size:int=1, num_workers:int=0, balance:float=0.5, 
+                        dims:int=2, use_cuda:bool=False, radius:int=3) -> Tuple[DataLoader, DataLoader]:
     '''make train and test dataloaders'''
     train_targets = file_utils.read_coordinates(train_targets_path)    
     if len(train_targets) == 0:
@@ -460,19 +500,15 @@ def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, 
     train_image_paths = convert_path_to_grouped_list(train_image_path, train_targets)
 
     train_dataset = MultipleImageSetDataset(train_image_paths, train_targets, epoch_size, crop, positive_balance=balance, split=split, 
-                                            rotate=(dims==2), flip=(dims==2), mode='training',
-                                            dims=dims)
+                                            rotate=(dims==2), flip=(dims==2), mode='training', dims=dims)
     train_dataloader = DataLoader(train_dataset, batch_size=minibatch_size, shuffle=True, num_workers=num_workers)
     report(f'Loaded {train_dataset.num_images} training micrographs with {train_dataset.num_particles} labeled particles')
 
     if test_targets_path is not None:
         test_targets = file_utils.read_coordinates(test_targets_path)
-        test_image_paths = convert_path_to_grouped_list(test_image_path, test_targets)
-        # TODO: should the epoch size be the same for testing?
-        test_dataset  = MultipleImageSetDataset(test_image_paths,  test_targets,  epoch_size, crop, positive_balance=None, split=split, 
-                                                rotate=(dims==2), flip=(dims==2), mode='testing', dims=dims)
+        test_dataset = TestingImageDataset(test_image_path, test_targets, radius=radius, dims=dims, use_cuda=use_cuda)
         test_dataloader = DataLoader(test_dataset, batch_size=testing_batch_size, shuffle=False, num_workers=num_workers)
-        report(f'Loaded {test_dataset.num_images} testing micrographs with {test_dataset.num_particles} labeled particles')
+        report(f'Loaded {len(test_dataset)} testing micrographs with {len(test_dataset.targets)} labeled particles')
         return train_dataloader, test_dataloader
     else:
         return train_dataloader, None
@@ -606,9 +642,9 @@ def train_model_old(classifier, train_images, train_targets, test_images, test_t
     return classifier
 
 
-def train_model(classifier, train_image_path:str, train_targets_path:str, test_image_path:str, test_targets_path:str, use_cuda:bool, 
+def train_model(classifier, train_images_path:str, train_targets_path:str, test_images_path:str, test_targets_path:str, use_cuda:bool, 
                 save_prefix:str, output, args, dims:int=2):
-    num_positive_regions, total_regions, num_images = report_data_stats(train_image_path, train_targets_path, test_image_path, test_targets_path, 
+    num_positive_regions, total_regions, num_images = report_data_stats(train_images_path, train_targets_path, test_images_path, test_targets_path,
                                                             radius=args.radius, dims=dims)
 
     ## make the training step method
@@ -634,9 +670,9 @@ def train_model(classifier, train_image_path:str, train_targets_path:str, test_i
     num_workers = mp.cpu_count() if args.num_workers < 0 else args.num_workers # set num workers to use all CPUs 
     balance = None if args.natural else args.minibatch_balance # ratio of positive to negative in minibatch
     
-    train_iterator,test_iterator = make_data_iterators(train_image_path, train_targets_path, classifier.width, split, args.minibatch_size, args.epoch_size, 
-                        test_image_path=test_image_path, test_targets_path=test_targets_path, testing_batch_size=args.test_batch_size, 
-                        num_workers=0, balance=balance, dims=dims)
+    train_iterator,test_iterator = make_data_iterators(train_images_path, train_targets_path, classifier.width, split, args.minibatch_size, args.epoch_size, 
+                        test_image_path=test_images_path, test_targets_path=test_targets_path, testing_batch_size=args.test_batch_size, 
+                        num_workers=0, balance=balance, dims=dims, use_cuda=use_cuda)
     
     fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs,
                save_prefix=save_prefix, use_cuda=use_cuda, output=output)
