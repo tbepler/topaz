@@ -488,6 +488,35 @@ class TestingImageDataset():
         return img,mask
     
 
+def expand_target_points(targets:pd.DataFrame, radius:int, dims:int=2) -> pd.DataFrame:
+    '''Expand target point coordinates into coordinates of a sphere with the given radius.'''
+    x_coord, y_coord = targets['x_coord'].values, targets['y_coord'].values
+    # make the spherically mask array of offsets to apply to the coordinates
+    sphere_width = int(np.floor(radius)) * 2 + 1
+    center = sphere_width // 2
+    filter_range = torch.arange(sphere_width)
+    grid = torch.meshgrid([filter_range]*dims, indexing='xy')
+    xgrid, ygrid = grid[0], grid[1]
+    d2 = (xgrid-center)**2 + (ygrid-center)**2
+    if dims == 3:
+        z_coord = targets['z_coord'].values
+        zgrid = grid[2]
+        d2 += (zgrid-center)**2
+    mask = (d2 <= radius**2).float()
+    
+    sphere_offsets = mask.nonzero() - center
+    sphere_offsets = pd.DataFrame(sphere_offsets.numpy(), columns=['z_offset', 'y_offset', 'x_offset'])
+    # create all combinations of targets and offsets
+    expanded = targets.merge(sphere_offsets, how='cross')
+    expanded['x_coord'] = expanded['x_coord'] + expanded['x_offset']
+    expanded['y_coord'] = expanded['y_coord'] + expanded['y_offset']
+    if dims == 3:
+        expanded['z_coord'] = expanded['z_coord'] + expanded['z_offset']
+        return expanded[['image_name', 'x_coord', 'y_coord', 'z_coord']]
+    else:
+        return expanded[['image_name', 'x_coord', 'y_coord']]
+
+
 def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, split:Literal['pn','pu'], minibatch_size:int, epoch_size:int, 
                         test_image_path:str=None, test_targets_path:str=None, testing_batch_size:int=1, num_workers:int=0, balance:float=0.5, 
                         dims:int=2, use_cuda:bool=False, radius:int=3) -> Tuple[DataLoader, DataLoader]:
@@ -499,16 +528,18 @@ def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, 
     
     train_image_paths = convert_path_to_grouped_list(train_image_path, train_targets)
 
-    train_dataset = MultipleImageSetDataset(train_image_paths, train_targets, epoch_size, crop, positive_balance=balance, split=split, 
+    expanded_train_targets = expand_target_points(train_targets, radius, dims)
+    train_dataset = MultipleImageSetDataset(train_image_paths, expanded_train_targets, epoch_size, crop, positive_balance=balance, split=split, 
                                             rotate=(dims==2), flip=(dims==2), mode='training', dims=dims, radius=radius, use_cuda=use_cuda)
     train_dataloader = DataLoader(train_dataset, batch_size=minibatch_size, shuffle=True, num_workers=num_workers)
-    report(f'Loaded {train_dataset.num_images} training micrographs with {train_dataset.num_particles} labeled particles')
+    report(f'Loaded {train_dataset.num_images} training micrographs with {len(train_targets)} labeled particles')
 
     if test_targets_path is not None:
         test_targets = file_utils.read_coordinates(test_targets_path)
-        test_dataset = TestingImageDataset(test_image_path, test_targets, radius=radius, dims=dims, use_cuda=use_cuda)
+        expanded_test_targets = expand_target_points(test_targets, radius, dims)
+        test_dataset = TestingImageDataset(test_image_path, expanded_test_targets, radius=radius, dims=dims, use_cuda=use_cuda)
         test_dataloader = DataLoader(test_dataset, batch_size=testing_batch_size, shuffle=False, num_workers=num_workers)
-        report(f'Loaded {len(test_dataset)} testing micrographs with {len(test_dataset.targets)} labeled particles')
+        report(f'Loaded {len(test_dataset)} testing micrographs with {len(test_targets)} labeled particles')
         return train_dataloader, test_dataloader
     else:
         return train_dataloader, None

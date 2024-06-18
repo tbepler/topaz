@@ -142,7 +142,7 @@ class MemoryMappedImage():
 
 class MultipleImageSetDataset(torch.utils.data.Dataset):
     def __init__(self, paths:List[List[str]], targets:pd.DataFrame, number_samples:int, crop_size:int, image_set_balance:List[float]=None, 
-                 positive_balance:float=.5, split:str='pn', rotate:bool=False, flip:bool=False, dims:int=2, mode:str='training', radius:int=3):
+                 positive_balance:float=.5, split:str='pn', rotate:bool=False, flip:bool=False, dims:int=2, mode:str='training', radius:int=3, use_cuda:bool=False):
         # convert float coords to ints
         targets[['y_coord', 'x_coord']] = targets[['y_coord', 'x_coord']].round().astype(int)
         if dims == 3:
@@ -159,7 +159,7 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
                 img_name = os.path.splitext(path.split('/')[-1])[0]
                 image_name_matches = targets['image_name']==img_name
                 img_targets = targets[image_name_matches]
-                group_list.append(MemoryMappedImage(path, img_targets, crop_size, positive_balance, split, radius=radius, dims=dims))
+                group_list.append(MemoryMappedImage(path, img_targets, crop_size, positive_balance, split, radius=radius, dims=dims, use_cuda=use_cuda))
                 self.num_images += 1
                 targets = targets[~image_name_matches] # remove targets already processed
             self.images.append(group_list)
