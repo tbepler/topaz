@@ -12,11 +12,13 @@ from topaz.utils.printing import report
 
 class MemoryMappedImage():
     '''Class for memory mapping an MRC file and sampling random crops from it.'''
-    def __init__(self, image_path:str, targets:pd.DataFrame, crop_size:int, balance:float=None, split:str='pn', radius:int=3, dims:int=2, use_cuda:bool=False):
+    def __init__(self, image_path:str, targets:pd.DataFrame, crop_size:int, split:str='pn', dims:int=2, use_cuda:bool=False):
         self.image_path = image_path
         self.targets = targets
         self.size = crop_size
         self.split = split
+        self.dims = dims
+        self.use_cuda = use_cuda
         self.rng = np.random.default_rng()
         self.num_particles = len(targets)  
         
@@ -27,48 +29,18 @@ class MemoryMappedImage():
         self.shape = (self.header.nz, self.header.ny, self.header.nx)
         self.dtype = get_mode_from_header(self.header)
         self.offset = 1024 + self.header.next # array beginning
-        self.dims = dims
-        self.use_cuda = use_cuda
         
         self.check_particle_image_bounds()
         
-        if balance is None:
-            self.balance = calculate_pi(len(targets), radius, np.prod(self.shape))
-        else:
-            self.balance = balance
-        
         # build a KDTree for the targets
-        if split == 'pn':
+        if split == 'pn' and len(targets) > 0:
             if dims==3:
                 self.positive_tree = KDTree(targets[['z_coord', 'y_coord', 'x_coord']].values) 
             elif dims==2:
                 self.positive_tree = KDTree(targets[['y_coord', 'x_coord']].values) 
         else:
             self.positive_tree = None
-        
-    def __getitem__(self, i):
-        '''Randomly sample a target and the associated crop of given size'''
-        label = 0.
-        if self.rng.random() < self.balance:
-            # sample a positive target
-            target = self.targets.sample()
-            y, x = target['y_coord'].item(), target['x_coord'].item()
-            z = target['z_coord'].item() if self.dims==3 else None
-            label = 1.
-        elif self.split == 'pn':
-            # sample a negative target
-            z, y, x = self.get_random_negative_crop_indices()
-        elif self.split == 'pu':
-            # sample any crop
-            z, y, x = self.get_random_crop_indices()
             
-        crop = self.get_crop((z, y, x))
-        
-        if self.use_cuda:
-            crop = crop.cuda()
-        
-        return crop, label
-    
     def get_crop(self, center_indices):
         z,y,x = center_indices
         # set crop index ranges and any necessary 0-padding
@@ -90,6 +62,10 @@ class MemoryMappedImage():
                 crop = np.pad(crop, (ypad, xpad))
 
         crop = torch.from_numpy(crop)
+        
+        if self.use_cuda:
+            crop = crop.cuda()
+        
         return crop
     
     def get_random_crop_indices(self):
@@ -111,8 +87,16 @@ class MemoryMappedImage():
                 z = None
                 idx, dist = self.positive_tree.query((y, x))
                 
-            if dist > 0: # not in one of the nodes
+            if dist > 0: # not in one of the nodes (assumes all particles are in the tree)
                 return z, y, x
+
+    def get_UN_crop(self):
+        '''Sample a random crop from the image.'''
+        if self.split == 'pu' or len(self.targets) == 0:
+            z,y,x = self.get_random_crop_indices()
+        elif self.split == 'pn':
+            z,y,x = self.get_random_negative_crop_indices()
+        return self.get_crop((z, y, x))
 
     def check_particle_image_bounds(self):
         '''Check that particles are within the image bounds.'''
@@ -143,12 +127,26 @@ class MemoryMappedImage():
 class MultipleImageSetDataset(torch.utils.data.Dataset):
     def __init__(self, paths:List[List[str]], targets:pd.DataFrame, number_samples:int, crop_size:int, image_set_balance:List[float]=None, 
                  positive_balance:float=.5, split:str='pn', rotate:bool=False, flip:bool=False, dims:int=2, mode:str='training', radius:int=3, use_cuda:bool=False):
+        self.paths = paths
         # convert float coords to ints
         targets[['y_coord', 'x_coord']] = targets[['y_coord', 'x_coord']].round().astype(int)
         if dims == 3:
             targets[['z_coord']] = targets[['z_coord']].round().astype(int)
+        self.targets = targets
+        self.number_samples = number_samples # per epoch
+        # increase crop_size to avoid clipping corners
+        self.crop_size = crop_size
+        crop_size = int(np.ceil(crop_size*np.sqrt(2))) if rotate else crop_size
+        # store other parameters
+        self.image_set_balance = image_set_balance # probabilities or uniform
+        self.positive_balance = positive_balance
+        self.split = split
+        self.rotate = rotate
+        self.flip = flip
+        self.dims = dims
+        self.mode = mode
+        self.rng = np.random.default_rng()
         
-        self.paths = paths
         self.num_particles = len(targets) # remove unmatched particles later
         self.images = []
         self.num_images = 0
@@ -159,7 +157,7 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
                 img_name = os.path.splitext(path.split('/')[-1])[0]
                 image_name_matches = targets['image_name']==img_name
                 img_targets = targets[image_name_matches]
-                group_list.append(MemoryMappedImage(path, img_targets, crop_size, positive_balance, split, radius=radius, dims=dims, use_cuda=use_cuda))
+                group_list.append(MemoryMappedImage(path, img_targets, crop_size, split, dims=dims, use_cuda=use_cuda))
                 self.num_images += 1
                 targets = targets[~image_name_matches] # remove targets already processed
             self.images.append(group_list)
@@ -170,17 +168,6 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
             report(f'WARNING: {len(missing)} micrographs listed in the coordinates file are missing from the {mode} images. Image names are listed below.', file=sys.stderr)
             report(f'WARNING: missing micrographs are: {missing}', file=sys.stderr)
             
-        self.number_samples = number_samples # per epoch
-        self.crop_size = crop_size
-        self.image_set_balance = image_set_balance
-        self.positive_balance = positive_balance
-        self.split = split
-        self.mode = mode
-        self.image_set_balance = image_set_balance # probabilties or uniform
-        self.rng = np.random.default_rng()
-        self.rotate = rotate
-        self.flip = flip
-        
     def __len__(self):
         return self.number_samples # how many crops we want in each epoch
 
@@ -188,15 +175,34 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
         # sample an image set
         img_set_idx = self.rng.choice(len(self.paths), p=self.image_set_balance)
         # sample an image from the set
-        img_idx = self.rng.choice(len(self.paths[img_set_idx]))
-        # sample a random crop and label from the image
-        img = self.images[img_set_idx][img_idx]
-        crop, label = img[i]
+        if self.rng.random() < self.positive_balance:
+            # sample a positive coordinate
+            target = self.targets.sample()
+            path = target['image_name'].item()
+            # get the image with a matching name
+            for img in self.images[img_set_idx]:
+                if img.image_path == path:
+                    break
+            # extract the crop and positive label
+            y, x = target['y_coord'].item(), target['x_coord'].item()
+            z = target['z_coord'].item() if self.dims==3 else None
+            crop, label = img.get_crop((z, y, x)), 1.
+        else:
+            # sample a random image
+            img_idx = self.rng.choice(len(self.paths[img_set_idx]))
+            # sample U/N crop from the image
+            img = self.images[img_set_idx][img_idx]
+            crop,label = img.get_UN_crop(), 0.
         
         # apply random transformations (2D only)
         if self.rotate:
             angle = self.rng.uniform(0, 360)
             crop = torchvision.transforms.functional.rotate(crop, angle)
+            # remove extra crop/padding
+            size_diff = crop.shape[-1] - self.crop_size
+            xmin, xmax = size_diff//2, size_diff//2 + self.crop_size
+            ymin, ymax = size_diff//2, size_diff//2 + self.crop_size
+            crop = crop[:, ymin:ymax, xmin:xmax]
         if self.flip:
             if self.rng.random() < 0.5:
                 crop = torchvision.transforms.functional.hflip(crop)
