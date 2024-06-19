@@ -309,14 +309,12 @@ def report_data_stats(train_images_path:str, train_targets_path:str, test_images
     train_grouped = convert_path_to_grouped_list(train_images_path, train_targets)
     num_train_images = sum(len(group) for group in train_grouped)
     # Calculate the number of positive and total regions
-    num_positive_regions, total_regions = extract_image_stats(train_grouped, train_targets, mode='train')
+    num_positive_regions, total_regions = extract_image_stats(train_grouped, train_targets, mode='train', radius=radius, dims=dims)
     # Repeat on testing set if given
     if (test_images_path is not None) and (test_targets_path is not None):
         test_targets = file_utils.read_coordinates(test_targets_path)
         test_grouped = convert_path_to_grouped_list(test_images_path, test_targets)
-        test_positive, test_total = extract_image_stats(test_grouped, test_targets, mode='test')
-        num_positive_regions += test_positive
-        total_regions += test_total
+        test_positive, test_total = extract_image_stats(test_grouped, test_targets, mode='test', radius=radius, dims=dims)
     return num_positive_regions, total_regions, num_train_images
 
 
