@@ -527,7 +527,7 @@ def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, 
     train_image_paths = convert_path_to_grouped_list(train_image_path, train_targets)
 
     expanded_train_targets = expand_target_points(train_targets, radius, dims)
-    train_dataset = MultipleImageSetDataset(train_image_paths, expanded_train_targets, epoch_size, crop, positive_balance=balance, split=split, 
+    train_dataset = MultipleImageSetDataset(train_image_paths, expanded_train_targets, epoch_size*minibatch_size, crop, positive_balance=balance, split=split, 
                                             rotate=(dims==2), flip=(dims==2), mode='training', dims=dims, radius=radius, use_cuda=use_cuda)
     train_dataloader = DataLoader(train_dataset, batch_size=minibatch_size, shuffle=True, num_workers=num_workers)
     report(f'Loaded {train_dataset.num_images} training micrographs with {len(train_targets)} labeled particles')
