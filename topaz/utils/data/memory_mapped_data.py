@@ -165,8 +165,8 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
         self.num_particles -= len(targets) # remove any remaining particles (only consider particles in images)
         if len(targets) > 0:
             missing = targets.image_name.unique().tolist()
-            report(f'WARNING: {len(missing)} micrographs listed in the coordinates file are missing from the {mode} images. Image names are listed below.', file=sys.stderr)
-            report(f'WARNING: missing micrographs are: {missing}', file=sys.stderr)
+            report(f'WARNING: {len(missing)} micrographs listed in the coordinates file are missing from the {mode} images. Image names are listed below.')
+            report(f'WARNING: missing micrographs are: {missing}')
             
     def __len__(self):
         return self.number_samples # how many crops we want in each epoch
