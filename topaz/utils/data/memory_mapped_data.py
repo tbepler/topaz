@@ -155,7 +155,7 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
             for path in group:
                 #get image name without file extension
                 img_name = os.path.splitext(path.split('/')[-1])[0]
-                image_name_matches = targets['image_name']==img_name
+                image_name_matches = targets['image_name'].str.contains(img_name)
                 img_targets = targets[image_name_matches]
                 group_list.append(MemoryMappedImage(path, img_targets, crop_size, split, dims=dims, use_cuda=use_cuda))
                 self.num_images += 1
@@ -178,10 +178,10 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
         if self.rng.random() < self.positive_balance:
             # sample a positive coordinate
             target = self.targets.sample()
-            path = target['image_name'].item()
+            name = target['image_name'].item()
             # get the image with a matching name
             for img in self.images[img_set_idx]:
-                if img.image_path == path:
+                if name in img.image_path:
                     break
             # extract the crop and positive label
             y, x = target['y_coord'].item(), target['x_coord'].item()
