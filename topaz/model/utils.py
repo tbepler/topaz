@@ -58,12 +58,14 @@ def segment_images(model, paths:List[str], output_dir:str, use_cuda:bool, verbos
             # add batch and channel dimensions
             X = torch.from_numpy(image).unsqueeze(0).unsqueeze(0)
             if patch_size is not None:
+                # patches move on and off GPU as processed, returns numpy array
                 score = predict_in_patches(model, X, patch_size=patch_size, patch_overlap=patch_size//2, is_3d=is_3d, use_cuda= use_cuda)
             else:
                 if use_cuda:
                     X = X.cuda()
-                score = model(X)
-            score = score.cpu().numpy()[0,0] # remove added dimensions
+                score = model(X) # torch Tensor
+                score = score.cpu().numpy()
+            score = score[0,0] # remove added dimensions
         
         path = os.path.join(output_dir, image_name)
         if verbose:
