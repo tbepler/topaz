@@ -117,7 +117,7 @@ class MemoryMappedImage():
         
         xy_below_cutoff = (x_max < 0.7 * self.shape[-1]) and (y_max < 0.7 * self.shape[-2])
         z_below_cutoff = (z_max < 0.7 * self.shape[-3]) if self.dims==3 else False
-        if xy_below_cutoff or z_below_cutoff:        
+        if xy_below_cutoff and self.dims == 2: # don't warn if 3D
             z_output = f'or z_coord > {z_max}' if (self.dims == 3) else ''
             output = f'WARNING: no coordinates are observed with x_coord > {x_max} or y_coord > {y_max} {z_output}. \
                     Did you scale the micrographs and particle coordinates correctly?'
