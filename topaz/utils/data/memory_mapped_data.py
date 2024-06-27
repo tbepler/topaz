@@ -147,7 +147,7 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
         self.mode = mode
         self.rng = np.random.default_rng()
         
-        self.num_particles = len(targets) # remove unmatched particles later
+        self.num_particles = len(targets) # remove unmatched (pixels/regions, not particles) later
         self.images = []
         self.num_images = 0
         for group in paths:
