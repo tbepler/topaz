@@ -56,7 +56,7 @@ def segment_images(model, paths:List[str], output_dir:str, use_cuda:bool, verbos
         ## process image with the model
         with torch.no_grad():
             # add batch and channel dimensions
-            X = torch.from_numpy(image).unsqueeze(0).unsqueeze(0)
+            X = torch.from_numpy(image.copy()).unsqueeze(0).unsqueeze(0)
             if patch_size is not None:
                 # patches move on and off GPU as processed, returns numpy array
                 score = predict_in_patches(model, X, patch_size=patch_size, patch_overlap=patch_size//2, is_3d=is_3d, use_cuda= use_cuda)

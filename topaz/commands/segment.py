@@ -19,7 +19,7 @@ def add_arguments(parser=None):
 
     parser.add_argument('paths', nargs='+', help='paths to image files for processing')
 
-    parser.add_argument('-m', '--model', default='resnet16', help='path to trained classifier. uses the pretrained resnet16 model by default.')
+    parser.add_argument('-m', '--model', default='resnet16', help='path to trained classifier. uses the pretrained resnet16 (2D) model by default.')
     parser.add_argument('-o', '--destdir', help='output directory')
 
     parser.add_argument('-d', '--device', default=0, type=int, help='which device to use, <0 corresponds to CPU (default: GPU if available)')

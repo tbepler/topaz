@@ -4,7 +4,7 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 
 
-def match_coordinates(targets, preds, radius):
+def  match_coordinates(targets:np.ndarray, preds:np.ndarray, radius:float) -> tuple[np.ndarray, np.ndarray]:
     d2 = np.sum((preds[:,np.newaxis] - targets[np.newaxis])**2, 2)
     cost = d2 - radius*radius
     cost[cost > 0] = 0
@@ -22,7 +22,7 @@ def match_coordinates(targets, preds, radius):
     return assignment, dist
 
 
-def non_maximum_suppression(x, r, threshold=-np.inf):
+def non_maximum_suppression(x, r:int, threshold:float=-np.inf) -> tuple[np.ndarray, np.ndarray]:
     ## enumerate coordinate deltas within d
     width = r
     ii,jj = np.meshgrid(np.arange(-width,width+1), np.arange(-width,width+1))
@@ -63,7 +63,7 @@ def non_maximum_suppression(x, r, threshold=-np.inf):
     return scores[:j], coords[:j]
 
 
-def non_maximum_suppression_3d(x, d, scale=1.0, threshold=-np.inf):
+def non_maximum_suppression_3d(x:np.ndarray, d:int, scale:float=1.0, threshold:float=-np.inf) -> tuple[np.ndarray, np.ndarray]:
     ## enumerate coordinate deltas within d
     r = scale*d/2
     width = int(np.ceil(r))
@@ -101,10 +101,3 @@ def non_maximum_suppression_3d(x, d, scale=1.0, threshold=-np.inf):
                 S.add(i + delta)
     
     return scores[:j], coords[:j]
-
-
-
-
-
-
-

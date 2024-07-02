@@ -48,6 +48,7 @@ def add_arguments(parser=None):
     parser.add_argument('--suffix', default='', help='optional suffix to add to particle file paths when using the --per-micrograph flag.')
     parser.add_argument('--format', choices=['coord', 'csv', 'star', 'json', 'box'], default='coord'
                     , help='file format of the OUTPUT files (default: coord)')
+    parser.add_argument('--dims', type=int, choices=[2,3], help='image dimensionality (default: 2/micrographs), set to 3 for tomograms')
 
     return parser
 
@@ -60,7 +61,7 @@ def main(args):
 
     extract_particles(args.paths, args.model, args.device, args.batch_size, args.threshold, args.radius, args.num_workers, 
                       args.targets, args.min_radius, args.max_radius, args.step_radius, args.assignment_radius, args.only_validate, 
-                      args.output, args.per_micrograph, args.suffix, args.format, args.up_scale, args.down_scale)
+                      args.output, args.per_micrograph, args.suffix, args.format, args.up_scale, args.down_scale, dims=args.dims)
 
 
 if __name__ == '__main__':
