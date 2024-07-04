@@ -59,7 +59,7 @@ def segment_images(model, paths:List[str], output_dir:str, use_cuda:bool, verbos
             X = torch.from_numpy(image.copy()).unsqueeze(0).unsqueeze(0)
             if patch_size is not None:
                 # patches move on and off GPU as processed, returns numpy array
-                score = predict_in_patches(model, X, patch_size=patch_size, patch_overlap=patch_size//2, is_3d=is_3d, use_cuda= use_cuda)
+                score = predict_in_patches(model, X, patch_size=patch_size*2, patch_overlap=patch_size//2, is_3d=is_3d, use_cuda= use_cuda)
             else:
                 if use_cuda:
                     X = X.cuda()
@@ -92,6 +92,9 @@ def predict_in_patches(model, X, patch_size, patch_overlap=0, is_3d=False, use_c
         with torch.no_grad():
             patch = patch.cuda() if use_cuda else patch # send only patch to GPU
             score = model(patch).data[0,0].cpu().numpy()
+            score = score[..., patch_overlap:-patch_overlap, patch_overlap:-patch_overlap]
+            if is_3d:
+                score = score[..., patch_overlap:-patch_overlap, :, :]
         scores.append(score)
 
     # Reassemble the image
@@ -103,7 +106,10 @@ def get_patches(X, patch_size, patch_overlap=0, is_3d=False):
     y, x = X.shape[-2:]
     z = X.shape[-3] if is_3d else None
     
-    step_size = patch_size - patch_overlap
+    pad = (patch_overlap, patch_overlap) * (3 if is_3d else 2)
+    X = torch.nn.functional.pad(X, pad)
+    
+    step_size = patch_size - 2*patch_overlap 
     patches = []
     for i in range(0, y, step_size):
         for j in range(0, x, step_size):
@@ -126,7 +132,7 @@ def reconstruct_from_patches(patches, original_shape, patch_size, patch_overlap=
     y, x = original_shape[-2:]
     z = original_shape[-3] if is_3d else None
 
-    step_size = patch_size - patch_overlap
+    step_size = patch_size - patch_overlap * 2 # good crop size
     reassembled = np.zeros(original_shape)
     # Reassemble the image
     patch_idx = 0

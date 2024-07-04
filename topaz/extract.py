@@ -14,7 +14,7 @@ import topaz.cuda
 import topaz.predict
 import topaz.utils.files as file_utils
 import torch
-from topaz.algorithms import match_coordinates, non_maximum_suppression
+from topaz.algorithms import match_coordinates, non_maximum_suppression, non_maximum_suppression_3d
 from topaz.metrics import average_precision
 from topaz.utils.data.loader import load_image
 
@@ -221,8 +221,6 @@ def extract_particles(paths:List[str], model:Union[torch.nn.Module, str], device
 
     # now, extract all particles from scored images
     if not only_validate:
-        per_micrograph = per_micrograph 
-
         f = sys.stdout if output is None or not per_micrograph else open(output, 'w')
         
         scale = up_scale/down_scale
