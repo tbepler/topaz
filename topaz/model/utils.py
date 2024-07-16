@@ -105,27 +105,34 @@ def predict_in_patches(model, X, patch_size, patch_overlap=0, is_3d=False, use_c
 def get_patches(X, patch_size, patch_overlap=0, is_3d=False):
     y, x = X.shape[-2:]
     z = X.shape[-3] if is_3d else None
-    
     pad = (patch_overlap, patch_overlap) * (3 if is_3d else 2)
     X = torch.nn.functional.pad(X, pad)
-    
-    step_size = patch_size - 2*patch_overlap 
+    # get padded sizes
+    y_pad, x_pad = X.shape[-2:]
+    z_pad = X.shape[-3] if is_3d else None
+    # take steps the size of the actual crop/patch, not including padding
+    step_size = patch_size - 2*patch_overlap
     patches = []
-    for i in range(0, y, step_size):
-        for j in range(0, x, step_size):
-            # Ensure the patch is within the image boundaries
-            i_end = min(i + patch_size, y)
-            j_end = min(j + patch_size, x)           
+    for i in range(0, y_pad, step_size):
+        for j in range(0, x_pad, step_size):
+            # Ensure the patch is within the image boundaries (including padding)
+            i_end = min(i + patch_size, y_pad)
+            j_end = min(j + patch_size, x_pad)           
             if is_3d:
-                for k in range(0, z, step_size):
-                    k_end = min(k + patch_size, z)
+                for k in range(0, z_pad, step_size):
+                    k_end = min(k + patch_size, z_pad)
                     patch = X[..., k:k_end, i:i_end, j:j_end]
+                    if patch.abs().sum() == 0:  # ignore patches that are all zero padding
+                        continue
                     patches.append(patch)
             else:
                 patch = X[..., i:i_end, j:j_end]
+                # ignore patches that are all zero padding
+                if patch.abs().sum() == 0:
+                    continue
                 patches.append(patch)
-            
     return patches
+
 
 
 def reconstruct_from_patches(patches, original_shape, patch_size, patch_overlap=0, is_3d=False):
