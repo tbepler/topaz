@@ -472,16 +472,18 @@ class TestingImageDataset():
         img = torch.from_numpy(img.copy())
         # create the target's binary mask
         img_name = os.path.splitext(path.split('/')[-1])[0]
-        image_name_matches = self.targets['image_name']==img_name
+        image_name_matches = self.targets['image_name'].str.contains(img_name)
         img_targets = self.targets[image_name_matches]
         x = img_targets['x_coord'].values
         y = img_targets['y_coord'].values
         z = img_targets['z_coord'].values if self.dims==3  else None
-        mask = as_mask(img.shape, self.radius, x, y, z_coord=z, use_cuda=self.use_cuda)
+        coords = (z, y, x) if dims == 3 else (y, x)
+        mask = torch.zeros(img.shape)
+        mask[coords] += 1
         
         if self.use_cuda:
-            # move img to device, targets there already
             img = img.cuda()
+            mask = mask.cuda()
             
         return img,mask
     
