@@ -477,9 +477,7 @@ class TestingImageDataset():
         x = img_targets['x_coord'].values
         y = img_targets['y_coord'].values
         z = img_targets['z_coord'].values if self.dims==3  else None
-        coords = (z, y, x) if dims == 3 else (y, x)
-        mask = torch.zeros(img.shape)
-        mask[coords] += 1
+        mask = as_mask(img.shape, self.radius, x, y, z, use_cuda=self.use_cuda)
         
         if self.use_cuda:
             img = img.cuda()
@@ -537,10 +535,9 @@ def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, 
 
     if test_targets_path is not None:
         test_targets = file_utils.read_coordinates(test_targets_path)
-        expanded_test_targets, mask_size = expand_target_points(test_targets, radius, dims)
-        test_dataset = TestingImageDataset(test_image_path, expanded_test_targets, radius=radius, dims=dims, use_cuda=use_cuda)
+        test_dataset = TestingImageDataset(test_image_path, test_targets, radius=radius, dims=dims, use_cuda=use_cuda)
         test_dataloader = DataLoader(test_dataset, batch_size=testing_batch_size, shuffle=False, num_workers=num_workers)
-        report(f'Loaded {len(test_dataset)} testing micrographs with ~{int(len(expanded_test_targets)//mask_size)} labeled particles')
+        report(f'Loaded {len(test_dataset)} testing micrographs with {len(test_targets)} labeled particles')
         return train_dataloader, test_dataloader
     else:
         return train_dataloader, None
