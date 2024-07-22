@@ -74,7 +74,7 @@ def convert_path_to_grouped_list(images_path:str, targets:pd.DataFrame) -> List[
         image_name = [os.path.splitext(os.path.basename(x))[0] for x in image_paths]
         image_paths = pd.DataFrame({'image_path': image_paths, 'image_name': image_name})
     else:
-        image_paths = pd.read_csv(path, sep='\s+') # training image file list
+        image_paths = pd.read_csv(images_path, sep='\s+') # training image file list
     
     if 'source' not in image_paths.columns:
         if 'source' not in targets.columns:
