@@ -288,7 +288,7 @@ def extract_image_stats(image_paths:List[List[str]], targets:pd.DataFrame, mode:
             source_total_regions += header.nz * header.ny * header.nx
             # Read image's positives from targets
             image_name = os.path.splitext(os.path.basename(path))[0]
-            target = targets[targets['image_name'] == image_name]
+            target = targets[targets['image_name'] == image_name] # name must have no extension
             # target = targets[targets['image_name'].str.contains(image_name)]
             source_positive_regions += (len(target)*pixels_per_particle) # all pixels, not just center
         # Calculate positive fraction and report
@@ -456,7 +456,8 @@ class TestingImageDataset():
             glob_base = images_path + os.sep + '*' # only get mrc files, need the header
             image_paths = glob.glob(glob_base+'.mrc')# + glob.glob(glob_base+'.tiff') + glob.glob(glob_base+'.png')
         else:
-            image_paths = pd.read_csv(images_path, sep='\s+')['image_name'].tolist()
+            image_names = pd.read_csv(images_path, sep='\s+')['image_name'].tolist() # these names should have no extension
+            image_paths = [name+'.mrc' for name in image_names] # these are paths that can be loaded
         self.image_paths = image_paths
         self.targets = targets
         self.radius = radius
@@ -473,7 +474,8 @@ class TestingImageDataset():
         img = torch.from_numpy(img.copy())
         # create the target's binary mask
         img_name = os.path.splitext(path.split('/')[-1])[0]
-        image_name_matches = self.targets['image_name'].str.contains(img_name)
+        # image_name_matches = self.targets['image_name'].str.contains(img_name)
+        image_name_matches = self.targets['image_name'] == img_name
         img_targets = self.targets[image_name_matches]
         x = img_targets['x_coord'].values
         y = img_targets['y_coord'].values
