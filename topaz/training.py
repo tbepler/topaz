@@ -289,6 +289,7 @@ def extract_image_stats(image_paths:List[List[str]], targets:pd.DataFrame, mode:
             # Read image's positives from targets
             image_name = os.path.splitext(os.path.basename(path))[0]
             target = targets[targets['image_name'] == image_name]
+            # target = targets[targets['image_name'].str.contains(image_name)]
             source_positive_regions += (len(target)*pixels_per_particle) # all pixels, not just center
         # Calculate positive fraction and report
         p_observed = source_positive_regions / source_total_regions

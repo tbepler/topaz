@@ -155,7 +155,8 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
             for path in group:
                 #get image name without file extension
                 img_name = os.path.splitext(path.split('/')[-1])[0]
-                image_name_matches = targets['image_name'].str.contains(img_name)
+                # image_name_matches = targets['image_name'].str.contains(img_name)
+                image_name_matches = targets['image_name'] == img_name
                 img_targets = targets[image_name_matches]
                 group_list.append(MemoryMappedImage(path, img_targets, crop_size, split, dims=dims, use_cuda=use_cuda))
                 self.num_images += 1
