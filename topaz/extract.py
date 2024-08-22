@@ -5,6 +5,7 @@ import argparse
 import multiprocessing
 import os
 import sys
+import time
 from typing import List, Union, Iterator, TextIO, Iterable
 
 import numpy as np
@@ -17,8 +18,8 @@ import torch
 from topaz.algorithms import match_coordinates, non_maximum_suppression, non_maximum_suppression_3d
 from topaz.metrics import average_precision
 from topaz.utils.data.loader import load_image
-
-
+from topaz.model.factory import load_model
+from tqdm import tqdm
 
 class NonMaximumSuppression: 
     def __init__(self, radius:int, threshold:float, dims:int=2):
@@ -34,20 +35,72 @@ class NonMaximumSuppression:
             score,coords = non_maximum_suppression_3d(score, self.radius*2, threshold=self.threshold)
         return name, score, coords
 
-
-def nms_iterator(scores:Iterable[np.ndarray], radius:int, threshold:float, pool:multiprocessing.Pool=None, dims:int=2) -> Iterator[tuple[str, np.ndarray, np.ndarray]]:
+def nms_iterator(scores:Iterable[np.ndarray], radius:int, threshold:float, pool:multiprocessing.Pool=None, dims:int=3, chunk_size:int=128) -> Iterator[tuple[str, np.ndarray, np.ndarray]]:
     process = NonMaximumSuppression(radius, threshold, dims=dims)
     if pool is not None:
-        for name,score,coords in pool.imap_unordered(process, scores):
-            yield name,score,coords
-    else:
-        for name,score in scores:
-            if dims == 2:
-                score,coords = non_maximum_suppression(score, radius, threshold=threshold)
-            elif dims == 3:
-                score,coords = non_maximum_suppression_3d(score, radius*2, threshold=threshold)
-            yield name,score,coords
+        for name, score in scores:
+            print(f"Debug: Initial score shape: {score.shape}")
+            original_shape = score.shape
+            if score.ndim != 3:
+                print(f"Warning: Expected 3D score array, but got shape {score.shape}. Attempting to reshape...")
+                if score.ndim == 1:
+                    side = int(np.cbrt(score.size))
+                    score = score.reshape(side, side, side)
+                elif score.ndim == 2:
+                    score = score.reshape(1, *score.shape)
+                print(f"Reshaped score array to {score.shape}")
 
+            coords_list = []
+            scores_list = []
+            for z in range(0, score.shape[0], chunk_size):
+                for y in range(0, score.shape[1], chunk_size):
+                    for x in range(0, score.shape[2], chunk_size):
+                        z_end = min(z + chunk_size, score.shape[0])
+                        y_end = min(y + chunk_size, score.shape[1])
+                        x_end = min(x + chunk_size, score.shape[2])
+                        
+                        chunk = score[z:z_end, y:y_end, x:x_end]
+                        _, chunk_score, chunk_coords = process((name, chunk))
+                        
+                        # Adjust coordinates to reflect position in full tomogram
+                        chunk_coords[:, 0] += x  # x coordinate
+                        chunk_coords[:, 1] += y  # y coordinate
+                        chunk_coords[:, 2] += z  # z coordinate
+                        
+                        coords_list.append(chunk_coords)
+                        scores_list.append(chunk_score)
+            
+            coords = np.concatenate(coords_list, axis=0) if coords_list else np.array([])
+            score = np.concatenate(scores_list, axis=0) if scores_list else np.array([])
+            
+            print(f"Debug: Final score shape: {score.shape}, coords shape: {coords.shape}")
+            
+            if coords.size > 0:
+                # Clip coordinates to ensure they're within the tomogram boundaries
+                coords = np.clip(coords, 0, np.array([original_shape[2]-1, original_shape[1]-1, original_shape[0]-1]))
+            
+            yield name, score, coords
+    else:
+        for name, score in scores:
+            print(f"Debug: Initial score shape: {score.shape}")
+            original_shape = score.shape
+            if score.ndim != 3:
+                print(f"Warning: Expected 3D score array, but got shape {score.shape}. Attempting to reshape...")
+                if score.ndim == 1:
+                    side = int(np.cbrt(score.size))
+                    score = score.reshape(side, side, side)
+                elif score.ndim == 2:
+                    score = score.reshape(1, *score.shape)
+                print(f"Reshaped score array to {score.shape}")
+
+            score, coords = non_maximum_suppression_3d(score, radius*2, threshold=threshold)
+            
+            print(f"Debug: Final score shape: {score.shape}, coords shape: {coords.shape}")
+            
+            if coords.size > 0:
+                coords = np.clip(coords, 0, np.array([original_shape[2]-1, original_shape[1]-1, original_shape[0]-1]))
+            
+            yield name, score, coords
 
 def iterate_score_target_pairs(scores, targets:pd.DataFrame) -> Iterator[tuple[np.ndarray, np.ndarray]]:
     for image_name,score in scores.items():
@@ -98,7 +151,7 @@ def extract_auprc(targets:np.ndarray, scores:np.ndarray, radius:float, threshold
                 score,coords = non_maximum_suppression(score, radius, threshold=threshold)
             elif dims == 3:
                 score,coords = non_maximum_suppression_3d(score, radius*2, threshold=threshold)
-                           
+                       
             radius_to_use = radius if (match_radius is None) else match_radius
             assignment, dist = match_coordinates(target, coords, radius_to_use)
             
@@ -154,25 +207,97 @@ def stream_images(paths:List[str]) -> Iterator[np.ndarray]:
         image = load_image(path, make_image=False, return_header=False)
         yield image
 
+def get_available_gpu_memory():
+    if torch.cuda.is_available():
+        return torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated()
+    return 0
+
+def calculate_chunk_size(image_shape, available_memory):
+    mem_per_slice = image_shape[1] * image_shape[2] * 4 * 2
+    return max(1, int(available_memory / mem_per_slice))
 
 def score_images(model:str, paths:List[str], device:int=-1, batch_size:int=1) -> Iterator[np.ndarray]:
     if model is not None and model != 'none': # score each image with the model
         ## set the device
         use_cuda = topaz.cuda.set_device(device)
-        ## load the model
-        from topaz.model.factory import load_model
         model = load_model(model)
         model.eval()
         model.fill()
         if use_cuda:
             model.cuda()
-        scores = topaz.predict.score_stream(model, stream_images(paths), use_cuda=use_cuda, batch_size=batch_size)
-    else: # load scores directly
-        scores = stream_images(paths)
-    for path,score in zip(paths, scores):
-        yield path, score
+        
+        def process_patch(patch):
+            with torch.no_grad():
+                patch = torch.from_numpy(patch).float()
+                if use_cuda:
+                    patch = patch.cuda()
+                result = model(patch).squeeze(1).cpu().numpy()
+                if use_cuda:
+                    torch.cuda.empty_cache()
+                return result
 
-
+        for path in tqdm(paths, desc="Processing tomograms", unit="tomogram"):
+            print(f"\nProcessing tomogram: {path}")
+            start_time = time.time()
+            image = load_image(path, make_image=False, return_header=False)
+            original_shape = image.shape
+            print(f"Tomogram shape: {original_shape}")
+            
+            # Define patch size and overlap
+            patch_size = (32, 128, 128)  # (z, y, x)
+            overlap = (8, 32, 32)  # 25% overlap
+            
+            scores = np.zeros(original_shape, dtype=np.float32)
+            weights = np.zeros(original_shape, dtype=np.float32)
+            
+            total_patches = ((original_shape[0] - overlap[0]) // (patch_size[0] - overlap[0]) + 1) * \
+                            ((original_shape[1] - overlap[1]) // (patch_size[1] - overlap[1]) + 1) * \
+                            ((original_shape[2] - overlap[2]) // (patch_size[2] - overlap[2]) + 1)
+            
+            with tqdm(total=total_patches, desc="Processing patches", unit="patch") as pbar:
+                for z in range(0, original_shape[0] - overlap[0], patch_size[0] - overlap[0]):
+                    for y in range(0, original_shape[1] - overlap[1], patch_size[1] - overlap[1]):
+                        for x in range(0, original_shape[2] - overlap[2], patch_size[2] - overlap[2]):
+                            z_end = min(z + patch_size[0], original_shape[0])
+                            y_end = min(y + patch_size[1], original_shape[1])
+                            x_end = min(x + patch_size[2], original_shape[2])
+                            
+                            patch = image[z:z_end, y:y_end, x:x_end]
+                            patch = patch[None, None, ...]  # Add batch and channel dimensions
+                            
+                            patch_scores = process_patch(patch)
+                            
+                            # Apply Gaussian smoothing to the patch
+                            patch_scores = gaussian_filter(patch_scores[0], sigma=1)
+                            
+                            # Create a weight array for blending
+                            weight = np.ones_like(patch_scores)
+                            weight = gaussian_filter(weight, sigma=2)
+                            
+                            scores[z:z_end, y:y_end, x:x_end] += patch_scores * weight
+                            weights[z:z_end, y:y_end, x:x_end] += weight
+                            
+                            del patch
+                            if use_cuda:
+                                torch.cuda.empty_cache()
+                            pbar.update(1)
+            
+            # Normalize the scores
+            scores /= np.maximum(weights, 1e-10)
+            
+            end_time = time.time()
+            print(f"Tomogram processing completed in {end_time - start_time:.2f} seconds")
+            yield path, scores, original_shape
+            
+            del scores
+            del weights
+            if use_cuda:
+                torch.cuda.empty_cache()
+    else:
+        for path in tqdm(paths, desc="Loading tomograms", unit="tomogram"):
+            image = load_image(path, make_image=False, return_header=False)
+            yield path, image, image.shape
+            
 def stream_inputs(f:TextIO) -> Iterator[str]:
     for line in f:
         line = line.strip()
@@ -181,68 +306,80 @@ def stream_inputs(f:TextIO) -> Iterator[str]:
 
 
 def extract_particles(paths:List[str], model:Union[torch.nn.Module, str], device:int, batch_size:int, threshold:float, radius:int, num_workers:int, targets:str, min_radius:int, max_radius:int, step:int, match_radius:int,
-                      only_validate:bool, output:str, per_micrograph:bool, suffix:str, out_format:str, up_scale:float, down_scale:float, dims=2):
-    # score the images lazily with a generator
-    paths = stream_inputs(sys.stdin) if len(paths) == 0 else paths # no paths, read from stdin
-
-    # generator of images and their scores
+                      only_validate:bool, output:str, per_micrograph:bool, suffix:str, out_format:str, up_scale:float, down_scale:float, dims=3):
+    paths = list(stream_inputs(sys.stdin) if len(paths) == 0 else paths)
+    print(f"Total number of tomograms to process: {len(paths)}")
     stream = score_images(model, paths, device=device, batch_size=batch_size)
 
-    # extract coordinates from scored images
     radius = radius if radius is not None else -1
 
     num_workers = num_workers if num_workers > 0 else multiprocessing.cpu_count()
     pool = multiprocessing.Pool(num_workers) if num_workers > 0 else None
 
-    # if no radius is set, we choose the radius based on targets provided
-    if radius < 0 and targets is not None: # set the radius to optimize AUPRC of the targets
-        scores = {k:v for k,v in stream} # process all images for this part
-        stream = scores.items()
+    if not per_micrograph and output:
+        if os.path.isdir(output):
+            output = os.path.join(output, "extracted_particles.txt")
+        with open(output, 'w') as f:
+            print('image_name\tx_coord\ty_coord\tz_coord\tscore', file=f)
 
-        targets = pd.read_csv(targets, sep='\t')
-        target_scores = {name: scores[name] for name in targets.image_name.unique() if name in scores}
-        ## find radius maximizing AUPRC
-        radius, auprc = find_opt_radius(targets, target_scores, threshold, lo=min_radius, hi=max_radius, step=step, match_radius=match_radius, pool=pool, dims=dims)
+    # Create COORDS directory
+    coords_dir = os.path.join(os.path.dirname(output), "COORDS")
+    os.makedirs(coords_dir, exist_ok=True)
 
-    elif targets is not None:
-        scores = {k:v for k,v in stream} # process all images for this part
-        stream = scores.items()
+    for path, score, original_shape in stream:
+        print(f"\nExtracting particles from: {path}")
+        start_time = time.time()
+        name, score, coords = next(nms_iterator([(path, score)], radius, threshold, pool=pool, dims=dims))
 
-        targets = pd.read_csv(targets, sep='\t')
-        target_scores = {name: scores[name] for name in targets.image_name.unique() if name in scores}
-        # calculate AUPRC for radius
-        au, rmse, recall, n = extract_auprc(targets, target_scores, radius, threshold, match_radius=match_radius, pool=pool, dims=dims)
-        print('# radius={}, auprc={}, rmse={}, recall={}, targets={}'.format(radius, au, rmse, recall, n))
-    
-    elif radius < 0:
-        # must have targets if radius < 0
-        raise Exception('Must specify targets for choosing the extraction radius if extraction radius is not provided')
-
-
-    # now, extract all particles from scored images
-    if not only_validate:
-        f = sys.stdout if output is None or not per_micrograph else open(output, 'w')
-        
-        scale = up_scale/down_scale
-
-        # combining all files together, print header first
-        if not per_micrograph:
-            print('image_name\tx_coord\ty_coord\tscore', file=f)
-        
-        ## extract coordinates using radius 
-        for path,score,coords in nms_iterator(stream, radius, threshold, pool=pool, dims=dims):
+        if not only_validate:
             basename = os.path.basename(path)
             name = os.path.splitext(basename)[0]
-            ## scale the coordinates
+            
+            scale = up_scale/down_scale
             if scale != 1:
                 coords = np.round(coords*scale).astype(int)
+
+            print(f"Number of particles extracted: {len(coords)}")
+
+            # Ensure coordinates are within tomogram boundaries
+            coords = np.clip(coords, 0, np.array(original_shape)[[2, 1, 0]] - 1)
+
+            # Save IMOD .coords file
+            coords_file = os.path.join(coords_dir, f"{name}.coords")
+            with open(coords_file, 'w') as f:
+                for coord in coords:
+                    # IMOD .coords format: x y z (one coordinate per line)
+                    print(f"{coord[0]} {coord[1]} {coord[2]}", file=f)
+            print(f"IMOD .coords file saved to: {coords_file}")
+
             if per_micrograph:
-                table = pd.DataFrame({'image_name': name, 'x_coord': coords[:,0], 'y_coord': coords[:,1], 'score': score})
-                out_path,ext = os.path.splitext(path)
+                table = pd.DataFrame({'image_name': name, 'x_coord': coords[:,0], 'y_coord': coords[:,1], 'z_coord': coords[:,2], 'score': score})
+                out_path, ext = os.path.splitext(path)
                 out_path = out_path + suffix + '.' + out_format
                 with open(out_path, 'w') as f:
                     file_utils.write_table(f, table, format=out_format, image_ext=ext)
+                print(f"Results written to: {out_path}")
             else:
-                for i in range(len(score)):
-                    print(name + '\t' + str(coords[i,0]) + '\t' + str(coords[i,1]) + '\t' + str(score[i]), file=f)   
-        f.close()
+                out_file = output if output else sys.stdout
+                with open(out_file, 'a') if isinstance(out_file, str) else out_file as f:
+                    for i in range(len(score)):
+                        print(f"{name}\t{coords[i,0]}\t{coords[i,1]}\t{coords[i,2]}\t{score[i]}", file=f)
+                if output:
+                    print(f"Results appended to: {output}")
+                else:
+                    print("Results printed to stdout")
+
+        end_time = time.time()
+        print(f"Particle extraction completed in {end_time - start_time:.2f} seconds")
+
+        del score
+        del coords
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    if pool is not None:
+        pool.close()
+        pool.join()
+
+    print("\nParticle extraction completed for all tomograms.")
+    print(f"IMOD .coords files saved in: {coords_dir}")
