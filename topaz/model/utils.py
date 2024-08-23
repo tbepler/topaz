@@ -80,9 +80,7 @@ def segment_images(model, paths:List[str], output_dir:str, use_cuda:bool, verbos
 
 
 def predict_in_patches(model, X, patch_size, patch_overlap=0, is_3d=False, use_cuda=False):
-    y, x = X.shape[-2:]
-    z = X.shape[-3] if is_3d else 1
-
+    ''' Predict on an image in patches and reassemble the image. Assumes batch and channel dimensions are present. '''
     # Split image into smaller patches
     patches = get_patches(X, patch_size, patch_overlap=patch_overlap, is_3d=is_3d)
     
@@ -136,6 +134,7 @@ def get_patches(X, patch_size, patch_overlap=0, is_3d=False):
 
 
 def reconstruct_from_patches(patches, original_shape, patch_size, patch_overlap=0, is_3d=False):
+    ''' Reassemble patches into an image. Assumes batch and channel dimensions removed. '''
     y, x = original_shape[-2:]
     z = original_shape[-3] if is_3d else None
 
