@@ -172,7 +172,7 @@ def get_mode_for_header(dtype):
     elif dtype == np.dtype('3B'):
         return 16
     
-    raise "MRC incompatible dtype: " + str(dtype)
+    raise ValueError("MRC incompatible dtype: " + str(dtype))
     
 
 def make_header(shape, cella, cellb, mz=1, dtype=np.float32, order=(1,2,3), dmin=0, dmax=-1, dmean=-2, rms=-1
