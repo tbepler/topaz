@@ -28,6 +28,7 @@ def add_arguments(parser=None):
 
     parser.add_argument('--num-workers', type=int, default=0, help='number of processes to use for extracting in parallel, 0 uses main process, -1 uses all CPUs (default: 0)')
     parser.add_argument('-j', '--num-threads', type=int, default=0, help='number of threads for pytorch, 0 uses pytorch defaults, <0 uses all cores (default: 0)')
+    parser.add_argument('-p', '--patch-size', type=int, default=0, help='patch size for scoring micrographs in pieces (default: 0, no patching)')
     parser.add_argument('--batch-size', type=int, default=1, help='batch size for scoring micrographs with model (default: 1)')
 
 
@@ -48,7 +49,7 @@ def add_arguments(parser=None):
     parser.add_argument('--suffix', default='', help='optional suffix to add to particle file paths when using the --per-micrograph flag.')
     parser.add_argument('--format', choices=['coord', 'csv', 'star', 'json', 'box'], default='coord'
                     , help='file format of the OUTPUT files (default: coord)')
-    parser.add_argument('--dims', type=int, choices=[2,3], help='image dimensionality (default: 2/micrographs), set to 3 for tomograms')
+    parser.add_argument('--dims', type=int, default=2, choices=[2,3], help='image dimensionality (default: 2/micrographs), set to 3 for tomograms')
 
     return parser
 
@@ -60,8 +61,9 @@ def main(args):
     set_num_threads(num_threads)
 
     extract_particles(args.paths, args.model, args.device, args.batch_size, args.threshold, args.radius, args.num_workers, 
-                      args.targets, args.min_radius, args.max_radius, args.step_radius, args.assignment_radius, args.only_validate, 
-                      args.output, args.per_micrograph, args.suffix, args.format, args.up_scale, args.down_scale, dims=args.dims)
+                      args.targets, args.min_radius, args.max_radius, args.step_radius, args.assignment_radius, args.patch_size,
+                      args.only_validate, args.output, args.per_micrograph, args.suffix, args.format, args.up_scale, args.down_scale, 
+                      dims=args.dims)
 
 
 if __name__ == '__main__':
