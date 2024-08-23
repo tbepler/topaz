@@ -23,7 +23,7 @@ def  match_coordinates(targets:np.ndarray, preds:np.ndarray, radius:float) -> tu
 
 
 def non_maximum_suppression(x, r:int, threshold:float=-np.inf) -> tuple[np.ndarray, np.ndarray]:
-    ## enumerate coordinate deltas within d
+    ## enumerate coordinate deltas within radius/distance r
     width = r
     ii,jj = np.meshgrid(np.arange(-width,width+1), np.arange(-width,width+1))
     mask = (ii**2 + jj**2) <= r*r
@@ -63,9 +63,9 @@ def non_maximum_suppression(x, r:int, threshold:float=-np.inf) -> tuple[np.ndarr
     return scores[:j], coords[:j]
 
 
-def non_maximum_suppression_3d(x:np.ndarray, d:int, scale:float=1.0, threshold:float=-np.inf) -> tuple[np.ndarray, np.ndarray]:
-    ## enumerate coordinate deltas within d
-    r = scale*d/2
+def non_maximum_suppression_3d(x:np.ndarray, r:int, scale:float=1.0, threshold:float=-np.inf) -> tuple[np.ndarray, np.ndarray]:
+    ## enumerate coordinate deltas within (possibly scaled) radius/distance r
+    r = scale*r
     width = int(np.ceil(r))
     A = np.arange(-width,width+1)
     ii,jj,kk = np.meshgrid(A, A, A)
