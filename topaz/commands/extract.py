@@ -50,6 +50,7 @@ def add_arguments(parser=None):
     parser.add_argument('--format', choices=['coord', 'csv', 'star', 'json', 'box'], default='coord'
                     , help='file format of the OUTPUT files (default: coord)')
     parser.add_argument('--dims', type=int, default=2, choices=[2,3], help='image dimensionality (default: 2/micrographs), set to 3 for tomograms')
+    parser.add_argument('-v','--verbose', action='store_true', help='report as each image is scored and picks are extracted')
 
     return parser
 
@@ -63,7 +64,7 @@ def main(args):
     extract_particles(args.paths, args.model, args.device, args.batch_size, args.threshold, args.radius, args.num_workers, 
                       args.targets, args.min_radius, args.max_radius, args.step_radius, args.assignment_radius, args.patch_size,
                       args.only_validate, args.output, args.per_micrograph, args.suffix, args.format, args.up_scale, args.down_scale, 
-                      dims=args.dims)
+                      dims=args.dims, verbose=args.verbose)
 
 
 if __name__ == '__main__':

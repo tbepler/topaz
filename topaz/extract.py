@@ -18,89 +18,86 @@ import torch
 from topaz.algorithms import match_coordinates, non_maximum_suppression, non_maximum_suppression_3d
 from topaz.metrics import average_precision
 from topaz.utils.data.loader import load_image
+from topaz.utils.printing import report
 from topaz.model.factory import load_model
 from topaz.model.utils import predict_in_patches, get_patches
 from tqdm import tqdm
 
 class NonMaximumSuppression: 
-    def __init__(self, radius:int, threshold:float, dims:int=2):
+    def __init__(self, radius:int, threshold:float, dims:int=2, patch_size=64, patch_overlap=32, verbose:bool=False):
         self.radius = radius
         self.threshold = threshold
         self.dims = dims
+        self.patch_size = patch_size
+        self.patch_overlap = patch_overlap
+        self.verbose = verbose
 
     def __call__(self, args) -> tuple[str, np.ndarray, np.ndarray]:
+        nms = non_maximum_suppression if self.dims == 2 else non_maximum_suppression_3d
         name,score = args
-        if self.dims == 2:
-            score,coords = non_maximum_suppression(score, self.radius, threshold=self.threshold)
-        elif self.dims == 3:
-            score,coords = non_maximum_suppression_3d(score, self.radius*2, threshold=self.threshold)
-        return name, score, coords
-
-
-def nms_iterator(scores:Iterable[np.ndarray], radius:int, threshold:float, pool:multiprocessing.Pool=None, dims:int=2, 
-                 patch_size:int=0) -> Iterator[tuple[str, np.ndarray, np.ndarray]]:
-    process = NonMaximumSuppression(radius, threshold, dims=dims)
-    
-    def crop_translate_coords_scores(scores, coords, patch_size, patch_overlap, x, y, z=None):
-        within_patch = np.logical_and(coords >= patch_overlap, coords <= patch_size+patch_overlap)
-        within_patch = np.all(within_patch, axis=-1)
-        coords = coords[within_patch]
-        scores = scores[within_patch]
-        # Adjust coordinates to reflect position in full tomogram
-        coords[:, -1] += x
-        coords[:, -2] += y
-        if z is not None:
-            coords[:, -3] += z
-        return scores, coords
-    
-    if pool is not None:
-        # for name,score,coords in pool.imap_unordered(process, scores): # TODO: multiprocessing was removed!
-        for name, score in scores:
-            original_shape = score.shape
-            y, x = original_shape[-2:]
-            z = original_shape[-3] if dims==3 else None
-            assert score.ndim == dims, f"Expected {dims}D score array, but got shape {score.shape}"
-
-            coords_list = []
+        if self.verbose:
+            report(f'Scoring {name}')
+        original_shape = score.shape
+        y, x = original_shape[-2:]
+        z = original_shape[-3] if self.dims==3 else None   
+        if self.patch_size:
             scores_list = []
-            
-            if patch_size:
-                patch_overlap = patch_size // 2                
-                patches = get_patches(score, patch_size)
-                step_size = patch_size - patch_overlap * 2 # good crop size
-                # process each patch
-                patch_idx = 0
-                for i in range(0, y, step_size):
-                    for j in range(0, x, step_size):
-                        if dims==3:
-                            for k in range(0, z, step_size):
-                                patch = patches[patch_idx]
-                                _, patch_score, patch_coords = process((name, patch))
-                                # find coordinates within patch boundaries
-                                patch_score, patch_coords = crop_translate_coords_scores(patch_score, patch_coords, 
-                                                                                         patch_size, patch_overlap, j, i, k)
-                                scores_list.append(patch_score)
-                                coords_list.append(patch_coords)
-                                patch_idx += 1
-                        else:
+            coords_list = []
+            patches = get_patches(score, self.patch_size, self.patch_overlap, is_3d=(self.dims==3))
+            step_size = self.patch_size - self.patch_overlap * 2 # good crop size
+            # process each patch
+            patch_idx = 0
+            for i in range(0, y, step_size):
+                for j in range(0, x, step_size):
+                    if self.dims==3:
+                        for k in range(0, z, step_size):
                             patch = patches[patch_idx]
-                            _, patch_score, patch_coords = process((name, patch))
-                            patch_score, patch_coords = crop_translate_coords_scores(patch_score, patch_coords, 
-                                                                                     patch_size, patch_overlap, j, i)
+                            _, patch_score, patch_coords = nms(patch, r=self.radius, threshold=self.threshold)
+                            # find coordinates within patch boundaries, and adjust to full tomogram coordinates
+                            patch_score, patch_coords = crop_translate_coords_scores(patch_score, patch_coords, self.patch_size, 
+                                                                                     self.patch_overlap, j, i, k)
                             scores_list.append(patch_score)
                             coords_list.append(patch_coords)
                             patch_idx += 1
-                # combine patch results
-                coords = np.concatenate(coords_list, axis=0) if coords_list else np.array([])
-                scores = np.concatenate(scores_list, axis=0) if scores_list else np.array([])           
-            else:
-                _, scores, coords = process((name, score))
-            
-            yield name, scores, coords
+                    else:
+                        patch = patches[patch_idx]
+                        _, patch_score, patch_coords = nms(patch, r=self.radius, threshold=self.threshold)
+                        patch_score, patch_coords = crop_translate_coords_scores(patch_score, patch_coords, self.patch_size, 
+                                                                                 self.patch_overlap, j, i)
+                        scores_list.append(patch_score)
+                        coords_list.append(patch_coords)
+                        patch_idx += 1
+            score = np.concatenate(scores_list, axis=0) if scores_list else np.array([])
+            coords = np.concatenate(coords_list, axis=0) if coords_list else np.array([])  
+        else:
+            score,coords = nms(score, self.radius, threshold=self.threshold)
+        return name, score, coords
+
+
+def crop_translate_coords_scores(scores, coords, patch_size, patch_overlap, x, y, z=None):
+    within_patch = np.logical_and(patch_overlap <= coords, coords < patch_size+patch_overlap)
+    within_patch = np.all(within_patch, axis=-1)
+    coords = coords[within_patch]
+    scores = scores[within_patch]
+    # Adjust coordinates to reflect position in full tomogram
+    coords[:, -1] += x
+    coords[:, -2] += y
+    if z is not None:
+        coords[:, -3] += z
+    return scores, coords
+
+
+def nms_iterator(scores:Iterable[np.ndarray], radius:int, threshold:float, pool:multiprocessing.Pool=None, dims:int=2, 
+                 patch_size:int=0, patch_overlap:int=0, verbose:bool=False) -> Iterator[tuple[str, np.ndarray, np.ndarray]]:
+    # create the process, can be patched or not, 2d or 3d
+    process = NonMaximumSuppression(radius, threshold, dims=dims, patch_size=patch_size, patch_overlap=patch_overlap, verbose=verbose)
+    # parallelize on CPU at the image level
+    if pool is not None:
+        for name,score,coords in pool.imap_unordered(process, scores):
+            yield name, score, coords
     else:
-        nms_nD = non_maximum_suppression if dims == 2 else non_maximum_suppression_3d
         for name, score in scores:
-            score, coords = nms_nD(score, radius, threshold=threshold)
+            name, score, coords = process((name, score))
             yield name, score, coords
 
 
@@ -268,78 +265,104 @@ def stream_inputs(f:TextIO) -> Iterator[str]:
             yield line
 
 
-def extract_particles(paths:List[str], model:Union[torch.nn.Module, str], device:int, batch_size:int, threshold:float, radius:int, num_workers:int, targets:str, min_radius:int, max_radius:int, step:int, match_radius:int,
-                      patch_size, only_validate:bool, output:str, per_micrograph:bool, suffix:str, out_format:str, up_scale:float, down_scale:float, dims=2):
-    paths = list(stream_inputs(sys.stdin) if len(paths) == 0 else paths)
-    # print(f"Total number of tomograms to process: {len(paths)}")
+def extract_particles(paths:List[str], model:Union[torch.nn.Module, str], device:int, batch_size:int, threshold:float, radius:int, num_workers:int, targets:str, 
+                      min_radius:int, max_radius:int, step:int, match_radius:int,patch_size, only_validate:bool, output:str, per_micrograph:bool, suffix:str, 
+                      out_format:str, up_scale:float, down_scale:float, dims=2, verbose:bool=False):
+    report('Beginning extraction')
+    # score the images lazily with a generator
+    paths = stream_inputs(sys.stdin) if len(paths) == 0 else paths # no paths, read from stdin
+    
+    # generator of images and their scores
     stream = score_images(model, paths, device=device, patch_size=patch_size, batch_size=batch_size)
 
-    radius = radius if radius is not None else -1
-
+    # set the number of workers
     num_workers = multiprocessing.cpu_count() if num_workers < 0 else num_workers
     pool = multiprocessing.Pool(num_workers) if num_workers > 0 else None
 
-    if not per_micrograph and output:
-        if os.path.isdir(output):
-            output = os.path.join(output, "extracted_particles.txt")
-        with open(output, 'w') as f:
-            print('image_name\tx_coord\ty_coord\tz_coord\tscore', file=f)
+    # extract coordinates from scored images
+    radius = radius if radius is not None else -1
 
-    # Create COORDS directory
-    coords_dir = os.path.join(os.path.dirname(output), "COORDS")
-    os.makedirs(coords_dir, exist_ok=True)
+    # if no radius is set, we choose the radius based on targets provided
+    if radius < 0 and targets is not None: # set the radius to optimize AUPRC of the targets
+        scores = {k:v for k,v in stream} # process all images for this part
+        stream = scores.items()
 
-    for path, scores in stream:
-        # print(f"\nExtracting particles from: {path}")
-        start_time = time.time()
-        name, score, coords = next(nms_iterator([(path, scores)], radius, threshold, pool=pool, dims=dims))
+        targets = pd.read_csv(targets, sep='\t')
+        target_scores = {name: scores[name] for name in targets.image_name.unique() if name in scores}
+        ## find radius maximizing AUPRC
+        report('Finding optimal radius for extraction')
+        radius, auprc = find_opt_radius(targets, target_scores, threshold, lo=min_radius, hi=max_radius,
+                                        step=step, match_radius=match_radius, pool=pool, dims=dims)
+        report(f'Optimal radius found: {radius} with AUPRC: {auprc}')
 
-        if not only_validate:
+    elif targets is not None:
+        scores = {k:v for k,v in stream} # process all images for this part
+        stream = scores.items()
+
+        targets = pd.read_csv(targets, sep='\t')
+        target_scores = {name: scores[name] for name in targets.image_name.unique() if name in scores}
+        # calculate AUPRC for radius
+        au, rmse, recall, n = extract_auprc(targets, target_scores, radius, threshold, match_radius=match_radius, 
+                                            pool=pool, dims=dims)
+        print('# radius={}, auprc={}, rmse={}, recall={}, targets={}'.format(radius, au, rmse, recall, n))
+    
+    elif radius < 0:
+        # must have targets if radius < 0
+        raise Exception('Must specify targets for choosing the extraction radius if extraction radius is not provided')
+
+    # extract all particles from scored images
+    if not only_validate:
+        scale = up_scale/down_scale
+        
+        # prepare output file or directory
+        if not per_micrograph:
+            # if output is a directory, create a file within
+            output = sys.path.join(output, 'extracted_particles.txt') if os.path.isdir(output) else output
+            # open file (or stdout) for writing
+            f = sys.stdout if (output is None) else open(output, 'w')
+            z_string = '\tz_coord' if dims == 3 else ''
+            print(f'image_name\tx_coord\ty_coord{z_string}\tscore', file=f)
+        elif not os.path.isdir(output):
+            # output isn't a directory, so create one
+            os.makedirs(os.path.dirname(output), exist_ok=True)
+            output_dir = os.path.join(os.path.dirname(output), 'COORDS')
+        else:
+            # already a directory
+            output_dir = output
+                  
+        # extract coordinates using radius 
+        for path,score,coords in nms_iterator(stream, radius, threshold, pool=pool, dims=dims, verbose=verbose):
+            # get the name of the image w/o extension
             basename = os.path.basename(path)
             name = os.path.splitext(basename)[0]
-            
-            scale = up_scale/down_scale
-            if scale != 1:
-                coords = np.round(coords*scale).astype(int)
-
-            print(f"Number of particles extracted: {len(coords)}")
-
-            # Save IMOD .coords file
-            coords_file = os.path.join(coords_dir, f"{name}.coords")
-            with open(coords_file, 'w') as f:
-                for coord in coords:
-                    # IMOD .coords format: x y z (one coordinate per line)
-                    print(f"{coord[0]} {coord[1]} {coord[2]}", file=f)
-            # print(f"IMOD .coords file saved to: {coords_file}")
-
+            if verbose:
+                report(f'Extracted {len(score)} particles from {name}')
+            # scale the coordinates
+            coords = np.round(coords*scale).astype(int) if scale != 1 else coords
             if per_micrograph:
-                table = pd.DataFrame({'image_name': name, 'x_coord': coords[:,0], 'y_coord': coords[:,1], 'z_coord': coords[:,2], 'score': score})
-                out_path, ext = os.path.splitext(path)
-                out_path = out_path + suffix + '.' + out_format
+                out_path = os.path.join(output_dir, name + suffix + '.' + out_format)
+                if dims == 2:
+                    table = pd.DataFrame({'image_name': name, 'x_coord': coords[:,0], 'y_coord': coords[:,1], 
+                                          'score': score})
+                else:
+                    table = pd.DataFrame({'image_name': name, 'x_coord': coords[:,0], 'y_coord': coords[:,1], 
+                                          'z_coord': coords[:,2], 'score': score})
                 with open(out_path, 'w') as f:
                     file_utils.write_table(f, table, format=out_format, image_ext=ext)
-                # print(f"Results written to: {out_path}")
             else:
-                out_file = output if output else sys.stdout
-                with open(out_file, 'a') if isinstance(out_file, str) else out_file as f:
-                    for i in range(len(score)):
-                        print(f"{name}\t{coords[i,0]}\t{coords[i,1]}\t{coords[i,2]}\t{score[i]}", file=f)
-                if output:
-                    print(f"Results appended to: {output}")
-                else:
-                    print("Results printed to stdout")
-
-        end_time = time.time()
-        # print(f"Particle extraction completed in {end_time - start_time:.2f} seconds")
-
-        del score
-        del coords
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-
-    if pool is not None:
+                for i in range(len(score)):
+                    z_coord = f'\t{coords[i,2]}' if dims == 3 else ''
+                    print(f'{name}\t{coords[i,0]}\t{coords[i,1]}{z_coord}\t{score[i]}', file=f)   
+        
+        # close a file if it was opened
+        try:
+            f.close()
+        except:
+            pass
+    
+    # Close multiprocessing pool
+    if num_workers > 0:
         pool.close()
         pool.join()
-
-    # print("\nParticle extraction completed for all tomograms.")
-    # print(f"IMOD .coords files saved in: {coords_dir}")
+        
+    report('Extraction complete')
