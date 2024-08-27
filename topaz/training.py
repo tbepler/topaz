@@ -72,7 +72,7 @@ def convert_path_to_grouped_list(images_path:str, targets:pd.DataFrame) -> List[
         glob_base = images_path + os.sep + '*' # only get mrc files, need the header
         image_paths = glob.glob(glob_base+'.mrc')# + glob.glob(glob_base+'.tiff') + glob.glob(glob_base+'.png')
         image_name = [os.path.splitext(os.path.basename(x))[0] for x in image_paths]
-        image_paths = pd.DataFrame({'image_path': image_paths, 'image_name': image_name})
+        image_paths = pd.DataFrame({'path': image_paths, 'image_name': image_name})
     else:
         image_paths = pd.read_csv(images_path, sep='\s+') # training image file list
     
@@ -83,11 +83,11 @@ def convert_path_to_grouped_list(images_path:str, targets:pd.DataFrame) -> List[
         else:
             # Ensure 'image_name' is unique in 'targets'
             targets_grouped = targets.groupby('image_name')['source'].first()  # or .last(), or .agg(lambda x: x.value_counts().index[0])
-            # Map the 'source' from 'targets' to 'image_paths'
+            # Map the 'source' from 'targets' to 'paths'
             image_paths['source'] = image_paths['image_name'].map(targets_grouped)
     
     # group by source
-    grouped = image_paths.groupby('source')['image_path'].apply(list).tolist()
+    grouped = image_paths.groupby('source')['path'].apply(list).tolist()
     return grouped
 
 
