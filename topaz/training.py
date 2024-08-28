@@ -491,7 +491,6 @@ class TestingImageDataset():
 
 def expand_target_points(targets:pd.DataFrame, radius:int, dims:int=2) -> pd.DataFrame:
     '''Expand target point coordinates into coordinates of a sphere with the given radius.'''
-    x_coord, y_coord = targets['x_coord'].values, targets['y_coord'].values
     # make the spherically mask array of offsets to apply to the coordinates
     sphere_width = int(np.floor(radius)) * 2 + 1
     center = sphere_width // 2
@@ -500,14 +499,17 @@ def expand_target_points(targets:pd.DataFrame, radius:int, dims:int=2) -> pd.Dat
     xgrid, ygrid = grid[0], grid[1]
     d2 = (xgrid-center)**2 + (ygrid-center)**2
     if dims == 3:
-        z_coord = targets['z_coord'].values
         zgrid = grid[2]
         d2 += (zgrid-center)**2
     mask = (d2 <= radius**2).float()
-    
     mask_size = mask.sum()
+    
     sphere_offsets = mask.nonzero() - center
-    sphere_offsets = pd.DataFrame(sphere_offsets.numpy(), columns=['z_offset', 'y_offset', 'x_offset'])
+    if dims == 3:
+        sphere_offsets = pd.DataFrame(sphere_offsets.numpy(), columns=['z_offset', 'y_offset', 'x_offset'])
+    else:
+        sphere_offsets = pd.DataFrame(sphere_offsets.numpy(), columns=['y_offset', 'x_offset'])
+        
     # create all combinations of targets and offsets
     expanded = targets.merge(sphere_offsets, how='cross')
     expanded['x_coord'] = expanded['x_coord'] + expanded['x_offset']
