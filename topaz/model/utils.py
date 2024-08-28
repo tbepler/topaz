@@ -59,7 +59,8 @@ def segment_images(model, paths:List[str], output_dir:str, use_cuda:bool, verbos
             X = torch.from_numpy(image.copy()).unsqueeze(0).unsqueeze(0)
             if patch_size is not None:
                 # patches move on and off GPU as processed, returns numpy array
-                score = predict_in_patches(model, X, patch_size=patch_size*2, patch_overlap=patch_size//2, is_3d=is_3d, use_cuda= use_cuda)
+                # use half of receptive field as padding
+                score = predict_in_patches(model, X, patch_size=patch_size*2, patch_padding=model.width//2, is_3d=is_3d, use_cuda= use_cuda)
             else:
                 if use_cuda:
                     X = X.cuda()
@@ -79,46 +80,59 @@ def segment_images(model, paths:List[str], output_dir:str, use_cuda:bool, verbos
 
 
 
-def predict_in_patches(model, X, patch_size, patch_overlap=0, is_3d=False, use_cuda=False):
+def predict_in_patches(model, X, patch_size, is_3d=False, use_cuda=False):
     ''' Predict on an image in patches and reassemble the image. Assumes batch and channel dimensions are present. '''
-    # Split image into smaller patches
-    patches = get_patches(X, patch_size, patch_overlap=patch_overlap, is_3d=is_3d)
+    # use half of receptive field as padding
+    patch_padding = model.width//2
     
+    # Split image into smaller patches
+    patches = get_patches(X, patch_size, patch_padding=patch_padding, is_3d=is_3d)
+    print('number of patches', len(patches))
     # Predict on the patches
     scores = []
     for patch in patches:
+        # print('before cropping', patch.shape)
         with torch.no_grad():
             patch = patch.cuda() if use_cuda else patch # send only patch to GPU
             score = model(patch).data[0,0].cpu().numpy()
-            score = score[..., patch_overlap:-patch_overlap, patch_overlap:-patch_overlap]
+            score = score[..., patch_padding:-patch_padding, patch_padding:-patch_padding]
             if is_3d:
-                score = score[..., patch_overlap:-patch_overlap, :, :]
+                score = score[..., patch_padding:-patch_padding, :, :]
+        # print('after cropping', score.shape)
         scores.append(score)
 
     # Reassemble the image
-    score = reconstruct_from_patches(scores, X.shape, patch_size, patch_overlap=patch_overlap, is_3d=is_3d)
+    score = reconstruct_from_patches(scores, X.shape, patch_size, patch_padding=patch_padding, is_3d=is_3d)
     return score
 
 
-def get_patches(X, patch_size, patch_overlap=0, is_3d=False):
+def get_patches(X, patch_size, patch_padding=0, is_3d=False):
     y, x = X.shape[-2:]
     z = X.shape[-3] if is_3d else None
-    pad = (patch_overlap, patch_overlap) * (3 if is_3d else 2)
+    pad = (patch_padding, patch_padding) * (3 if is_3d else 2)
     X = torch.nn.functional.pad(X, pad)
+    print('padded shape', X.shape)
     # get padded sizes
     y_pad, x_pad = X.shape[-2:]
     z_pad = X.shape[-3] if is_3d else None
     # take steps the size of the actual crop/patch, not including padding
-    step_size = patch_size - 2*patch_overlap
+    step_size = patch_size - 2*patch_padding
     patches = []
-    for i in range(0, y_pad, step_size):
-        for j in range(0, x_pad, step_size):
+    # for i in range(0, y_pad, step_size):
+    for i in range(0, y, step_size):
+    # for i in range(0, y_pad, step_size):
+        for j in range(0, x, step_size):
             # Ensure the patch is within the image boundaries (including padding)
             i_end = min(i + patch_size, y_pad)
-            j_end = min(j + patch_size, x_pad)           
+            j_end = min(j + patch_size, x_pad)
+            # i_end = min(i + patch_size, y)
+            # j_end = min(j + patch_size, x)           
             if is_3d:
-                for k in range(0, z_pad, step_size):
+                # for k in range(0, z_pad, step_size):
+                for k in range(0, z, step_size):
                     k_end = min(k + patch_size, z_pad)
+                    # k_end = min(k + patch_size, z)
+                    print('patch ends', k_end, i_end, j_end)
                     patch = X[..., k:k_end, i:i_end, j:j_end]
                     if patch.abs().sum() == 0:  # ignore patches that are all zero padding
                         continue
@@ -133,12 +147,12 @@ def get_patches(X, patch_size, patch_overlap=0, is_3d=False):
 
 
 
-def reconstruct_from_patches(patches, original_shape, patch_size, patch_overlap=0, is_3d=False):
+def reconstruct_from_patches(patches, original_shape, patch_size, patch_padding=0, is_3d=False):
     ''' Reassemble patches into an image. Assumes batch and channel dimensions removed. '''
     y, x = original_shape[-2:]
     z = original_shape[-3] if is_3d else None
 
-    step_size = patch_size - patch_overlap * 2 # good crop size
+    step_size = patch_size - patch_padding * 2 # good crop size
     reassembled = np.zeros(original_shape)
     # Reassemble the image
     patch_idx = 0
