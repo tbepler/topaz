@@ -47,6 +47,7 @@ class NonMaximumSuppression:
             step_size = self.patch_size - self.patch_overlap * 2 # good crop size
             # process each patch
             patch_idx = 0
+            # TODO: this would be a good place for a progress bar
             for i in range(0, y, step_size):
                 for j in range(0, x, step_size):
                     if self.dims==3:
@@ -59,6 +60,7 @@ class NonMaximumSuppression:
                             scores_list.append(patch_score)
                             coords_list.append(patch_coords)
                             patch_idx += 1
+                            # print(f'Processed patch {patch_idx} of {len(patches)}', end='\r', flush=True)
                     else:
                         patch = patches[patch_idx]
                         _, patch_score, patch_coords = nms(patch, r=self.radius, threshold=self.threshold)
@@ -67,6 +69,7 @@ class NonMaximumSuppression:
                         scores_list.append(patch_score)
                         coords_list.append(patch_coords)
                         patch_idx += 1
+                        # print(f'Processed patch {patch_idx} of {len(patches)}', end='\r')
             score = np.concatenate(scores_list, axis=0) if scores_list else np.array([])
             coords = np.concatenate(coords_list, axis=0) if coords_list else np.array([])  
         else:
@@ -87,16 +90,16 @@ def crop_translate_coords_scores(scores, coords, patch_size, patch_overlap, x, y
     return scores, coords
 
 
-def nms_iterator(scores:Iterable[np.ndarray], radius:int, threshold:float, pool:multiprocessing.Pool=None, dims:int=2, 
+def nms_iterator(paths_scores:Iterable[np.ndarray], radius:int, threshold:float, pool:multiprocessing.Pool=None, dims:int=2, 
                  patch_size:int=0, patch_overlap:int=0, verbose:bool=False) -> Iterator[tuple[str, np.ndarray, np.ndarray]]:
     # create the process, can be patched or not, 2d or 3d
     process = NonMaximumSuppression(radius, threshold, dims=dims, patch_size=patch_size, patch_overlap=patch_overlap, verbose=verbose)
     # parallelize on CPU at the image level
     if pool is not None:
-        for name,score,coords in pool.imap_unordered(process, scores):
+        for name,score,coords in pool.imap_unordered(process, paths_scores):
             yield name, score, coords
     else:
-        for name, score in scores:
+        for name, score in paths_scores:
             name, score, coords = process((name, score))
             yield name, score, coords
 
@@ -218,7 +221,7 @@ def calculate_chunk_size(image_shape, available_memory):
     return max(1, int(available_memory / mem_per_slice))
 
 
-def score_images(model:Union[torch.nn.Module, str], paths:List[str], device:int=-1, patch_size:int=0, batch_size:int=1) -> Iterator[np.ndarray]:
+def score_images(model:Union[torch.nn.Module, str], paths:Union[List[str], Iterable[str]], device:int=-1, patch_size:int=0, batch_size:int=1) -> Iterator[np.ndarray]:
     if model is not None and model != 'none': # score each image with the model
         ## set the device
         use_cuda = topaz.cuda.set_device(device)
@@ -228,32 +231,27 @@ def score_images(model:Union[torch.nn.Module, str], paths:List[str], device:int=
         if use_cuda:
             model.cuda()
         
-        # for path in tqdm(paths, desc="Scoring tomograms", unit="tomogram"):
         for path in paths:
-            # print(f"\Scoring tomogram: {path}")
-            start_time = time.time()
             image = load_image(path, make_image=False, return_header=False)
-            image = torch.from_numpy(image.copy()).float()
-            image = image[...,:150,:150,:150]
-            image = image.unsqueeze(0).unsqueeze(0) # add batch and channel dimensions
-            # print(f"Image shape: {image.shape} FIX CROPPING LATER!!!!")
             original_shape = image.shape
             is_3d = len(original_shape) == 3
+            image = torch.from_numpy(image.copy()).float()
+            image = image.unsqueeze(0).unsqueeze(0) # add batch and channel dimensions
             
             if patch_size:
-                patch_overlap = patch_size // 2
-                scores = predict_in_patches(model, image, patch_size*2, patch_overlap=patch_overlap, is_3d=is_3d, use_cuda=use_cuda)
+                patch_overlap = model.width // 2 # patch_overlap == receptive field // 2
+                # TODO: does this need further refactoring?
+                scores = predict_in_patches(model, image, patch_size+2*patch_overlap, is_3d=is_3d, use_cuda=use_cuda)
                 scores = scores[0,0] # remove added dimensions
             else:
                 if use_cuda:
                     image = image.cuda()
                 scores = model(image).data[0,0].cpu().numpy()
             
-            # print(f"Tomogram {path} scoring completed in {time.time() - start_time:.2f} seconds")
             yield path, scores            
     else:
         # TODO: scoring without model? check if 2d and use pretrained
-        for path in tqdm(paths, desc="Loading tomograms", unit="tomogram"):
+        for path in paths:
             image = load_image(path, make_image=False, return_header=False)
             yield path, image
 
@@ -317,7 +315,8 @@ def extract_particles(paths:List[str], model:Union[torch.nn.Module, str], device
         # prepare output file or directory
         if not per_micrograph:
             # if output is a directory, create a file within
-            output = sys.path.join(output, 'extracted_particles.txt') if os.path.isdir(output) else output
+            output = sys.path.join(output, 'extracted_particles.txt') \
+                if (output is not None and os.path.isdir(output)) else output
             # open file (or stdout) for writing
             f = sys.stdout if (output is None) else open(output, 'w')
             z_string = '\tz_coord' if dims == 3 else ''
