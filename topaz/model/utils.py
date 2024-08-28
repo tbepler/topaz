@@ -87,18 +87,15 @@ def predict_in_patches(model, X, patch_size, is_3d=False, use_cuda=False):
     
     # Split image into smaller patches
     patches = get_patches(X, patch_size, patch_padding=patch_padding, is_3d=is_3d)
-    print('number of patches', len(patches))
     # Predict on the patches
     scores = []
     for patch in patches:
-        # print('before cropping', patch.shape)
         with torch.no_grad():
             patch = patch.cuda() if use_cuda else patch # send only patch to GPU
             score = model(patch).data[0,0].cpu().numpy()
             score = score[..., patch_padding:-patch_padding, patch_padding:-patch_padding]
             if is_3d:
                 score = score[..., patch_padding:-patch_padding, :, :]
-        # print('after cropping', score.shape)
         scores.append(score)
 
     # Reassemble the image
@@ -111,7 +108,6 @@ def get_patches(X, patch_size, patch_padding=0, is_3d=False):
     z = X.shape[-3] if is_3d else None
     pad = (patch_padding, patch_padding) * (3 if is_3d else 2)
     X = torch.nn.functional.pad(X, pad)
-    print('padded shape', X.shape)
     # get padded sizes
     y_pad, x_pad = X.shape[-2:]
     z_pad = X.shape[-3] if is_3d else None
@@ -132,7 +128,6 @@ def get_patches(X, patch_size, patch_padding=0, is_3d=False):
                 for k in range(0, z, step_size):
                     k_end = min(k + patch_size, z_pad)
                     # k_end = min(k + patch_size, z)
-                    print('patch ends', k_end, i_end, j_end)
                     patch = X[..., k:k_end, i:i_end, j:j_end]
                     if patch.abs().sum() == 0:  # ignore patches that are all zero padding
                         continue
