@@ -26,7 +26,7 @@ class MemoryMappedImage():
         with open(self.image_path, 'rb') as f:
             header_bytes = f.read(1024)
         self.header = parse_header(header_bytes)
-        self.shape = (self.header.nz, self.header.ny, self.header.nx)
+        self.shape = (self.header.nz, self.header.ny, self.header.nx) if self.dims == 3 else (self.header.ny, self.header.nx)
         self.dtype = get_mode_from_header(self.header)
         self.offset = 1024 + self.header.next # array beginning
         
@@ -85,7 +85,7 @@ class MemoryMappedImage():
                 idx, dist = self.positive_tree.query([[z, y, x]])
             else:
                 z = None
-                idx, dist = self.positive_tree.query((y, x))
+                idx, dist = self.positive_tree.query([[y, x]])
                 
             if dist > 0: # not in one of the nodes (assumes all particles are in the tree)
                 return z, y, x
@@ -196,6 +196,7 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
             crop,label = img.get_UN_crop(), 0.
         
         # apply random transformations (2D only)
+        crop = crop.unsqueeze(0) # add C dim (rotate/flip expects this)
         if self.rotate:
             angle = self.rng.uniform(0, 360)
             crop = torchvision.transforms.functional.rotate(crop, angle)
@@ -203,11 +204,12 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
             size_diff = crop.shape[-1] - self.crop_size
             xmin, xmax = size_diff//2, size_diff//2 + self.crop_size
             ymin, ymax = size_diff//2, size_diff//2 + self.crop_size
-            crop = crop[:, ymin:ymax, xmin:xmax]
+            crop = crop[..., ymin:ymax, xmin:xmax]
         if self.flip:
             if self.rng.random() < 0.5:
                 crop = torchvision.transforms.functional.hflip(crop)
             if self.rng.random() < 0.5:
                 crop = torchvision.transforms.functional.vflip(crop)
+        crop = crop.squeeze(0) # remove channel dim
         
         return crop,label
