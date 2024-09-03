@@ -155,6 +155,7 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
         self.num_pixels = len(targets) # all given pixels, remove any unmatched/out-of-bounds later
         self.images = []
         self.num_images = 0
+        self.name_dict = {}
         for group in paths:
             group_list = []
             for path in group:
@@ -163,8 +164,10 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
                 # image_name_matches = targets['image_name'].str.contains(img_name)
                 image_name_matches = targets['image_name'] == img_name
                 img_targets = targets[image_name_matches]
-                group_list.append(MemoryMappedImage(path, img_targets, crop_size, split, dims=dims, use_cuda=use_cuda, mask_size=mask_size))
+                image = MemoryMappedImage(path, img_targets, crop_size, split, dims=dims, use_cuda=use_cuda, mask_size=mask_size)
+                group_list.append(image)
                 self.num_images += 1
+                self.name_dict[img_name] = image
                 targets = targets[~image_name_matches] # remove targets already processed
             self.images.append(group_list)
         
@@ -186,9 +189,7 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
             target = self.targets.sample()
             name = target['image_name'].item()
             # get the image with a matching name
-            for img in self.images[img_set_idx]:
-                if name in img.image_path:
-                    break
+            img = self.name_dict[name]
             # extract the crop and positive label
             y, x = target['y_coord'].item(), target['x_coord'].item()
             z = target['z_coord'].item() if self.dims==3 else None
