@@ -156,24 +156,36 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
         self.images = []
         self.num_images = 0
         self.name_dict = {}
+        
+        unseen_targets = targets.copy()
         for group in paths:
             group_list = []
             for path in group:
-                #get image name without file extension
+                # get image name without file extension
                 img_name = os.path.splitext(path.split('/')[-1])[0]
-                # image_name_matches = targets['image_name'].str.contains(img_name)
-                image_name_matches = targets['image_name'] == img_name
-                img_targets = targets[image_name_matches]
+                # create image object with matching targets
+                image_name_matches = unseen_targets['image_name'] == img_name
+                img_targets = unseen_targets[image_name_matches]
                 image = MemoryMappedImage(path, img_targets, crop_size, split, dims=dims, use_cuda=use_cuda, mask_size=mask_size)
-                group_list.append(image)
+                # find image's out-of-bounds particles from its targets
+                valid_img_targets = image.targets
+                invalid_img_targets = img_targets[~img_targets.index.isin(valid_img_targets.index)]
+                # remove invalid_img_targets from self.targets
+                self.targets = self.targets[~self.targets.index.isin(invalid_img_targets.index)]
+                self.num_pixels -= len(invalid_img_targets)
+                # store image and map name to image object
                 self.num_images += 1
                 self.name_dict[img_name] = image
-                targets = targets[~image_name_matches] # remove targets already processed
+                group_list.append(image)
+                # remove targets just processed
+                unseen_targets = unseen_targets[~image_name_matches]
             self.images.append(group_list)
         
-        self.num_pixels -= len(targets) # remove any unmatched particle pixels (only consider those in images)
-        if len(targets) > 0:
-            missing = targets.image_name.unique().tolist()
+        # remove any targets that don't match any images
+        self.num_pixels -= len(unseen_targets)
+        self.targets = self.targets[~self.targets.index.isin(unseen_targets.index)]
+        if len(unseen_targets) > 0:
+            missing = unseen_targets.image_name.unique().tolist()
             report(f'WARNING: {len(missing)} micrographs listed in the coordinates file are missing from the {mode} images. Image names are listed below.')
             report(f'WARNING: missing micrographs are: {missing}')
             
@@ -217,12 +229,5 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
             if self.rng.random() < 0.5:
                 crop = torchvision.transforms.functional.vflip(crop)
         crop = crop.squeeze(0) # remove channel dim
-        
-        if crop.shape != (self.crop_size, self.crop_size, self.crop_size):
-            try:
-                print('image name', name)
-            except:
-                print(img.image_path.split('/')[-1])
-            print('crop shape:', crop.shape)
         
         return crop,label
