@@ -71,8 +71,8 @@ def convert_path_to_grouped_list(images_path:str, targets:pd.DataFrame) -> List[
     if os.path.isdir(images_path):
         glob_base = images_path + os.sep + '*' # only get mrc files, need the header
         image_paths = glob.glob(glob_base+'.mrc')# + glob.glob(glob_base+'.tiff') + glob.glob(glob_base+'.png')
-        image_name = [os.path.splitext(os.path.basename(x))[0] for x in image_paths]
-        image_paths = pd.DataFrame({'path': image_paths, 'image_name': image_name})
+        image_names = [os.path.splitext(os.path.basename(x))[0] for x in image_paths]
+        image_paths = pd.DataFrame({'path': image_paths, 'image_name': image_names})
     else:
         image_paths = pd.read_csv(images_path, sep='\s+') # training image file list
     
@@ -538,9 +538,9 @@ def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, 
 
     expanded_train_targets, mask_size = expand_target_points(train_targets, radius, dims)
     train_dataset = MultipleImageSetDataset(train_image_paths, expanded_train_targets, epoch_size*minibatch_size, crop, positive_balance=balance, split=split, 
-                                            rotate=(dims==2), flip=(dims==2), mode='training', dims=dims, radius=radius, use_cuda=use_cuda)
+                                            rotate=(dims==2), flip=(dims==2), mode='training', dims=dims, radius=radius, use_cuda=use_cuda, mask_size=mask_size)
     train_dataloader = DataLoader(train_dataset, batch_size=minibatch_size, shuffle=True, num_workers=num_workers)
-    report(f'Loaded {train_dataset.num_images} training micrographs with ~{int(train_dataset.num_particles//mask_size)} labeled particles')
+    report(f'Loaded {train_dataset.num_images} training micrographs with ~{int(train_dataset.num_pixels//mask_size)} labeled particles')
 
     if test_targets_path is not None:
         test_targets = file_utils.read_coordinates(test_targets_path)
@@ -653,7 +653,7 @@ def train_model_old(classifier, train_images, train_targets, test_images, test_t
         
         pi = calculate_pi(expected_num_particles, args.radius, total_regions, dims)
 
-        report('Specified expected number of particle per micrograph = {}'.format(args.num_particles))
+        report(f'Specified expected number of particle per micrograph = {args.num_particles}')
         report('With radius = {}'.format(args.radius))
         report('Setting pi = {}'.format(pi))
     else: 
@@ -690,12 +690,12 @@ def train_model(classifier, train_images_path:str, train_targets_path:str, test_
         # expected particles in training set rather than per micrograph
         expected_num_particles = args.num_particles * num_images
         pi = calculate_pi(expected_num_particles, args.radius, total_regions, dims)
-        report('Specified expected number of particle per micrograph = {}'.format(args.num_particles))
-        report('With radius = {}'.format(args.radius))
-        report('Setting pi = {}'.format(pi))
+        report(f'Specified expected number of particle per micrograph = {args.num_particles}')
+        report(f'With radius = {args.radius}')
+        report(f'Setting pi = {pi}')
     else: 
         pi = args.pi
-        report('pi = {}'.format(pi))
+        report(f'pi = {pi}')
     
     trainer, criteria, split = make_training_step_method(classifier, num_positive_regions,
                                                          num_positive_regions/total_regions,

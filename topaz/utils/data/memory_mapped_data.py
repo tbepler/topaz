@@ -12,7 +12,7 @@ from topaz.utils.printing import report
 
 class MemoryMappedImage():
     '''Class for memory mapping an MRC file and sampling random crops from it.'''
-    def __init__(self, image_path:str, targets:pd.DataFrame, crop_size:int, split:str='pn', dims:int=2, use_cuda:bool=False):
+    def __init__(self, image_path:str, targets:pd.DataFrame, crop_size:int, split:str='pn', dims:int=2, use_cuda:bool=False, mask_size=123):
         self.image_path = image_path
         self.targets = targets
         self.size = crop_size
@@ -20,7 +20,8 @@ class MemoryMappedImage():
         self.dims = dims
         self.use_cuda = use_cuda
         self.rng = np.random.default_rng()
-        self.num_particles = len(targets)  
+        self.num_pixels = len(targets)
+        self.mask_size = mask_size
         
         # read image information from header
         with open(self.image_path, 'rb') as f:
@@ -100,16 +101,17 @@ class MemoryMappedImage():
 
     def check_particle_image_bounds(self):
         '''Check that particles are within the image bounds.'''
-        if self.dims == 3:
-            out_of_bounds = (self.targets['x_coord'] < 0) | (self.targets['y_coord'] < 0) | (self.targets['z_coord'] < 0) | \
-                            (self.targets['x_coord'] >= self.shape[-1]) | (self.targets['y_coord'] >= self.shape[-2]) | (self.targets['z_coord'] >= self.shape[-3])
+        if self.dims == 3:            
+            out_of_bounds = (self.targets['x_coord'] < 0) | (self.targets['x_coord'] >= self.shape[-1]) | \
+                            (self.targets['y_coord'] < 0) | (self.targets['y_coord'] >= self.shape[-2]) | \
+                            (self.targets['z_coord'] < 0) | (self.targets['z_coord'] >= self.shape[-3])
         else:
-            out_of_bounds = (self.targets['x_coord'] < 0) | (self.targets['y_coord'] < 0) | \
-                            (self.targets['x_coord'] >= self.shape[-1]) | (self.targets['y_coord'] >= self.shape[-2])
+            out_of_bounds = (self.targets['x_coord'] < 0) | (self.targets['x_coord'] >= self.shape[-1]) | \
+                            (self.targets['y_coord'] < 0) | (self.targets['y_coord'] >= self.shape[-2])
         if out_of_bounds.any():
-            report(f'WARNING: {out_of_bounds.sum()} particles are out of bounds for image {self.image_path}. Did you scale the micrographs and particle coordinates correctly?')
+            report(f'WARNING: ~{int(out_of_bounds.sum()//self.mask_size)} particles are out of bounds for image {self.image_path}. Did you scale the micrographs and particle coordinates correctly?')
             self.targets = self.targets[~out_of_bounds]
-            self.num_particles -= out_of_bounds.sum()
+            self.num_pixels -= out_of_bounds.sum()
             
         # also check that the coordinates fill most of the micrograph, cutoffs arbitrary
         x_max, y_max = self.targets.x_coord.max(), self.targets.y_coord.max()
@@ -126,7 +128,10 @@ class MemoryMappedImage():
 
 class MultipleImageSetDataset(torch.utils.data.Dataset):
     def __init__(self, paths:List[List[str]], targets:pd.DataFrame, number_samples:int, crop_size:int, image_set_balance:List[float]=None, 
-                 positive_balance:float=.5, split:str='pn', rotate:bool=False, flip:bool=False, dims:int=2, mode:str='training', radius:int=3, use_cuda:bool=False):
+                 positive_balance:float=.5, split:str='pn', rotate:bool=False, flip:bool=False, dims:int=2, mode:str='training', radius:int=3,
+                 use_cuda:bool=False, mask_size=123):
+        '''Dataset for sampling random crops from multiple memory-mapped images. Expects targets to include each positive pixel
+        individually, not just particle centers.'''
         self.paths = paths
         # convert float coords to ints
         targets[['y_coord', 'x_coord']] = targets[['y_coord', 'x_coord']].round().astype(int)
@@ -147,7 +152,7 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
         self.mode = mode
         self.rng = np.random.default_rng()
         
-        self.num_particles = len(targets) # remove unmatched (pixels/regions, not particles) later
+        self.num_pixels = len(targets) # all given pixels, remove any unmatched/out-of-bounds later
         self.images = []
         self.num_images = 0
         for group in paths:
@@ -158,12 +163,12 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
                 # image_name_matches = targets['image_name'].str.contains(img_name)
                 image_name_matches = targets['image_name'] == img_name
                 img_targets = targets[image_name_matches]
-                group_list.append(MemoryMappedImage(path, img_targets, crop_size, split, dims=dims, use_cuda=use_cuda))
+                group_list.append(MemoryMappedImage(path, img_targets, crop_size, split, dims=dims, use_cuda=use_cuda, mask_size=mask_size))
                 self.num_images += 1
                 targets = targets[~image_name_matches] # remove targets already processed
             self.images.append(group_list)
         
-        self.num_particles -= len(targets) # remove any remaining particles (only consider particles in images)
+        self.num_pixels -= len(targets) # remove any unmatched particle pixels (only consider those in images)
         if len(targets) > 0:
             missing = targets.image_name.unique().tolist()
             report(f'WARNING: {len(missing)} micrographs listed in the coordinates file are missing from the {mode} images. Image names are listed below.')
@@ -211,5 +216,12 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
             if self.rng.random() < 0.5:
                 crop = torchvision.transforms.functional.vflip(crop)
         crop = crop.squeeze(0) # remove channel dim
+        
+        if crop.shape != (self.crop_size, self.crop_size, self.crop_size):
+            try:
+                print('image name', name)
+            except:
+                print(img.image_path.split('/')[-1])
+            print('crop shape:', crop.shape)
         
         return crop,label
