@@ -456,8 +456,12 @@ class TestingImageDataset():
             glob_base = images_path + os.sep + '*' # only get mrc files, need the header
             image_paths = glob.glob(glob_base+'.mrc')# + glob.glob(glob_base+'.tiff') + glob.glob(glob_base+'.png')
         else:
-            image_names = pd.read_csv(images_path, sep='\s+')['image_name'].tolist() # these names should have no extension
-            image_paths = [name+'.mrc' for name in image_names] # these are paths that can be loaded
+            image_df = pd.read_csv(images_path, sep='\s+')
+            image_names = image_df['image_name'].tolist() # these names should have no extension
+            if 'path' not in image_df.columns:
+                image_paths = [name+'.mrc' for name in image_names] # these are paths that can be loaded
+            else:
+                image_paths = image_df['path'].tolist()
         self.image_paths = image_paths
         self.targets = targets
         self.radius = radius
