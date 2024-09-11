@@ -173,6 +173,8 @@ Tested with python 3.6 and 2.7
 
 - pytorch (>= 1.0.0)
 - torchvision
+- tqdm (>= 4.65.0)
+- h5py (>= 3.7.0)
 - pillow (>= 6.2.0)
 - numpy (>= 1.11)
 - pandas (>= 0.20.3) 
@@ -181,7 +183,7 @@ Tested with python 3.6 and 2.7
 
 Easy installation of dependencies with conda
 ```
-conda install numpy pandas scikit-learn
+conda install numpy pandas scikit-learn h5py tqdm
 conda install -c pytorch pytorch torchvision
 ```
 For more info on installing pytorch for your CUDA version see https://pytorch.org/get-started/locally/
