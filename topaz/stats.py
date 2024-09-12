@@ -305,7 +305,8 @@ class Normalize:
             if header:
                 # update image size (pixels) in header if present
                 new_height, new_width = x.shape
-                header.ny, header.nx = new_height, new_width
+                header = header._replace(ny=new_height)
+                header = header._replace(nx=new_width)
 
         # normalize it
         method = 'gmm'
