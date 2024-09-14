@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from __future__ import division, print_function
 
 import glob
@@ -5,12 +6,13 @@ import multiprocessing as mp
 import os
 import sys
 from typing import List, Literal, Tuple, Union
-from tqdm import tqdm
 
 import numpy as np
 import pandas as pd
 from PIL import Image
+from tqdm import tqdm
 
+from torch.cuda.amp import autocast, GradScaler
 import topaz.methods as methods
 import topaz.model.classifier as C
 import topaz.utils.data.partition
@@ -35,42 +37,24 @@ from topaz.utils.data.memory_mapped_data import MultipleImageSetDataset
 from topaz.utils.printing import report
 from topaz.utils.picks import as_mask
 
+
 def match_images_targets(images: dict, targets: pd.DataFrame, radius: float, dims: int = 2, use_cuda: bool = False) \
         -> Tuple[List[List[Union[Image.Image, np.ndarray]]], List[List[np.ndarray]]]:
-    """
-    Match images with their corresponding targets.
-
-    Args:
-        images (dict): Dictionary of images.
-        targets (pd.DataFrame): DataFrame containing target coordinates.
-        radius (float): Radius for matching.
-        dims (int): Number of dimensions (2 or 3).
-        use_cuda (bool): Whether to use CUDA.
-
-    Returns:
-        Tuple containing lists of matched images and targets.
-    """
+    '''Given names mapped to images and a DataFrame of coordinates, returns coordinates as mask of the same shape 
+    as corresponding image. Returns lists of lists of arrays, each list of arrays corresponding to an input source.'''
     matched = match_coordinates_to_images(targets, images, radius=radius, dims=dims, use_cuda=use_cuda)
-    images_list = []
-    targets_list = []
+    ## unzip into matched lists
+    images = []
+    targets = []
     for key in matched:
         these_images, these_targets = zip(*list(matched[key].values()))
-        images_list.append(list(these_images))
-        targets_list.append(list(these_targets))
-    return images_list, targets_list
+        images.append(list(these_images))
+        targets.append(list(these_targets))
+    return images, targets
+
 
 def filter_targets_missing_images(images: pd.DataFrame, targets: pd.DataFrame, mode: str = 'training'):
-    """
-    Filter out targets that don't have corresponding images.
-
-    Args:
-        images (pd.DataFrame): DataFrame of images.
-        targets (pd.DataFrame): DataFrame of targets.
-        mode (str): 'training' or 'test'.
-
-    Returns:
-        Filtered targets DataFrame.
-    """
+    '''Discard target coordinates for micrographs not in the set of images. Warn the user if any are discarded.'''
     names = set()
     for k, d in images.items():
         for name in d.keys():
@@ -83,85 +67,59 @@ def filter_targets_missing_images(images: pd.DataFrame, targets: pd.DataFrame, m
     targets = targets.loc[check]
     return targets
 
+
 def convert_path_to_grouped_list(images_path: str, targets: pd.DataFrame) -> List[List[str]]:
-    """
-    Convert image paths to a grouped list based on the targets.
-
-    Args:
-        images_path (str): Path to images or directory containing images.
-        targets (pd.DataFrame): DataFrame of targets.
-
-    Returns:
-        List of lists containing grouped image paths.
-    """
+    '''Find image paths under a given path and group them by source.'''
     if os.path.isdir(images_path):
         glob_base = images_path + os.sep + '*'
         image_paths = glob.glob(glob_base + '.mrc')
-        image_name = [os.path.basename(x) for x in image_paths]
-        image_paths = pd.DataFrame({'image_path': image_paths, 'image_name': image_name})
+        image_names = [os.path.splitext(os.path.basename(x))[0] for x in image_paths]
+        image_paths = pd.DataFrame({'path': image_paths, 'image_name': image_names})
     else:
         image_paths = pd.read_csv(images_path, sep='\s+')
 
-    # Logging to check the image paths and names
-    print("Image paths loaded:")
-    print(image_paths)
+    if 'source' not in image_paths.columns:
+        if 'source' not in targets.columns:
+            image_paths['source'] = 0
+            targets['source'] = 0
+        else:
+            targets_grouped = targets.groupby('image_name')['source'].first()
+            image_paths['source'] = image_paths['image_name'].map(targets_grouped)
 
-    if 'source' not in targets.columns:
-        targets['source'] = 0
-
-    # Merging directly on the original image names
-    merged = pd.merge(image_paths, targets, on='image_name', how='inner')
-
-    # Logging to check the merged dataframe
-    print("Merged image paths with targets:")
-    print(merged)
-
-    if 'source' not in merged.columns:
-        merged['source'] = 0
-
-    grouped = merged.groupby('source')['image_path'].apply(list).tolist()
+    grouped = image_paths.groupby('source')['path'].apply(list).tolist()
     return grouped
+
 
 def load_image_set(images_path, targets_path, image_ext, radius, format_, as_images=True, mode='training',
                    dims=2, use_cuda=False) -> Tuple[List[List[Union[Image.Image, np.ndarray]]], List[List[np.ndarray]]]:
-    """
-    Load a set of images and their corresponding targets.
-
-    Args:
-        images_path (str): Path to images or directory containing images.
-        targets_path (str): Path to targets file.
-        image_ext (str): Image file extension.
-        radius (float): Radius for matching targets to images.
-        format_ (str): Format of the targets file.
-        as_images (bool): Whether to load as PIL Images.
-        mode (str): 'training' or 'test'.
-        dims (int): Number of dimensions (2 or 3).
-        use_cuda (bool): Whether to use CUDA.
-
-    Returns:
-        Tuple containing lists of images and targets.
-    """
+    # if train_images is a directory path, map to all images in the directory
     if os.path.isdir(images_path):
         paths = glob.glob(images_path + os.sep + '*' + image_ext)
         valid_paths, image_names = [], []
         for path in paths:
             name = os.path.basename(path)
-            if name.endswith('.mrc') or name.endswith('.tiff') or name.endswith('.png'):
+            name, ext = os.path.splitext(name)
+            if ext in ['.mrc', '.tiff', '.png']:
                 image_names.append(name)
                 valid_paths.append(path)
         images = pd.DataFrame({'image_name': image_names, 'path': valid_paths})
     else:
-        images = pd.read_csv(images_path, sep='\t')
+        images = pd.read_csv(images_path, sep='\t')  # training image file list
     targets = file_utils.read_coordinates(targets_path, format=format_)
 
+    # check for source columns
     if 'source' not in images and 'source' not in targets:
         images['source'] = 0
         targets['source'] = 0
 
-    images = load_images_from_list(images.image_name, images.path, sources=images.source, as_images=as_images)
+    # load the images and create target masks from the particle coordinates
+    # Use memory-mapping for large datasets
+    images = load_images_from_list(images.image_name, images.path, sources=images.source, as_images=as_images, memmap=True)
 
+    # remove target coordinates missing corresponding images
     targets = filter_targets_missing_images(images, targets, mode=mode)
 
+    # check that particles roughly fit in images; if they don't, may not have scaled particles/images correctly
     check_particle_image_bounds(images, targets, dims=dims)
 
     num_micrographs = sum(len(images[k]) for k in images.keys())
@@ -171,33 +129,33 @@ def load_image_set(images_path, targets_path, image_ext, radius, format_, as_ima
         print('ERROR: no training particles specified. Check that micrograph names in the particles file match those in the micrographs file/directory.', file=sys.stderr)
         raise Exception('No training particles.')
 
+    # convert targets to masks of the same shape as their image
     images, targets = match_images_targets(images, targets, radius, dims=dims, use_cuda=use_cuda)
     report(f'Created target binary masks for {mode} micrographs.')
     return images, targets
 
-def check_particle_image_bounds(images: pd.DataFrame, targets: pd.DataFrame, dims=2):
-    """
-    Check if particle coordinates are within image bounds.
 
-    Args:
-        images (pd.DataFrame): DataFrame of images.
-        targets (pd.DataFrame): DataFrame of targets.
-        dims (int): Number of dimensions (2 or 3).
-    """
+def check_particle_image_bounds(images: pd.DataFrame, targets: pd.DataFrame, dims=2):
+    '''Check that the target particles roughly fit within the images/micrographs. If they don't, 
+    prints a warning that images/particle coordinates may not have been scaled correctly.'''
     width, height, depth = 0, 0, 0
+    # set maximum bounds from image shapes
     for k, d in images.items():
         for image in d.values():
             if dims == 2:
+                # if numpy array (H, W), reverse height and width order to (W,H)
                 w, h = image.size if (type(image) == Image.Image) else (image.shape[1], image.shape[0])
             elif dims == 3:
-                d, h, w = image.shape
+                d, h, w = image.shape  # 3D arrays can only be read as numpy arrays
             width, height = max(w, width), max(h, height)
             depth = max(d, depth) if dims == 3 else 0
     out_of_bounds = (targets.x_coord > width) | (targets.y_coord > height) | (dims == 3 and targets.z_coord > depth)
     count = out_of_bounds.sum()
 
+    # arbitrary cutoff of more than 10% of particles being out of bounds...
     if count > int(0.1 * len(targets)):
         print(f'WARNING: {count} particle coordinates are out of the micrograph dimensions. Did you scale the micrographs and particle coordinates correctly?', file=sys.stderr)
+    # also check that the coordinates fill most of the micrograph, cutoffs arbitrary
     x_max, y_max = targets.x_coord.max(), targets.y_coord.max()
     z_max = targets.z_coord.max() if dims == 3 else None
     xy_below_cutoff = (x_max < 0.7 * width) and (y_max < 0.7 * height)
@@ -207,21 +165,11 @@ def check_particle_image_bounds(images: pd.DataFrame, targets: pd.DataFrame, dim
                 Did you scale the micrographs and particle coordinates correctly?'
         print(output, file=sys.stderr)
 
+
 def make_traindataset(X: List[List[Union[Image.Image, np.ndarray]]], Y: List[List[np.ndarray]], crop: int,
                       dims: int = 2) -> Union[LabeledImageCropDataset, RandomImageTransforms]:
-    """
-    Create a dataset for training with data augmentation.
-
-    Args:
-        X (List[List[Union[Image.Image, np.ndarray]]]): List of lists of images.
-        Y (List[List[np.ndarray]]): List of lists of targets.
-        crop (int): Crop size.
-        dims (int): Number of dimensions (2 or 3).
-
-    Returns:
-        Union[LabeledImageCropDataset, RandomImageTransforms]: Dataset for training.
-    """
-    size = int(np.ceil(crop * np.sqrt(2)))  # multiply square side by hypotenuse to ensure rotations dont remove corners
+    '''Extract and augment (via rotation, mirroring, and cropping) crops from the input arrays.'''
+    size = int(np.ceil(crop * np.sqrt(2)))  # multiply square side by hypotenuse to ensure rotations don't remove corners
     size += 1 if size % 2 == 0 else 0
     dataset = LabeledImageCropDataset(X, Y, size, dims=dims)
     if dims == 3:  # don't augment 3D volumes
@@ -230,16 +178,8 @@ def make_traindataset(X: List[List[Union[Image.Image, np.ndarray]]], Y: List[Lis
         transformed = RandomImageTransforms(dataset, crop=crop, dims=dims, flip=True, rotate=True)
     return transformed
 
+
 def calculate_positive_fraction(targets):
-    """
-    Calculate the fraction of positive samples in the targets.
-
-    Args:
-        targets (List[List[np.ndarray]]): List of lists of target arrays.
-
-    Returns:
-        float: Mean fraction of positive samples.
-    """
     per_source = []
     for source_targets in targets:
         positives = sum(target.sum() for target in source_targets)
@@ -247,20 +187,8 @@ def calculate_positive_fraction(targets):
         per_source.append(positives / total)
     return np.mean(per_source)
 
+
 def cross_validation_split(k: int, fold: int, images: List[Union[Image.Image, np.ndarray]], targets: List[np.ndarray], random=np.random):
-    """
-    Perform k-fold cross-validation split.
-
-    Args:
-        k (int): Number of folds.
-        fold (int): Current fold.
-        images (List[Union[Image.Image, np.ndarray]]): List of images.
-        targets (List[np.ndarray]): List of targets.
-        random (np.random.RandomState): Random state for reproducibility.
-
-    Returns:
-        Tuple containing train and test splits of images and targets.
-    """
     ## calculate number of positives per image for stratified split
     source = []
     index = []
@@ -276,16 +204,16 @@ def cross_validation_split(k: int, fold: int, images: List[Union[Image.Image, np
     ## make the split from the partition indices
     train_table, validate_table = partitions[fold]
 
-    test_images = [[]*len(images)]
-    test_targets = [[]*len(targets)]
+    test_images = [[] * len(images)]
+    test_targets = [[] * len(targets)]
     for _, row in validate_table.iterrows():
         i = row['source']
         j = row['image_name']
         test_images[i].append(images[i][j])
         test_targets[i].append(targets[i][j])
 
-    train_images = [[]*len(images)]
-    train_targets = [[]*len(targets)]
+    train_images = [[] * len(images)]
+    train_targets = [[] * len(targets)]
     for _, row in train_table.iterrows():
         i = row['source']
         j = row['image_name']
@@ -294,29 +222,11 @@ def cross_validation_split(k: int, fold: int, images: List[Union[Image.Image, np
 
     return train_images, train_targets, test_images, test_targets
 
-def load_data(train_images_path: str, train_targets_path: str, test_images_path: str, test_targets_path: str, radius: float, k_fold: int = 0, fold: int = 0,
+
+def load_data(train_images_path: str, train_targets_path: str, test_images_path: str, test_targets_path: str, radius: float, k_fold: int = 0,
+              fold: int = 0,
               cross_validation_seed: int = 42, format_: str = 'auto', image_ext: str = '', as_images: bool = True, dims: int = 2, use_cuda: bool = False):
-    """
-    Load training and testing data, optionally performing cross-validation split.
-
-    Args:
-        train_images_path (str): Path to training images.
-        train_targets_path (str): Path to training targets.
-        test_images_path (str): Path to test images (optional).
-        test_targets_path (str): Path to test targets (optional).
-        radius (float): Radius for matching targets to images.
-        k_fold (int): Number of folds for cross-validation (if > 1).
-        fold (int): Current fold for cross-validation.
-        cross_validation_seed (int): Random seed for cross-validation.
-        format_ (str): Format of the targets file.
-        image_ext (str): Image file extension.
-        as_images (bool): Whether to load as PIL Images.
-        dims (int): Number of dimensions (2 or 3).
-        use_cuda (bool): Whether to use CUDA.
-
-    Returns:
-        Tuple containing training and testing images and targets.
-    """
+    '''Load training and testing (if available) images and picked particles. May split training data for cross-validation if no testing data are given.'''
     # load training images and target particles
     train_images, train_targets = load_image_set(train_images_path, train_targets_path, image_ext=image_ext, radius=radius,
                                                  format_=format_, as_images=as_images, mode='training', dims=dims, use_cuda=use_cuda)
@@ -338,19 +248,9 @@ def load_data(train_images_path: str, train_targets_path: str, test_images_path:
 
     return train_images, train_targets, test_images, test_targets
 
+
 def report_data_stats_old(train_images, train_targets, test_images, test_targets):
-    """
-    Report statistics about the dataset (old version).
-
-    Args:
-        train_images (List[List[Union[Image.Image, np.ndarray]]]): Training images.
-        train_targets (List[List[np.ndarray]]): Training targets.
-        test_images (List[List[Union[Image.Image, np.ndarray]]]): Test images.
-        test_targets (List[List[np.ndarray]]): Test targets.
-
-    Returns:
-        Tuple[int, int]: Number of positive regions and total regions.
-    """
+    '''Assumes data are given as torch Tensors.'''
     report('source\tsplit\tp_observed\tnum_positive_regions\ttotal_regions')
     num_positive_regions = 0
     total_regions = 0
@@ -363,65 +263,46 @@ def report_data_stats_old(train_images, train_targets, test_images, test_targets
         p_observed = p / total
         p_observed = '{:.3g}'.format(p_observed)
         report(str(i) + '\t' + 'train' + '\t' + p_observed + '\t' + str(p) + '\t' + str(total))
-    if test_targets is not None:
-        p = sum(test_targets[i][j].sum() for j in range(len(test_targets[i])))
-        p = int(p)
-        total = sum(test_targets[i][j].numel() for j in range(len(test_targets[i])))
-        p_observed = p / total
-        p_observed = '{:.3g}'.format(p_observed)
-        report(str(i) + '\t' + 'test' + '\t' + p_observed + '\t' + str(p) + '\t' + str(total))
+        if test_targets is not None:
+            p = sum(test_targets[i][j].sum() for j in range(len(test_targets[i])))
+            p = int(p)
+            total = sum(test_targets[i][j].numel() for j in range(len(test_targets[i])))
+            p_observed = p / total
+            p_observed = '{:.3g}'.format(p_observed)
+            report(str(i) + '\t' + 'test' + '\t' + p_observed + '\t' + str(p) + '\t' + str(total))
     return num_positive_regions, total_regions
 
+
 def extract_image_stats(image_paths: List[List[str]], targets: pd.DataFrame, mode: str = 'train', radius: int = 3, dims: int = 2) -> Tuple[int, int]:
-    """
-    Extract statistics from images and targets.
-
-    Args:
-        image_paths (List[List[str]]): List of lists of image paths.
-        targets (pd.DataFrame): DataFrame of targets.
-        mode (str): 'train' or 'test'.
-        radius (int): Radius for particle detection.
-        dims (int): Number of dimensions (2 or 3).
-
-    Returns:
-        Tuple[int, int]: Number of positive regions and total regions.
-    """
+    '''Helper function for report data stats.'''
     num_positive_regions = 0
     total_regions = 0
     pixels_per_particle = pixels_given_radius(radius, dims)
     for source, source_paths in enumerate(image_paths):
         source_positive_regions = 0
         source_total_regions = 0
+        # Read each image's header and sum the total number of regions
         for path in source_paths:
             with open(path, 'rb') as f:
                 header_bytes = f.read(1024)
-                header = parse_header(header_bytes)
+            header = parse_header(header_bytes)
             source_total_regions += header.nz * header.ny * header.nx
-            image_name = os.path.basename(path)
-            target = targets[targets['image_name'] == image_name]
-            source_positive_regions += (len(target) * pixels_per_particle)
+            # Read image's positives from targets
+            image_name = os.path.splitext(os.path.basename(path))[0]
+            target = targets[targets['image_name'] == image_name]  # name must have no extension
+            source_positive_regions += (len(target) * pixels_per_particle)  # all pixels, not just center
+        # Calculate positive fraction and report
         p_observed = source_positive_regions / source_total_regions
         report(f'{source}\t{mode}\t{p_observed:.2f}\t{source_positive_regions}\t{source_total_regions}')
+        # Update total counts
         num_positive_regions += source_positive_regions
         total_regions += source_total_regions
     return num_positive_regions, total_regions
 
+
 def report_data_stats(train_images_path: str, train_targets_path: str, test_images_path: str = None, test_targets_path: str = None,
                       radius: int = 3, dims: int = 2) -> Tuple[int, int, int]:
-    """
-    Report statistics about the dataset.
-
-    Args:
-        train_images_path (str): Path to training images.
-        train_targets_path (str): Path to training targets.
-        test_images_path (str): Path to test images (optional).
-        test_targets_path (str): Path to test targets (optional).
-        radius (int): Radius for particle detection.
-        dims (int): Number of dimensions (2 or 3).
-
-    Returns:
-        Tuple[int, int, int]: Number of positive regions, total regions, and number of training images.
-    """
+    '''Report number of positive regions and total regions in the training and testing data.'''
     report('source\tsplit\tp_observed\tnum_positive_regions\ttotal_regions')
     # Read targets into dataframe
     train_targets = file_utils.read_coordinates(train_targets_path)
@@ -437,16 +318,9 @@ def report_data_stats(train_images_path: str, train_targets_path: str, test_imag
         test_positive, test_total = extract_image_stats(test_grouped, test_targets, mode='test', radius=radius, dims=dims)
     return num_positive_regions, total_regions, num_train_images
 
+
 def make_model(args):
-    """
-    Create or load a model based on the provided arguments.
-
-    Args:
-        args: Argument object containing model parameters.
-
-    Returns:
-        nn.Module: The created or loaded model.
-    """
+    '''Load or create 2D models.'''
     report('Loading model:', args.model)
     if args.model.endswith('.sav'):  # loading pretrained model
         model = torch.load(args.model)
@@ -480,8 +354,7 @@ def make_model(args):
         classifier = load_model(flag)
         classifier.train()
     else:
-        feature_extractor = get_feature_extractor(args.model, units, dropout=dropout, bn=bn
-                                                  , unit_scaling=unit_scaling, pooling=pooling)
+        feature_extractor = get_feature_extractor(args.model, units, dropout=dropout, bn=bn, unit_scaling=unit_scaling, pooling=pooling)
         classifier = C.LinearClassifier(feature_extractor, dims=2, patch_size=args.patch_size, padding=args.patch_padding, batch_size=args.minibatch_size)
 
     ## if the method is generative, create the generative model as well
@@ -498,26 +371,9 @@ def make_model(args):
 
     return classifier
 
-def make_training_step_method(classifier, num_positive_regions, positive_fraction
-                              , lr=1e-3, l2=0, method='GE-binomial', pi=0, slack=-1
-                              , autoencoder=0):
-    """
-    Create a training step method based on the specified parameters.
 
-    Args:
-        classifier (nn.Module): The classifier model.
-        num_positive_regions (int): Number of positive regions.
-        positive_fraction (float): Fraction of positive samples.
-        lr (float): Learning rate.
-        l2 (float): L2 regularization strength.
-        method (str): Training method ('GE-binomial', 'GE-KL', 'PN', or 'PU').
-        pi (float): Expected fraction of positives.
-        slack (float): Slack parameter for GE methods.
-        autoencoder (int): Autoencoder strength.
-
-    Returns:
-        Tuple containing the trainer, criteria, and split type.
-    """
+def make_training_step_method(classifier, num_positive_regions, positive_fraction, lr=1e-3, l2=0, method='GE-binomial', pi=0, slack=-1,
+                              autoencoder=0):
     criteria = nn.BCEWithLogitsLoss()
     optim = torch.optim.Adam
 
@@ -565,26 +421,10 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
 
     return trainer, criteria, split
 
+
 def make_data_iterators_old(train_images: List[List[Union[Image.Image, np.ndarray]]], train_targets: List[List[np.ndarray]],
                             test_images: List[List[Union[Image.Image, np.ndarray]]], test_targets: List[List[np.ndarray]],
-                            crop: int, split: Literal['pn', 'pu'], args, dims: int = 2, to_tensor: bool = True):
-    """
-    Create data iterators for training and testing (old version).
-
-    Args:
-        train_images (List[List[Union[Image.Image, np.ndarray]]]): Training images.
-        train_targets (List[List[np.ndarray]]): Training targets.
-        test_images (List[List[Union[Image.Image, np.ndarray]]]): Test images.
-        test_targets (List[List[np.ndarray]]): Test targets.
-        crop (int): Crop size.
-        split (Literal['pn', 'pu']): Split type ('pn' or 'pu').
-        args: Argument object containing training parameters.
-        dims (int): Number of dimensions (2 or 3).
-        to_tensor (bool): Whether to convert to PyTorch tensors.
-
-    Returns:
-        Tuple[DataLoader, DataLoader]: Training and testing data loaders.
-    """
+                            crop: int, split: Literal['pn', 'pu'], args, dims: int = 2, to_tensor=True):
     ## training parameters
     minibatch_size = args.minibatch_size
     epoch_size = args.epoch_size
@@ -606,23 +446,19 @@ def make_data_iterators_old(train_images: List[List[Union[Image.Image, np.ndarra
     test_iterator = DataLoader(test_dataset, batch_size=testing_batch_size, num_workers=0) if test_dataset is not None else None
     return train_iterator, test_iterator
 
-class TestingImageDataset():
-    """
-    Dataset for testing images.
 
-    Args:
-        images_path (str): Path to images or directory containing images.
-        targets (pd.DataFrame): DataFrame of targets.
-        radius (int): Radius for particle detection.
-        dims (int): Number of dimensions (2 or 3).
-        use_cuda (bool): Whether to use CUDA.
-    """
+class TestingImageDataset():
     def __init__(self, images_path: str, targets: pd.DataFrame, radius: int = 3, dims: int = 2, use_cuda: bool = False):
         if os.path.isdir(images_path):
             glob_base = images_path + os.sep + '*'
             image_paths = glob.glob(glob_base + '.mrc')
         else:
-            image_paths = pd.read_csv(images_path, sep='\s+')['image_name'].tolist()
+            image_df = pd.read_csv(images_path, sep='\s+')
+            image_names = image_df['image_name'].tolist()
+            if 'path' not in image_df.columns:
+                image_paths = [name + '.mrc' for name in image_names]
+            else:
+                image_paths = image_df['path'].tolist()
         self.image_paths = image_paths
         self.targets = targets
         self.radius = radius
@@ -636,7 +472,7 @@ class TestingImageDataset():
         path = self.image_paths[i]
         img = load_image(path, make_image=False, return_header=False)
         img = torch.from_numpy(img.copy())
-        img_name = os.path.basename(path)
+        img_name = os.path.splitext(os.path.basename(path))[0]
         image_name_matches = self.targets['image_name'] == img_name
         img_targets = self.targets[image_name_matches]
         x = img_targets['x_coord'].values
@@ -650,19 +486,9 @@ class TestingImageDataset():
 
         return img, mask
 
+
 def expand_target_points(targets: pd.DataFrame, radius: int, dims: int = 2) -> pd.DataFrame:
-    """
-    Expand target point coordinates into coordinates of a sphere with the given radius.
-
-    Args:
-        targets (pd.DataFrame): DataFrame of targets.
-        radius (int): Radius for expansion.
-        dims (int): Number of dimensions (2 or 3).
-
-    Returns:
-        Tuple[pd.DataFrame, int]: Expanded targets and mask size.
-    """
-    x_coord, y_coord = targets['x_coord'].values, targets['y_coord'].values
+    '''Expand target point coordinates into coordinates of a sphere with the given radius.'''
     # make the spherically mask array of offsets to apply to the coordinates
     sphere_width = int(np.floor(radius)) * 2 + 1
     center = sphere_width // 2
@@ -671,14 +497,17 @@ def expand_target_points(targets: pd.DataFrame, radius: int, dims: int = 2) -> p
     xgrid, ygrid = grid[0], grid[1]
     d2 = (xgrid - center) ** 2 + (ygrid - center) ** 2
     if dims == 3:
-        z_coord = targets['z_coord'].values
         zgrid = grid[2]
         d2 += (zgrid - center) ** 2
     mask = (d2 <= radius ** 2).float()
-
     mask_size = mask.sum()
+
     sphere_offsets = mask.nonzero() - center
-    sphere_offsets = pd.DataFrame(sphere_offsets.numpy(), columns=['z_offset', 'y_offset', 'x_offset'])
+    if dims == 3:
+        sphere_offsets = pd.DataFrame(sphere_offsets.numpy(), columns=['z_offset', 'y_offset', 'x_offset'])
+    else:
+        sphere_offsets = pd.DataFrame(sphere_offsets.numpy(), columns=['y_offset', 'x_offset'])
+
     # create all combinations of targets and offsets
     expanded = targets.merge(sphere_offsets, how='cross')
     expanded['x_coord'] = expanded['x_coord'] + expanded['x_offset']
@@ -689,59 +518,26 @@ def expand_target_points(targets: pd.DataFrame, radius: int, dims: int = 2) -> p
     else:
         return expanded[['image_name', 'x_coord', 'y_coord']], mask_size
 
+
 def make_data_iterators(train_image_path: str, train_targets_path: str, crop: int, split: Literal['pn', 'pu'], minibatch_size: int, epoch_size: int,
                         test_image_path: str = None, test_targets_path: str = None, testing_batch_size: int = 1, num_workers: int = 0, balance: float = 0.5,
                         dims: int = 2, use_cuda: bool = False, radius: int = 3) -> Tuple[DataLoader, DataLoader]:
-    """
-    Create data iterators for training and testing.
-
-    Args:
-        train_image_path (str): Path to training images.
-        train_targets_path (str): Path to training targets.
-        crop (int): Crop size.
-        split (Literal['pn', 'pu']): Split type ('pn' or 'pu').
-        minibatch_size (int): Minibatch size.
-        epoch_size (int): Epoch size.
-        test_image_path (str): Path to test images (optional).
-        test_targets_path (str): Path to test targets (optional).
-        testing_batch_size (int): Batch size for testing.
-        num_workers (int): Number of workers for data loading.
-        balance (float): Balance ratio for positive/negative samples.
-        dims (int): Number of dimensions (2 or 3).
-        use_cuda (bool): Whether to use CUDA.
-        radius (int): Radius for particle detection.
-
-    Returns:
-        Tuple[DataLoader, DataLoader]: Training and testing data loaders.
-    """
-    report('Reading train targets...')
+    '''make train and test dataloaders'''
     train_targets = file_utils.read_coordinates(train_targets_path)
-    report(f'Loaded {len(train_targets)} train targets')
-
     if len(train_targets) == 0:
         report('ERROR: no training particles specified. Check that micrograph names in the particles file match those in the micrographs file/directory.', file=sys.stderr)
         raise Exception('No training particles.')
 
-    report('Converting path to grouped list...')
     train_image_paths = convert_path_to_grouped_list(train_image_path, train_targets)
-    report(f'Converted {len(train_image_paths)} train image paths')
 
-    report('Expanding target points...')
     expanded_train_targets, mask_size = expand_target_points(train_targets, radius, dims)
-    report(f'Expanded train targets with mask size {mask_size}')
-
-    report('Creating train dataset...')
     train_dataset = MultipleImageSetDataset(train_image_paths, expanded_train_targets, epoch_size * minibatch_size, crop, positive_balance=balance, split=split,
-                                            rotate=(dims == 2), flip=(dims == 2), mode='training', dims=dims, radius=radius, use_cuda=use_cuda)
+                                            rotate=(dims == 2), flip=(dims == 2), mode='training', dims=dims, radius=radius, use_cuda=use_cuda, mask_size=mask_size)
     train_dataloader = DataLoader(train_dataset, batch_size=minibatch_size, shuffle=True, num_workers=num_workers)
-    report(f'Loaded {train_dataset.num_images} training micrographs with ~{int(train_dataset.num_particles // mask_size)} labeled particles')
+    report(f'Loaded {train_dataset.num_images} training micrographs with ~{int(train_dataset.num_pixels // mask_size)} labeled particles')
 
     if test_targets_path is not None:
-        report('Reading test targets...')
         test_targets = file_utils.read_coordinates(test_targets_path)
-        report(f'Loaded {len(test_targets)} test targets')
-
-        report('Creating test dataset...')
         test_dataset = TestingImageDataset(test_image_path, test_targets, radius=radius, dims=dims, use_cuda=use_cuda)
         test_dataloader = DataLoader(test_dataset, batch_size=testing_batch_size, shuffle=False, num_workers=num_workers)
         report(f'Loaded {len(test_dataset)} testing micrographs with {len(test_targets)} labeled particles')
@@ -749,19 +545,8 @@ def make_data_iterators(train_image_path: str, train_targets_path: str, crop: in
     else:
         return train_dataloader, None
 
+
 def evaluate_model(classifier, criteria, data_iterator, use_cuda=False):
-    """
-    Evaluate the model on a given dataset.
-
-    Args:
-        classifier (nn.Module): The classifier model.
-        criteria (nn.Module): Loss function.
-        data_iterator (DataLoader): Data iterator for the dataset.
-        use_cuda (bool): Whether to use CUDA.
-
-    Returns:
-        Tuple containing loss, precision, true positive rate, false positive rate, and AUPRC.
-    """
     classifier.eval()
     classifier.fill()
 
@@ -805,125 +590,77 @@ def evaluate_model(classifier, criteria, data_iterator, use_cuda=False):
 
     return loss, precision, tpr, fpr, auprc
 
-def fit_epoch(step_method, data_iterator, epoch=1, it=1, use_cuda=False, output=sys.stdout):
-    """
-    Fit the model for one epoch.
 
-    Args:
-        step_method: Training step method.
-        data_iterator (DataLoader): Data iterator for training.
-        epoch (int): Current epoch number.
-        it (int): Current iteration number.
-        use_cuda (bool): Whether to use CUDA.
-        output: Output stream for logging.
+def fit_epoch(step_method, data_iterator, epoch=1, it=1, use_cuda=False, output=sys.stdout, scaler=None):
+    pbar = tqdm(data_iterator, desc=f"Epoch {epoch}", leave=False)
 
-    Returns:
-        Tuple[int, float]: Updated iteration number and AUPRC for the epoch.
-    """
-    pbar = tqdm(data_iterator, desc=f"Epoch {epoch}", leave=False, position=2)
-    all_scores = []
-    all_labels = []
     for X, Y in pbar:
         Y = Y.view(-1)
         if use_cuda:
-            X = X.cuda()
-            Y = Y.cuda()
-        metrics = step_method.step(X, Y)
+            X = X.cuda()  # Move input to CUDA
+            Y = Y.cuda()  # Move labels to CUDA
 
-        # Use the model attribute of step_method instead of classifier
-        scores = step_method.model(X).view(-1)
+        # Mixed precision training with autocast and GradScaler
+        with autocast():  # Enable mixed precision for the forward pass
+            metrics = step_method.step(X, Y)  # Forward pass
+        
+        # Ensure the loss (metrics[0]) is a Tensor and move to GPU if necessary
+        loss = metrics[0] if isinstance(metrics[0], torch.Tensor) else torch.tensor(metrics[0], requires_grad=True)
 
-        all_scores.extend(scores.detach().cpu().numpy())
-        all_labels.extend(Y.detach().cpu().numpy())
+        if use_cuda:
+            loss = loss.cuda()  # Move the loss to CUDA
+
+        # Backward pass with scaled gradients
+        scaler.scale(loss).backward()  # Scale the loss and apply backward
+
+        # Optimizer step with scaling
+        scaler.step(step_method.optim)
+        scaler.update()  # Update the scale for the next iteration
+
+        # Print the metrics and update progress
         line = '\t'.join([str(epoch), str(it), 'train'] + [str(metric) for metric in metrics] + ['-'])
         print(line, file=output)
+
         it += 1
-        pbar.set_postfix({'loss': metrics[0]})  # Assuming the first metric is loss
+        pbar.set_postfix({'iter': it})
 
-    # Calculate AUPRC for the entire epoch
-    auprc = average_precision(np.array(all_labels), np.array(all_scores))
-    return it, auprc
-
-def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator, num_epochs,
-              save_prefix=None, use_cuda=False, output=sys.stdout, num_sets=1, current_set=1):
-    """
-    Fit the model for multiple epochs.
-
-    Args:
-        classifier (nn.Module): The classifier model.
-        criteria (nn.Module): Loss function.
-        step_method: Training step method.
-        train_iterator (DataLoader): Data iterator for training.
-        test_iterator (DataLoader): Data iterator for testing.
-        num_epochs (int): Number of epochs to train.
-        save_prefix (str): Prefix for saving model checkpoints.
-        use_cuda (bool): Whether to use CUDA.
-        output: Output stream for logging.
-        num_sets (int): Total number of sets.
-        current_set (int): Current set number.
-
-    Returns:
-        nn.Module: The trained classifier.
-    """
+    return it
+    
+def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator, num_epochs, save_prefix=None, use_cuda=False, output=sys.stdout, scaler=None):
+    ## fit the model, report train/test stats, save model if required
     header = step_method.header
     line = '\t'.join(['epoch', 'iter', 'split'] + header + ['auprc'])
     print(line, file=output)
 
     it = 1
-    pbar_sets = tqdm(total=num_sets, desc="Overall Progress", position=0)
-    pbar_sets.update(current_set - 1)  # Update to the current set
-    pbar_epochs = tqdm(range(1, num_epochs+1), desc=f"Set {current_set} Progress", position=1, leave=False)
-
+    pbar_epochs = tqdm(range(1, num_epochs + 1), desc="Training", leave=True)
     for epoch in pbar_epochs:
+        ## update the model
         classifier.train()
-        it, train_auprc = fit_epoch(step_method, train_iterator, epoch=epoch, it=it, use_cuda=use_cuda, output=output)
+        it = fit_epoch(step_method, train_iterator, epoch=epoch, it=it, use_cuda=use_cuda, output=output, scaler=scaler)  # Pass scaler here
 
-        # Add train AUPRC to the output
-        line = '\t'.join([str(epoch), str(it), 'train'] + ['-']*(len(header)) + [str(train_auprc)])
-        print(line, file=output)
-
+        ## measure validation performance
         if test_iterator is not None:
             loss, precision, tpr, fpr, auprc = evaluate_model(classifier, criteria, test_iterator, use_cuda=use_cuda)
-            line = '\t'.join([str(epoch), str(it), 'test', str(loss)] + ['-']*(len(header)-4) + [str(precision), str(tpr), str(fpr), str(auprc)])
+
+            # Ensure that AUPRC is included in the output string without placeholders pushing it out
+            line = '\t'.join([str(epoch), str(it), 'test', str(loss), str(precision), str(tpr), str(fpr), str(auprc)])
             print(line, file=output)
             output.flush()
-            pbar_epochs.set_postfix({'test_loss': loss, 'test_auprc': auprc, 'train_auprc': train_auprc})
 
+        ## save the model
         if save_prefix is not None:
             prefix = save_prefix
             digits = int(np.ceil(np.log10(num_epochs)))
-            path = prefix + (f'_set{current_set}_epoch{{:0{digits}}}.sav').format(epoch)
+            path = prefix + ('_epoch{:0' + str(digits) + '}.sav').format(epoch)
             classifier.cpu()
             torch.save(classifier, path)
             if use_cuda:
                 classifier.cuda()
 
-    pbar_sets.update(1)
-    pbar_epochs.close()
+        pbar_epochs.set_postfix({'iter': it})
 
-    if current_set == num_sets:
-        pbar_sets.close()
-
-def train_model_old(classifier, train_images, train_targets, test_images, test_targets, use_cuda, save_prefix, output, args, dims: int = 2, to_tensor: bool = True):
-    """
-    Train the model (old version).
-
-    Args:
-        classifier (nn.Module): The classifier model.
-        train_images (List[List[Union[Image.Image, np.ndarray]]]): Training images.
-        train_targets (List[List[np.ndarray]]): Training targets.
-        test_images (List[List[Union[Image.Image, np.ndarray]]]): Test images.
-        test_targets (List[List[np.ndarray]]): Test targets.
-        use_cuda (bool): Whether to use CUDA.
-        save_prefix (str): Prefix for saving model checkpoints.
-        output: Output stream for logging.
-        args: Argument object containing training parameters.
-        dims (int): Number of dimensions (2 or 3).
-        to_tensor (bool): Whether to convert to PyTorch tensors.
-
-    Returns:
-        nn.Module: The trained classifier.
-    """
+def train_model_old(classifier, train_images, train_targets, test_images, test_targets, use_cuda, save_prefix, output, args, dims: int = 2, to_tensor=True):
     num_positive_regions, total_regions = report_data_stats_old(train_images, train_targets, test_images, test_targets)
 
     ## make the training step method
@@ -934,7 +671,7 @@ def train_model_old(classifier, train_images, train_targets, test_images, test_t
 
         pi = calculate_pi(expected_num_particles, args.radius, total_regions, dims)
 
-        report('Specified expected number of particle per micrograph = {}'.format(args.num_particles))
+        report(f'Specified expected number of particle per micrograph = {args.num_particles}')
         report('With radius = {}'.format(args.radius))
         report('Setting pi = {}'.format(pi))
     else:
@@ -961,67 +698,46 @@ def train_model_old(classifier, train_images, train_targets, test_images, test_t
     return classifier
 
 def train_model(classifier, train_images_path: str, train_targets_path: str, test_images_path: str, test_targets_path: str, use_cuda: bool,
-                save_prefix: str, output, args, dims: int = 2, num_sets: int = 1):
-    """
-    Train the model.
+                save_prefix: str, output, args, dims: int = 2):
+    
+    # Report stats about the data
+    num_positive_regions, total_regions, num_images = report_data_stats(train_images_path, train_targets_path, test_images_path, test_targets_path,
+                                                                        radius=args.radius, dims=dims)
 
-    Args:
-        classifier (nn.Module): The classifier model.
-        train_images_path (str): Path to training images.
-        train_targets_path (str): Path to training targets.
-        test_images_path (str): Path to test images.
-        test_targets_path (str): Path to test targets.
-        use_cuda (bool): Whether to use CUDA.
-        save_prefix (str): Prefix for saving model checkpoints.
-        output: Output stream for logging.
-        args: Argument object containing training parameters.
-        dims (int): Number of dimensions (2 or 3).
-        num_sets (int): Number of training sets.
+    ## Calculate pi based on expected number of particles
+    if args.num_particles > 0:
+        expected_num_particles = args.num_particles * num_images
+        pi = calculate_pi(expected_num_particles, args.radius, total_regions, dims)
+        report(f'Specified expected number of particles per micrograph = {args.num_particles}')
+        report(f'With radius = {args.radius}')
+        report(f'Setting pi = {pi}')
+    else:
+        # Ensure pi has a valid value
+        pi = args.pi if args.pi is not None else 0.0
+        report(f'pi = {pi}')
 
-    Returns:
-        nn.Module: The trained classifier.
-    """
-    overall_pbar = tqdm(total=num_sets, desc="Overall Progress", position=0)
+    # Create the training step method (optimizer, loss function, etc.)
+    trainer, criteria, split = make_training_step_method(classifier, num_positive_regions,
+                                                         num_positive_regions / total_regions,
+                                                         lr=args.learning_rate, l2=args.l2,
+                                                         method=args.method, pi=pi, slack=args.slack,
+                                                         autoencoder=args.autoencoder)
 
-    for current_set in range(1, num_sets + 1):
-        print(f"\nStarting training set {current_set} of {num_sets}")
+    # Initialize the GradScaler for mixed precision training
+    scaler = GradScaler()  # Initialize scaler here
 
-        report('Starting to report data stats...')
-        num_positive_regions, total_regions, num_images = report_data_stats(train_images_path, train_targets_path, test_images_path, test_targets_path,
-                                                                             radius=args.radius, dims=dims)
+    # Training parameters
+    report(f'minibatch_size={args.minibatch_size}, epoch_size={args.epoch_size}, num_epochs={args.num_epochs}')
+    num_workers = mp.cpu_count() if args.num_workers < 0 else args.num_workers
+    balance = None if args.natural else args.minibatch_balance
 
-        report('Completed reporting data stats...')
-        if args.num_particles > 0:
-            expected_num_particles = args.num_particles * num_images
-            pi = calculate_pi(expected_num_particles, args.radius, total_regions, dims)
-            report('Specified expected number of particles per micrograph = {}'.format(args.num_particles))
-            report('With radius = {}'.format(args.radius))
-            report('Setting pi = {}'.format(pi))
-        else:
-            pi = args.pi
-            report('pi = {}'.format(pi))
+    # Create data loaders (train and test)
+    train_iterator, test_iterator = make_data_iterators(train_images_path, train_targets_path, classifier.width, split, args.minibatch_size, args.epoch_size,
+                                                        test_image_path=test_images_path, test_targets_path=test_targets_path, testing_batch_size=args.test_batch_size,
+                                                        num_workers=num_workers, balance=balance, dims=dims, use_cuda=use_cuda, radius=args.radius)
 
-        report('Making training step method...')
-        trainer, criteria, split = make_training_step_method(classifier, num_positive_regions,
-                                                             num_positive_regions / total_regions,
-                                                             lr=args.learning_rate, l2=args.l2,
-                                                             method=args.method, pi=pi, slack=args.slack,
-                                                             autoencoder=args.autoencoder)
+    # Fit the model for the given number of epochs
+    fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs,
+               save_prefix=save_prefix, use_cuda=use_cuda, output=output, scaler=scaler)  # Pass scaler here
 
-        report(f'minibatch_size={args.minibatch_size}, epoch_size={args.epoch_size}, num_epochs={args.num_epochs}')
-        num_workers = mp.cpu_count() if args.num_workers < 0 else args.num_workers
-        balance = None if args.natural else args.minibatch_balance
-
-        report('Creating data iterators...')
-        train_iterator, test_iterator = make_data_iterators(train_images_path, train_targets_path, classifier.width, split, args.minibatch_size, args.epoch_size,
-                                                            test_image_path=test_images_path, test_targets_path=test_targets_path, testing_batch_size=args.test_batch_size,
-                                                            num_workers=0, balance=balance, dims=dims, use_cuda=use_cuda, radius=args.radius)
-
-        report('Starting training epochs...')
-        fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs,
-                   save_prefix=save_prefix, use_cuda=use_cuda, output=output, num_sets=num_sets, current_set=current_set)
-
-        overall_pbar.update(1)
-
-    overall_pbar.close()
     return classifier
