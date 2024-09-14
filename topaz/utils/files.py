@@ -42,21 +42,10 @@ def strip_ext(name):
 
 def check_for_malformed_image_name(particles:pd.DataFrame):
     '''Check image names for multiple periods/extensions. Remove extensions if found.'''
-    def check_for_ext(name:str):
-        '''Return true if name includes extensions.'''
-        name, ext = os.path.splitext(name)
-        return ext != ''
+    def strip_ext(name:str):
+        '''Remove file extension from name.'''
+        return os.path.splitext(name)[0]
     
-    have_extension = particles['image_name'].apply(check_for_ext)
-    have_extension_names = particles['image_name'][have_extension].unique().tolist()
-    if len(have_extension_names) > 0:
-        print(f'WARNING: image names {have_extension_names} seem to contain a file extension. Removing extensions to avoid later errors.', file=sys.stderr)
-    
-    have_multiple_periods = particles['image_name'].apply(lambda x: x.count('.') > 0)
-    have_multiple_periods_names = particles['image_name'][have_multiple_periods].unique().tolist()
-    if len(have_multiple_periods_names) > 0:
-        print(f'WARNING: image names {have_multiple_periods_names} contain periods, which is not supported.', file=sys.stderr)
-
     particles['image_name'] = particles['image_name'].apply(strip_ext)
     return particles
 
