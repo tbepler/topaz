@@ -293,7 +293,7 @@ def extract_image_stats(image_paths:List[List[str]], targets:pd.DataFrame, mode:
             source_positive_regions += (len(target)*pixels_per_particle) # all pixels, not just center
         # Calculate positive fraction and report
         p_observed = source_positive_regions / source_total_regions
-        report(f'{source}\t{mode}\t{p_observed:.2f}\t{source_positive_regions}\t{source_total_regions}')
+        report(f'{source}\t{mode}\t{p_observed:.5e}\t{source_positive_regions}\t{source_total_regions}')
         # Update total counts
         num_positive_regions += source_positive_regions
         total_regions += source_total_regions
