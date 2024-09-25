@@ -22,6 +22,7 @@ particle_format_map = {
     '.tab': 'coord',
 }
 
+image_formats = ('.mrc', '.tiff', '.tif', '.png', '.jpg', '.jpeg')
 
 class UnknownFormatError(Exception):
     def __init__(self, ext):
@@ -39,25 +40,25 @@ def strip_ext(name):
     clean_name,ext = os.path.splitext(name)
     return clean_name
 
+def strip_image_ext(filename):
+    '''Strip image extension from filename, if present.'''
+    name,ext = os.path.splitext(filename)
+    return name if ext in image_formats else filename
 
 def check_for_malformed_image_name(particles:pd.DataFrame):
-    '''Check image names for multiple periods/extensions. Remove extensions if found.'''
+    '''Check image names for extensions. Remove extensions if found.'''
     def check_for_ext(name:str):
-        '''Return true if name includes extensions.'''
+        '''Return true if name includes extensions from a fixed set.'''
         name, ext = os.path.splitext(name)
-        return ext != ''
+        # check if "extension" is common image file extension, may be '' if no extension
+        has_ext = (ext in image_formats)
+        return has_ext
     
     have_extension = particles['image_name'].apply(check_for_ext)
     have_extension_names = particles['image_name'][have_extension].unique().tolist()
     if len(have_extension_names) > 0:
-        print(f'WARNING: image names {have_extension_names} seem to contain a file extension. Removing extensions to avoid later errors.', file=sys.stderr)
-    
-    have_multiple_periods = particles['image_name'].apply(lambda x: x.count('.') > 0)
-    have_multiple_periods_names = particles['image_name'][have_multiple_periods].unique().tolist()
-    if len(have_multiple_periods_names) > 0:
-        print(f'WARNING: image names {have_multiple_periods_names} contain periods, which is not supported.', file=sys.stderr)
-
-    particles['image_name'] = particles['image_name'].apply(strip_ext)
+        # print(f'WARNING: image names {have_extension_names} seem to contain a file extension. Removing extensions to avoid later errors.', file=sys.stderr)
+        particles['image_name'] = particles['image_name'].apply(strip_image_ext)
     return particles
 
 
@@ -199,7 +200,7 @@ def read_coordinates(path, format='auto'):
     else: # default to coordiantes table format
         particles = pd.read_csv(path, sep='\t')
 
-    # check that image names don't contain extension (remove if found) or multiple periods
+    # check that image names don't contain extension (remove if found)
     particles = check_for_malformed_image_name(particles)
     return particles
 
