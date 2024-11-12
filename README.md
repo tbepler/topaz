@@ -9,6 +9,14 @@ A pipeline for particle detection in cryo-electron microscopy images using convo
 
 **Check out our [Discussion](https://github.com/tbepler/topaz/discussions) section for general help, suggestions, and tips on using Topaz. You can also find our documentation site [here](https://topaz-em.readthedocs.io/en/latest/?badge=latest).**
 
+## New in v0.3.0
+- Major refactoring of logic out of commands for modularity
+- Refactored datasets and sampling allow larger training sets with mixed micrograph sizes
+- Particle extraction can now be performed in patches
+- Topaz train now additionally reports adjusted_precision, as a proportion of the theoretical max precision (pi)
+- Can now read long argument lists using "@list_of_many_files.txt" in place of filenames or wildcards (thanks to [#192](https://github.com/tbepler/topaz/pull/192) from @nfrasser) 
+- Various bug fixes
+
 ## New in v0.2.5
 - Added Relion integration scripts
 - Topaz extract can now write particle coordinates to one file per input micrograph
