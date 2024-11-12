@@ -1,3 +1,6 @@
+import sys
+import torch
+from torch import nn
 
 # this seems unnecessary
 def set_device(model, device, log=sys.stderr):

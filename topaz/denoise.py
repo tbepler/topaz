@@ -490,7 +490,7 @@ def denoise_tomogram(path:str, model:Denoise3D, outdir:str=None, suffix:str='', 
     ## save the denoised tomogram
     if outdir is None:
         # write denoised tomogram to same location as input, but add the suffix
-        if suffix is '': # use default
+        if suffix == '': # use default
             suffix = '.denoised'
         no_ext,ext = os.path.splitext(path)
         outpath = no_ext + suffix + ext

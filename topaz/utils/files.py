@@ -305,10 +305,10 @@ def split_particle_file(input_file, format, suffix, threshold, output_dir):
         except UnknownFormatError as e:
             print('Error: unrecognized input coordinates file extension ('+e.ext+')', file=sys.stderr)
             sys.exit(1)
-    _,ext = os.path.splitext(path)
+    _,ext = os.path.splitext(input_file)
     
     if format == 'star':
-        with open(path, 'r') as f:
+        with open(input_file, 'r') as f:
             table = star.parse(f)
         # apply score threshold 
         if star.SCORE_COLUMN_NAME in table.columns:
@@ -320,7 +320,7 @@ def split_particle_file(input_file, format, suffix, threshold, output_dir):
             with open(path, 'w') as f:
                 star.write(group, f)
     else: # format is coordinate table
-        table = pd.read_csv(path, sep='\t')
+        table = pd.read_csv(input_file, sep='\t')
         if 'score' in table.columns:
             table = table.loc[table['score'] >= threshold]
         # write per micrograph files
