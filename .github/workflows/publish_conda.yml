@@ -3,16 +3,19 @@ name: Conda Upload
 on:
   release:
     types: [published]
-    
-jobs:
 
+jobs:
   publish:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1 #may want to change to v2
+    - uses: actions/checkout@v3
+    - name: Set up Miniconda
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        auto-update-conda: true
     - name: publish-to-conda
       uses: darnellgranberry/conda-package-publish-action@master
       with:
-        subDir: 'conda-build'
-        AnacondaToken: ${{ secrets.CONDAAPITOKEN }}
+        subdir: 'conda-build'
+        anacondatoken: ${{ secrets.CONDAAPITOKEN }}
