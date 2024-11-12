@@ -124,7 +124,7 @@ def main(args):
                                  normalize, use_cuda)
     else:
         # stream the micrographs and denoise them
-        denoised = denoise_stream(args.micrographs, args.output, args.format, args.suffix, models, args.lowpass, args.pixel_cutoff, 
+        denoised = denoise_stream(args.micrographs, args.output, args.format_, args.suffix, models, args.lowpass, args.pixel_cutoff, 
                                   gaus, inv_gaus, args.deconvolve, args.deconv_patch, args.patch_size, args.patch_padding,
                                   normalize, use_cuda)
     return denoised

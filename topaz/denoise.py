@@ -270,22 +270,29 @@ class Denoise():
 
     
     @torch.no_grad()        
-    def _denoise(self, input:Union[np.ndarray, torch.Tensor]):
+    def _denoise(self, input:Union[np.ndarray, torch.Tensor]) -> np.ndarray:
         '''Call stored denoising model.
         '''
         self.model.eval()
-        mu, std =  input.mean(), input.std()
+        # convert to tensor if necessary, move to device
+        input = torch.from_numpy(input) if type(input) == np.ndarray else input
+        input = input.to(self.device)
         # normalize, add singleton batch and input channel dims 
-        input = torch.from_numpy( (input-mu)/std ).to(self.device).unsqueeze(0).unsqueeze(0)
-        pred = self.model(input)
-        # remove singleton dims, unnormalize
-        return pred.squeeze().cpu().numpy() * std + mu
+        mu, std = input.mean(), input.std()
+        input = (input - mu) / std 
+        input = input.unsqueeze(0).unsqueeze(0)
+        # predict, remove extra dims
+        pred = self.model(input).squeeze()
+        # unnormalize
+        pred = pred * std + mu
+        return pred.cpu().numpy()
  
 
     @torch.no_grad()
-    def denoise_patches(self, x:Union[np.ndarray, torch.Tensor], patch_size:int, padding:int=128):
+    def denoise_patches(self, x:Union[np.ndarray, torch.Tensor], patch_size:int, padding:int=128) -> np.ndarray:
         ''' Denoise micrograph patches.
         '''
+        x = torch.from_numpy(x) if type(x) == np.ndarray else x
         y = torch.zeros_like(x)
 
         for i in range(0, x.size(2), patch_size):
@@ -304,14 +311,15 @@ class Denoise():
                 sj = j - sj
 
                 y[i:i+patch_size,j:j+patch_size] = yij[si:si+patch_size,sj:sj+patch_size]
+        y = y.squeeze().cpu().numpy()
         return y
 
 
     @torch.no_grad()
     def denoise(self, x:Union[np.ndarray, torch.Tensor], patch_size=-1, padding=128):
         s = patch_size + padding  # check the patch plus padding size
-        use_patch = (patch_size > 0) and (s < x.size(0) or s < x.size(1)) # must denoise in patches
-        result = self.denoise_patches(x, patch_size, padding=padding) if use_patch else self.denoise(x)
+        use_patch = (patch_size > 0) and (s < x.shape[0] or s < x.shape[1]) # must denoise in patches
+        result = self.denoise_patches(x, patch_size, padding=padding) if use_patch else self._denoise(x)
         return result
   
 
@@ -359,19 +367,20 @@ class Denoise3D(Denoise):
 
 
 #2D Denoising Functions
-def denoise_image(mic, models:List[Denoise], lowpass=1, cutoff=0, gaus:GaussianDenoise=None, inv_gaus:InvGaussianFilter=None, deconvolve=False, 
-                    deconv_patch=1, patch_size=-1, padding=0, normalize=False, use_cuda=False):
+def denoise_image(mic:np.ndarray, models:List[Denoise], lowpass=1, cutoff=0, gaus:GaussianDenoise=None, inv_gaus:InvGaussianFilter=None, deconvolve=False, 
+                    deconv_patch=1, patch_size=-1, padding=0, normalize=False, use_cuda=False) -> np.ndarray:
     ''' Denoise micrograph using (pre-)trained neural networks and various filters.
     '''
     mic = lowpass(mic, lowpass) if lowpass > 1 else mic
-    mic = torch.from_numpy(mic)
-    mic = mic.cuda() if use_cuda else mic
-
     # normalize and remove outliers
     mu, std = mic.mean(), mic.std()
     x = (mic - mu)/std
     if cutoff > 0:
         x[(x < -cutoff) | (x > cutoff)] = 0
+
+    # convert to tensor and move to device
+    mic = torch.from_numpy(mic.copy())
+    mic = mic.cuda() if use_cuda else mic
 
     # apply guassian/inverse gaussian filter
     if gaus is not None:
@@ -392,8 +401,7 @@ def denoise_image(mic, models:List[Denoise], lowpass=1, cutoff=0, gaus:GaussianD
         # add back std. dev. and mean
         mic = std*mic + mu
 
-    # return back to numpy/cpu
-    return mic.cpu().numpy()
+    return mic
 
 
 def denoise_stack(path:str, output_path:str, models:List[Denoise], lowpass:float=1, pixel_cutoff:float=0, 

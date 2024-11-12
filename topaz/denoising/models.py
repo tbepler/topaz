@@ -8,9 +8,9 @@ from collections import OrderedDict
 import numpy as np
 import pkg_resources
 import torch
-import torch.functional as F
-from topaz.filters import AffineDenoise
 from torch import nn
+import torch.nn.functional as F
+from topaz.filters import AffineDenoise
 from torch.utils.data import DataLoader
 
 
