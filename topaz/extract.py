@@ -333,7 +333,7 @@ def extract_particles(paths:List[str], model:Union[torch.nn.Module, str], device
         for path,score,coords in nms_iterator(stream, radius, threshold, pool=pool, dims=dims, verbose=verbose):
             # get the name of the image w/o extension
             basename = os.path.basename(path)
-            name = os.path.splitext(basename)[0]
+            name, ext = os.path.splitext(basename)
             if verbose:
                 report(f'Extracted {len(score)} particles from {name}')
             # scale the coordinates
