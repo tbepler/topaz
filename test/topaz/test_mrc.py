@@ -1,4 +1,4 @@
-from topaz.mrc import get_mode, make_header, parse, write
+from topaz.mrc import get_mode_from_header, get_mode_for_header, make_header, parse, write
 
 
 def test_parse():
@@ -9,9 +9,11 @@ def test_parse():
     # assert len(header) == 49
     pass
 
-def test_get_mode():
+def test_get_mode_from_header():
     pass
 
+def test_get_mode_for_header():
+    pass
 
 def test_make_header():
     pass

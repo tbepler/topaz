@@ -4,8 +4,7 @@ import numpy as np
 from PIL import Image
 from topaz.utils.data.sampler import (RandomImageTransforms, ShuffledSampler,
                                       StratifiedCoordinateSampler,
-                                      enumerate_pn_coordinates,
-                                      enumerate_pu_coordinates)
+                                      enumerate_coordinates)
 
 
 class TestRandomImageTransforms():
@@ -50,9 +49,5 @@ class TestStratifiedCoordinateSampler():
 
 
 
-def test_enum_pn_coordinates():
-    pass
-
-
-def test_enum_pu_coordinates():
+def test_enumerate_coordinates():
     pass
