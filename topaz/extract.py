@@ -6,7 +6,7 @@ import multiprocessing
 import os
 import sys
 import time
-from typing import List, Union, Iterator, TextIO, Iterable
+from typing import List, Union, Iterator, TextIO, Iterable, Tuple
 
 import numpy as np
 import pandas as pd
@@ -32,7 +32,7 @@ class NonMaximumSuppression:
         self.patch_overlap = patch_overlap
         self.verbose = verbose
 
-    def __call__(self, args) -> tuple[str, np.ndarray, np.ndarray]:
+    def __call__(self, args) -> Tuple[str, np.ndarray, np.ndarray]:
         nms = non_maximum_suppression if self.dims == 2 else non_maximum_suppression_3d
         name,score = args
         if self.verbose:
@@ -91,7 +91,7 @@ def crop_translate_coords_scores(scores, coords, patch_size, patch_overlap, x, y
 
 
 def nms_iterator(paths_scores:Iterable[np.ndarray], radius:int, threshold:float, pool:multiprocessing.Pool=None, dims:int=2, 
-                 patch_size:int=0, patch_overlap:int=0, verbose:bool=False) -> Iterator[tuple[str, np.ndarray, np.ndarray]]:
+                 patch_size:int=0, patch_overlap:int=0, verbose:bool=False) -> Iterator[Tuple[str, np.ndarray, np.ndarray]]:
     # create the process, can be patched or not, 2d or 3d
     process = NonMaximumSuppression(radius, threshold, dims=dims, patch_size=patch_size, patch_overlap=patch_overlap, verbose=verbose)
     # parallelize on CPU at the image level
@@ -104,7 +104,7 @@ def nms_iterator(paths_scores:Iterable[np.ndarray], radius:int, threshold:float,
             yield name, score, coords
 
 
-def iterate_score_target_pairs(scores, targets:pd.DataFrame) -> Iterator[tuple[np.ndarray, np.ndarray]]:
+def iterate_score_target_pairs(scores, targets:pd.DataFrame) -> Iterator[Tuple[np.ndarray, np.ndarray]]:
     for image_name,score in scores.items():
         target = targets.loc[targets.image_name == image_name][['x_coord', 'y_coord']].values
         yield score,target
@@ -117,7 +117,7 @@ class ExtractMatches:
         self.match_radius = match_radius
         self.dims = dims
 
-    def __call__(self, args:tuple[np.ndarray, np.ndarray]) -> tuple[np.ndarray, np.ndarray, float, int]:
+    def __call__(self, args:Tuple[np.ndarray, np.ndarray]) -> Tuple[np.ndarray, np.ndarray, float, int]:
         score,target = args
         if self.dims == 2: 
             score,coords = non_maximum_suppression(score, self.radius, threshold=self.threshold)
@@ -133,7 +133,7 @@ class ExtractMatches:
 
 
 def extract_auprc(targets:np.ndarray, scores:np.ndarray, radius:float, threshold:float, match_radius:float=None, 
-                  pool:multiprocessing.Pool=None, dims:int=2) -> tuple[float, float, int, int]:
+                  pool:multiprocessing.Pool=None, dims:int=2) -> Tuple[float, float, int, int]:
     N = 0
     mse = 0
     hits = []
@@ -185,7 +185,7 @@ class Process:
 
 
 def find_opt_radius(targets:np.ndarray, target_scores:np.ndarray, threshold:float, lo:int=0, hi:int=200, step:int=10, 
-                    match_radius:int=None, pool:multiprocessing.Pool=None, dims:int=2) -> tuple[int, float]:
+                    match_radius:int=None, pool:multiprocessing.Pool=None, dims:int=2) -> Tuple[int, float]:
 
     auprc = np.zeros(hi+1) - 1
     process = Process(targets, target_scores, threshold, match_radius, dims=dims)
