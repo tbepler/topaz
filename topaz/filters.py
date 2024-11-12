@@ -49,7 +49,10 @@ class AffineDenoise(nn.Module):
 
 
 class GaussianDenoise(nn.Module):
-    def __init__(self, sigma, scale=5, dims=2):
+    '''
+     Apply Gaussian filter with sigma to image. Truncates the kernel at scale times sigma pixels.
+    '''    
+    def __init__(self, sigma, scale=5, dims=2, use_cuda=False):
         super(GaussianDenoise, self).__init__()
         width = 1 + 2*int(np.ceil(sigma*scale))
         f = gaussian_filter(sigma, s=width, dims=dims)
@@ -62,13 +65,23 @@ class GaussianDenoise(nn.Module):
 
         self.filter.weight.data[:] = torch.from_numpy(f).float()
         self.filter.bias.data.zero_()
+        self.use_cuda = use_cuda
 
     def forward(self, x):
         return self.filter(x)
 
+    @torch.no_grad()
+    def apply(self, x):
+        x = torch.from_numpy(x).unsqueeze(0).unsqueeze(0)
+        if self.use_cuda:
+            self.filter.cuda()
+            x = x.cuda()
+        y = self.forward(x).squeeze().cpu().numpy()
+        return y
+    
 
-class InvGaussianFilter(nn.Module):
-    def __init__(self, sigma, scale=5):
+class InvGaussianFilter(GaussianDenoise, nn.Module):
+    def __init__(self, sigma, scale=5, use_cuda=False):
         super(InvGaussianFilter, self).__init__()
         width = 1 + 2*int(np.ceil(sigma*scale))
         f = gaussian_filter(sigma, s=width)
@@ -80,6 +93,4 @@ class InvGaussianFilter(nn.Module):
         self.filter = nn.Conv2d(1, 1, width, padding=width//2)
         self.filter.weight.data[:] = torch.from_numpy(F).float()
         self.filter.bias.data.zero_()
-
-    def forward(self, x):
-        return self.filter(x)
+        self.use_cuda = use_cuda

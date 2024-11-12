@@ -3,7 +3,7 @@ from __future__ import print_function, division
 import torch
 
 import topaz
-from topaz.model.features.basic import BasicConv 
+from topaz.model.features.basic import BasicConv
 from topaz.model.features.resnet import ResNet16, ResNet8, ResNet6
 from topaz.model.classifier import LinearClassifier
 
@@ -64,7 +64,3 @@ def load_model(path):
     model.load_state_dict(state_dict)
 
     return model
-
-
-
-

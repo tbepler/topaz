@@ -1,4 +1,5 @@
 from __future__ import absolute_import, print_function
+from typing import Any, Tuple
 
 import numpy as np
 import struct
@@ -105,10 +106,9 @@ names += ' nlabl labels'
 header_struct = struct.Struct(fstr)
 MRCHeader = namedtuple('MRCHeader', names)
 
-def parse(content):
+def parse(content:bytes) -> Tuple[np.ndarray, Any, Any]:
     ## parse the header
-    header = content[0:1024]
-    header = MRCHeader._make(header_struct.unpack(content[:1024]))
+    header = parse_header(content[:1024])
 
     ## get the number of bytes in extended header
     extbytes = header.next
@@ -116,24 +116,7 @@ def parse(content):
     extended_header = content[1024:start]
 
     content = content[start:]
-    if header.mode == 0:
-        dtype = np.int8
-    elif header.mode == 1:
-        dtype = np.int16
-    elif header.mode == 2:
-        dtype = np.float32
-    elif header.mode == 3:
-        dtype = '2h' # complex number from 2 shorts
-    elif header.mode == 4:
-        dtype = np.complex64
-    elif header.mode == 6:
-        dtype = np.uint16
-    elif header.mode == 16:
-        dtype = '3B' # RGB values
-    elif header.mode == 12:
-        dtype = np.float16
-    else:
-        raise Exception('Unknown dtype mode:' + str(header.mode))
+    dtype = get_mode_from_header(header)
 
     array = np.frombuffer(content, dtype=dtype) 
     # clip array to first nz*ny*nx elements
@@ -145,7 +128,35 @@ def parse(content):
 
     return array, header, extended_header
 
-def get_mode(dtype):
+
+def parse_header(header_bytes:bytes) -> MRCHeader:
+    '''Parse the first 1024 bytes of MRC into header'''
+    header = MRCHeader._make(header_struct.unpack(header_bytes))
+    return header
+
+
+def get_mode_from_header(header):
+    if header.mode == 0:
+        return np.int8
+    elif header.mode == 1:
+        return np.int16
+    elif header.mode == 2:
+        return np.float32
+    elif header.mode == 3:
+        return '2h' # complex number from 2 shorts
+    elif header.mode == 4:
+        return np.complex64
+    elif header.mode == 6:
+        return np.uint16  
+    elif header.mode == 16:
+        return '3B' # RGB values
+    elif header.mode == 12:
+        return np.float16
+    else:
+        raise Exception('Unknown dtype mode:' + str(header.mode))
+
+
+def get_mode_for_header(dtype):
     if dtype == np.int8:
         return 0
     elif dtype == np.int16:
@@ -161,12 +172,12 @@ def get_mode(dtype):
     elif dtype == np.dtype('3B'):
         return 16
     
-    raise "MRC incompatible dtype: " + str(dtype)
+    raise ValueError("MRC incompatible dtype: " + str(dtype))
     
 
 def make_header(shape, cella, cellb, mz=1, dtype=np.float32, order=(1,2,3), dmin=0, dmax=-1, dmean=-2, rms=-1
                , exthd_size=0, ispg=0):
-    mode = get_mode(dtype)
+    mode = get_mode_for_header(dtype)
     header = MRCHeader( shape[2], shape[1], shape[0], # nx, ny, nz
                         mode, # mode = 32-bit signed real
                         0, 0, 0, # nxstart, nystart, nzstart
@@ -220,10 +231,5 @@ def write(f, array, header=None, extended_header=b'', ax=1, ay=1, az=1, alpha=0,
     ## write the header
     buf = header_struct.pack(*list(header))
     f.write(buf)
-
     f.write(extended_header)
-
     f.write(array.tobytes())
-
-
-

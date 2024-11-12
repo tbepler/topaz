@@ -1,16 +1,8 @@
-from __future__ import print_function,division
+from __future__ import division, print_function
 
-import sys
-import os
-import numpy as np
-import pandas as pd
-import json
-from PIL import Image
-import glob
+import argparse
 
-from topaz.utils.conversions import coordinates_to_eman2_json
-from topaz.utils.data.loader import load_image
-
+from topaz.utils.conversions import file_coordinates_to_eman2_json
 
 name = 'coordinates_to_eman2_json'
 help = 'convert coordinates table to EMAN2 json format files per image'
@@ -28,41 +20,11 @@ def add_arguments(parser):
 
 
 def main(args):
-    dfs = []
-    for path in args.paths:
-        coords = pd.read_csv(path, sep='\t')
-        dfs.append(coords)
-    coords = pd.concat(dfs, axis=0)
-
-    coords = coords.drop_duplicates()
-    print(len(coords))
-
-    if not os.path.exists(args.destdir):
-        os.makedirs(args.destdir)
-
-    invert_y = args.invert_y
-
-    for image_name,group in coords.groupby('image_name'):
-        path = args.destdir + '/' + image_name + '_info.json'
-
-        shape = None
-        if invert_y:
-            impath = os.path.join(args.imagedir, image_name) + '.' + args.image_ext
-            # use glob incase image_ext is '*'
-            impath = glob.glob(impath)[0]
-            im = load_image(impath)
-            shape = (im.height,im.width)
-        
-        xy = group[['x_coord','y_coord']].values.astype(int)
-        boxes = coordinates_to_eman2_json(xy, shape=shape, invert_y=invert_y)
-
-        with open(path, 'w') as f:
-            json.dump({'boxes': boxes}, f, indent=0)
+    file_coordinates_to_eman2_json(args.paths, args.destdir, args.invert_y, args.imagedir, args.image_ext)
 
 
 if __name__ == '__main__':
-    import argparse
     parser = argparse.ArgumentParser(help)
-    add_arguments(parser)
+    parser = add_arguments(parser)
     args = parser.parse_args()
     main(args)

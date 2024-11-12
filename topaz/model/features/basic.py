@@ -1,28 +1,41 @@
 from __future__ import print_function, division
+from typing import List
 
 import numpy as np
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.autograd import Variable
 
 from topaz.model.utils import insize_from_outsize
 
 class BasicConv(nn.Module):
     '''A generic convolutional neural network scaffold.'''
 
-    def __init__(self, layers, units, unit_scaling=1, dropout=0, bn=True
-                , pooling=None, activation=nn.PReLU):
+    def __init__(self, layers:List[int], units:int, unit_scaling:int=1, dropout:float=0, 
+                 bn:bool=True, pooling:nn.Module=None, activation:nn.Module=nn.PReLU, dims:int=2):
         super(BasicConv, self).__init__()
 
+        if dims == 2:
+            conv = nn.Conv2d
+            max_pool = nn.MaxPool2d
+            avg_pool = nn.AvgPool2d
+            batch_norm = nn.BatchNorm2d
+        elif dims == 3:
+            conv = nn.Conv3d
+            max_pool = nn.MaxPool3d
+            avg_pool = nn.AvgPool3d
+            batch_norm = nn.BatchNorm3d
+        else:
+            raise ValueError(f'Unsupported number of dimensions: {dims}. Try dims=2 or dims=3.')
+            
         use_bias = (not bn)
         stride = 2
         if pooling == 'max':
-            pooling = nn.MaxPool2d
+            pooling = max_pool
             stride = 1
         elif pooling == 'avg':
-            pooling = nn.AvgPool2d
+            pooling = avg_pool
             stride = 1
 
         sizes = layers
@@ -31,10 +44,10 @@ class BasicConv(nn.Module):
 
         nin = 1
         for size in sizes[:-1]:
-            layers += [ nn.Conv2d(nin, units, size, stride=stride, bias=use_bias) ]
+            layers += [ conv(nin, units, size, stride=stride, bias=use_bias) ]
             strides += [stride]
             if bn:
-                layers += [ nn.BatchNorm2d(units) ]
+                layers += [ batch_norm(units) ]
                 strides += [1]
             layers += [ activation() ]
             strides += [1]
@@ -47,10 +60,10 @@ class BasicConv(nn.Module):
             units *= unit_scaling
 
         size = sizes[-1]
-        layers += [ nn.Conv2d(nin, units, size, bias=use_bias) ]
+        layers += [ conv(nin, units, size, bias=use_bias) ]
         strides += [1]
         if bn:
-            layers += [ nn.BatchNorm2d(units) ]
+            layers += [ batch_norm(units) ]
             strides += [1]
         layers += [ activation() ]
         if dropout > 0:
@@ -60,25 +73,18 @@ class BasicConv(nn.Module):
         self.strides = strides
         self.width = insize_from_outsize(layers, 1)
         self.filled = False
-
         self.features = nn.Sequential(*layers)
-
         self.latent_dim = units
+        self.dims = dims
 
-    def fill(self, stride=1):
+
+    def fill(self, stride:int=1):
         for mod,mod_stride in zip(self.features.children(), self.strides):
             if hasattr(mod, 'dilation'):
-                mod.dilation = (stride, stride)
+                mod.dilation = tuple(stride for _ in range(self.dims))
             if hasattr(mod, 'stride'):
-                mod.stride = (1,1)
-            # this is bugged in pytorch, padding size cannot be bigger than kernel despite dilation
-            #if hasattr(mod, 'padding'):
-            #    if type(mod.padding) is tuple and mod.padding[0] > 0:
-            #        mod.padding = (stride,stride)
-            #    elif type(mod.padding) is int and mod.padding > 0:
-            #        mod.padding = stride
+                mod.stride = tuple(1 for _ in range(self.dims))
             stride *= mod_stride
-        layers = list(self.features.modules())
         self.filled = True
         return stride
 
@@ -86,35 +92,29 @@ class BasicConv(nn.Module):
     def unfill(self):
         for mod,mod_stride in zip(self.features.children(), self.strides):
             if hasattr(mod, 'dilation'):
-                mod.dilation = (1,1)
+                mod.dilation = tuple(1 for _ in range(self.dims))
             if hasattr(mod, 'stride'):
-                mod.stride = (mod_stride,mod_stride)
-            #if hasattr(mod, 'padding'):
-            #    if type(mod.padding) is tuple and mod.padding[0] > 0:
-            #        mod.padding = (1,1)
-            #    elif type(mod.padding) is int and mod.padding > 0:
-            #        mod.padding = 1
+                mod.stride = tuple(mod_stride for _ in range(self.dims))
         self.filled = False
 
 
-    def forward(self, x):
-        if len(x.size()) < 4:
-            x = x.unsqueeze(1) # add channels dim
+    def forward(self, x:torch.Tensor):
+        if len(x.size()) < self.dims + 2:
+            # add channels dim, assumes batch dim is present
+            x = x.unsqueeze(1)
         if self.filled: ## add (width-1)//2 zeros to edges of x
             p = self.width//2
-            x = F.pad(x, (p,p,p,p))
+            #before and after padding for each dim
+            pads = tuple(p for _ in range(self.dims * 2))
+            x = F.pad(x, pads)
         z = self.features(x)
         return z
 
 
 class Conv127(BasicConv):
-    def __init__(self, units, **kwargs):
-        super(Conv127, self).__init__(units, [7, 5, 5, 5, 5], **kwargs)
+    def __init__(self, units:int, **kwargs):
+        super(Conv127, self).__init__([7, 5, 5, 5, 5], units, dims=2, **kwargs)
 
 class Conv63(BasicConv):
-    def __init__(self, units, **kwargs):
-        super(Conv63, self).__init__(units, [7, 5, 5, 5], **kwargs)
-
-
-
-
+    def __init__(self, units:int, **kwargs):
+        super(Conv63, self).__init__([7, 5, 5, 5], units, dims=2, **kwargs)

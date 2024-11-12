@@ -113,7 +113,7 @@ def main(args):
         else:
             try:
                 to_form = file_utils.detect_format(output_path)
-            except file_utils.UnkownFormatError as e:
+            except file_utils.UnknownFormatError as e:
                 print('Error: unrecognized output coordinates file extension ('+e.ext+')', file=sys.stderr)
                 sys.exit(1)
     if verbose > 0:

@@ -1,18 +1,14 @@
 from __future__ import print_function
 
+import argparse
+import imp
 import os
 import sys
-import json
+
 import numpy as np
-import multiprocessing as mp
-
-import torch
-import argparse
-
-from topaz.stats import normalize
-from topaz.utils.data.loader import load_image
-from topaz.utils.image import downsample, save_image
-import topaz.cuda
+from topaz.cuda import set_device
+from topaz.stats import normalize_images
+from topaz.torch import set_num_threads
 
 name = 'normalize'
 help = 'normalize a set of images using the 2-component Gaussian mixture model'
@@ -46,104 +42,23 @@ def add_arguments(parser=None):
 
     return parser
 
-class Normalize:
-    def __init__(self, dest, scale, affine, num_iters, alpha, beta
-                , sample, metadata, formats, use_cuda):
-        self.dest = dest
-        self.scale = scale
-        self.affine = affine
-        self.num_iters = num_iters
-        self.alpha = alpha
-        self.beta = beta
-        self.sample = sample
-        self.metadata = metadata
-        self.formats = formats
-        self.use_cuda = use_cuda
-
-    def __call__(self, path):
-        # load the image
-        x = np.array(load_image(path), copy=False).astype(np.float32)
-
-        if self.scale > 1:
-            x = downsample(x, self.scale)
-
-        # normalize it
-        method = 'gmm'
-        if self.affine:
-            method = 'affine'
-        x,metadata = normalize(x, alpha=self.alpha, beta=self.beta, num_iters=self.num_iters
-                              , method=method, sample=self.sample, use_cuda=self.use_cuda)
-
-        # save the image and the metadata
-        name,_ = os.path.splitext(os.path.basename(path))
-        base = os.path.join(self.dest, name)
-        for f in self.formats:
-            save_image(x, base, f=f)
-
-        if self.metadata:
-            # save the metadata in json format
-            mdpath = base + '.metadata.json'
-            if not self.affine:
-                metadata['mus'] = metadata['mus'].tolist()
-                metadata['stds'] = metadata['stds'].tolist()
-                metadata['pis'] = metadata['pis'].tolist()
-                metadata['logps'] = metadata['logps'].tolist()
-            with open(mdpath, 'w') as f:
-                json.dump(metadata, f, indent=4)
-
-        return name
-
 
 def main(args):
-    paths = args.files
-    dest = args.destdir
-    verbose = args.verbose
-
-    scale = args.scale
-    affine = args.affine
-
-    num_iters = args.niters
-    alpha = args.alpha
-    beta = args.beta
-    sample = args.sample
-
-    num_workers = args.num_workers
-    metadata = args.metadata
     formats = args.format_.split(',')
 
     # set the number of threads
-    num_threads = args.num_threads
-    from topaz.torch import set_num_threads
-    set_num_threads(num_threads)
+    set_num_threads(args.num_threads)
 
     # set CUDA device
-    use_cuda = topaz.cuda.set_device(args.device)
-    if use_cuda:
-        # when using GPU, turn off multiple processes
-        num_workers = 0
+    use_cuda = set_device(args.device)
+    # when using GPU, turn off multiple processes
+    num_workers = 0 if use_cuda else args.num_workers
 
-    if not os.path.exists(dest):
-        os.makedirs(dest)
-
-    process = Normalize(dest, scale, affine, num_iters, alpha, beta
-                       , sample, metadata, formats, use_cuda)
-
-    if num_workers > 1:
-        pool = mp.Pool(num_workers)
-        for name in pool.imap_unordered(process, paths):
-            if verbose:
-                print('# processed:', name, file=sys.stderr)
-    else:
-        for path in paths:
-            name = process(path)
-            if verbose:
-                print('# processed:', name, file=sys.stderr)
+    normalize_images(args.files, args.destdir, num_workers, args.scale, args.affine, args.niters, args.alpha, args.beta,
+                        args.sample, args.metadata, formats, use_cuda, args.verbose)
 
 
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser('Script for normalizing a list of images using 2-component Gaussian mixture model')
     parser = add_arguments()
     args = parser.parse_args()
     main(args)
-
-
