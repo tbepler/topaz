@@ -32,9 +32,9 @@ class PN:
         self.l2 = l2
         self.autoencoder = autoencoder
 
-        self.header = ['loss', 'precision', 'tpr', 'fpr']
+        self.header = ['loss', 'precision', 'adjusted_precision', 'tpr', 'fpr']
         if self.autoencoder > 0:
-            self.header = ['loss', 'recon_error', 'precision', 'tpr', 'fpr']
+            self.header = ['loss', 'recon_error', 'precision', 'adjusted_precision', 'tpr', 'fpr']
 
     def step(self, X, Y):
 
@@ -91,9 +91,9 @@ class GE_binomial:
         self.autoencoder = autoencoder
         self.posterior_L1 = posterior_L1
 
-        self.header = ['loss', 'ge_penalty', 'precision', 'tpr', 'fpr']
+        self.header = ['loss', 'ge_penalty', 'precision', 'adjusted_precision', 'tpr', 'fpr']
         if self.autoencoder > 0:
-            self.header = ['loss', 'ge_penalty', 'recon_error', 'precision', 'tpr', 'fpr']
+            self.header = ['loss', 'ge_penalty', 'recon_error', 'precision', 'adjusted_precision', 'tpr', 'fpr']
 
     def step(self, X, Y):
 
@@ -180,7 +180,7 @@ class GE_KL:
         #self.labeled_fraction = labeled_fraction
         self.entropy_penalty = entropy_penalty
 
-        self.header = ['loss', 'ge_penalty', 'precision', 'tpr', 'fpr']
+        self.header = ['loss', 'ge_penalty', 'precision', 'adjusted_precision', 'tpr', 'fpr']
 
     def step(self, X, Y):
 
@@ -267,9 +267,9 @@ class PU:
         self.beta = beta
         self.autoencoder = autoencoder
 
-        self.header = ['loss', 'precision', 'tpr', 'fpr']
+        self.header = ['loss', 'precision', 'adjusted_precision', 'tpr', 'fpr']
         if self.autoencoder > 0:
-            self.header = ['loss', 'recon_error', 'precision', 'tpr', 'fpr']
+            self.header = ['loss', 'recon_error', 'precision', 'adjusted_precision', 'tpr', 'fpr']
 
     def step(self, X, Y):
 

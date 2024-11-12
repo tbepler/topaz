@@ -248,30 +248,6 @@ def load_data(train_images_path:str, train_targets_path:str, test_images_path:st
     return train_images, train_targets, test_images, test_targets
 
 
-def report_data_stats_old(train_images, train_targets, test_images, test_targets):
-    '''Assumes data are given as torch Tensors.'''
-    report('source\tsplit\tp_observed\tnum_positive_regions\ttotal_regions')
-    num_positive_regions = 0
-    total_regions = 0
-    for i in range(len(train_images)):
-        p = sum(train_targets[i][j].sum() for j in range(len(train_targets[i])))
-        p = int(p)
-        total = sum(train_targets[i][j].numel() for j in range(len(train_targets[i])))
-        num_positive_regions += p
-        total_regions += total
-        p_observed = p/total
-        p_observed = '{:.3g}'.format(p_observed)
-        report(str(i)+'\t'+'train'+'\t'+p_observed+'\t'+str(p)+'\t'+str(total))
-        if test_targets is not None:
-            p = sum(test_targets[i][j].sum() for j in range(len(test_targets[i])))
-            p = int(p)
-            total = sum(test_targets[i][j].numel() for j in range(len(test_targets[i])))
-            p_observed = p/total
-            p_observed = '{:.3g}'.format(p_observed)
-            report(str(i)+'\t'+'test'+'\t'+p_observed+'\t'+str(p)+'\t'+str(total))
-    return num_positive_regions, total_regions
-
-
 def extract_image_stats(image_paths:List[List[str]], targets:pd.DataFrame, mode:str='train', radius:int=3, dims:int=2) -> Tuple[int,int]:
     '''Helper function for report data stats.'''
     num_positive_regions = 0
@@ -424,31 +400,6 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
     return trainer, criteria, split
 
 
-def make_data_iterators_old(train_images:List[List[Union[Image.Image,np.ndarray]]], train_targets:List[List[np.ndarray]], 
-                        test_images:List[List[Union[Image.Image,np.ndarray]]], test_targets:List[List[np.ndarray]], 
-                        crop:int, split:Literal['pn','pu'], args, dims:int=2, to_tensor=True):
-    ## training parameters
-    minibatch_size = args.minibatch_size
-    epoch_size = args.epoch_size
-    num_epochs = args.num_epochs
-    num_workers = mp.cpu_count() if args.num_workers < 0 else args.num_workers # set num workers to use all CPUs 
-    testing_batch_size = args.test_batch_size
-    balance = None if args.natural else args.minibatch_balance # ratio of positive to negative in minibatch
-    report(f'minibatch_size={minibatch_size}, epoch_size={epoch_size}, num_epochs={num_epochs}')
-
-    ## create augmented training dataset
-    train_dataset = make_traindataset(train_images, train_targets, crop, dims=dims)
-    test_dataset = SegmentedImageDataset(test_images, test_targets, to_tensor=to_tensor) if test_targets is not None else None
-
-    ## create minibatch iterators
-    labels = train_dataset.data.labels
-    sampler = StratifiedCoordinateSampler(labels, size=epoch_size*minibatch_size, balance=balance, split=split)
-    
-    train_iterator = DataLoader(train_dataset, batch_size=minibatch_size, sampler=sampler, num_workers=num_workers)
-    test_iterator = DataLoader(test_dataset, batch_size=testing_batch_size, num_workers=0) if test_dataset is not None else None
-    return train_iterator, test_iterator
-
-
 class TestingImageDataset():
     def __init__(self, images_path:str, targets:pd.DataFrame, radius:int=3, dims:int=2, use_cuda:bool=False):
         # get list of paths only (names not needed)
@@ -597,37 +548,46 @@ def evaluate_model(classifier, criteria, data_iterator, use_cuda=False):
     return loss, precision, tpr, fpr, auprc
 
 
-def fit_epoch(step_method, data_iterator, epoch=1, it=1, use_cuda=False, output=sys.stdout):
+def fit_epoch(step_method, data_iterator, est_max_prec=1.0, epoch=1, it=1, use_cuda=False, output=sys.stdout):
     for X,Y in data_iterator:
         Y = Y.view(-1)
         if use_cuda:
             X = X.cuda()
             Y = Y.cuda()
         metrics = step_method.step(X, Y)
-        line = '\t'.join([str(epoch), str(it), 'train'] + [str(metric) for metric in metrics] + ['-'])
+        metrics = list(metrics)
+        precision_index = step_method.header.index('precision')  # find the index of precision
+        precision = metrics[precision_index]  # get the precision
+        adjusted_precision = precision / est_max_prec # calculate portion of the ideal precision given pi
+        metrics.insert(precision_index + 1, adjusted_precision)  # insert after precision
+
+        line = f'{epoch}\t{it}\ttrain\t' + '\t'.join([str(metric) for metric in metrics]) + '\t-'
         print(line, file=output)
         #output.flush()
         it += 1
     return it
 
 
-def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator, num_epochs
+def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator, num_epochs, est_max_prec
               , save_prefix=None, use_cuda=False, output=sys.stdout):
     ## fit the model, report train/test stats, save model if required
-    header = step_method.header
-    line = '\t'.join(['epoch', 'iter', 'split'] + header + ['auprc'])
+    metric_list = step_method.header # loss, potentially another metric, precision, tpr, fpr
+    line = '\t'.join(['epoch', 'iter', 'split'] + metric_list + ['auprc'])
     print(line, file=output)
 
     it = 1
     for epoch in range(1,num_epochs+1):
         ## update the model
         classifier.train()
-        it = fit_epoch(step_method, train_iterator, epoch=epoch, it=it, use_cuda=use_cuda, output=output)
+        it = fit_epoch(step_method, train_iterator, est_max_prec=est_max_prec, epoch=epoch, it=it, use_cuda=use_cuda, output=output)
 
         ## measure validation performance
         if test_iterator is not None:
             loss,precision,tpr,fpr,auprc = evaluate_model(classifier, criteria, test_iterator, use_cuda=use_cuda)
-            line = '\t'.join([str(epoch), str(it), 'test', str(loss)] + ['-']*(len(header)-4) + [str(precision), str(tpr), str(fpr), str(auprc)])
+            # report proportion of ideal precision given pi
+            adjusted_precision = precision / est_max_prec
+            dashes = '\t'.join(['-'] * (len(metric_list) - 5)) # fill for training-specific metrics 
+            line = f'{epoch}\t{it}\ttest\t{loss}\t{dashes}\t{precision}\t{adjusted_precision}\t{tpr}\t{fpr}\t{auprc}'
             print(line, file=output)
             output.flush()
 
@@ -640,44 +600,6 @@ def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator,
             torch.save(classifier, path)
             if use_cuda:
                 classifier.cuda()
-
-
-def train_model_old(classifier, train_images, train_targets, test_images, test_targets, use_cuda, save_prefix, output, args, dims:int=2, to_tensor=True):
-    num_positive_regions, total_regions = report_data_stats_old(train_images, train_targets, test_images, test_targets)
-
-    ## make the training step method
-    if args.num_particles > 0:
-        num_micrographs = sum(len(images) for images in train_images)
-        # expected particles in training set rather than per micrograph
-        expected_num_particles = args.num_particles * num_micrographs
-        
-        pi = calculate_pi(expected_num_particles, args.radius, total_regions, dims)
-
-        report(f'Specified expected number of particle per micrograph = {args.num_particles}')
-        report('With radius = {}'.format(args.radius))
-        report('Setting pi = {}'.format(pi))
-    else: 
-        pi = args.pi
-        report('pi = {}'.format(pi))
-    
-    trainer, criteria, split = make_training_step_method(classifier, num_positive_regions,
-                                                         num_positive_regions/total_regions,
-                                                         lr=args.learning_rate, l2=args.l2,
-                                                         method=args.method, pi=pi, slack=args.slack,
-                                                         autoencoder=args.autoencoder)
-    
-    ## training parameters
-    report(f'minibatch_size={args.minibatch_size}, epoch_size={args.epoch_size}, num_epochs={args.num_epochs}')
-    num_workers = mp.cpu_count() if args.num_workers < 0 else args.num_workers # set num workers to use all CPUs 
-    balance = None if args.natural else args.minibatch_balance # ratio of positive to negative in minibatch
-    
-    train_iterator,test_iterator = make_data_iterators_old(train_images, train_targets, test_images, test_targets,
-                                                       classifier.width, split, args, dims=dims, to_tensor=to_tensor)
-    
-    fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs,
-               save_prefix=save_prefix, use_cuda=use_cuda, output=output)
-
-    return classifier
 
 
 def train_model(classifier, train_images_path:str, train_targets_path:str, test_images_path:str, test_targets_path:str, use_cuda:bool, 
@@ -703,6 +625,12 @@ def train_model(classifier, train_images_path:str, train_targets_path:str, test_
                                                          method=args.method, pi=pi, slack=args.slack,
                                                          autoencoder=args.autoencoder)
     
+    # estimate max precision from p_observed and pi
+    total_p_observed = num_positive_regions / total_regions
+    est_max_prec = total_p_observed / pi
+    report('Estimated max precision given pi and p_observed:', est_max_prec)
+    report('If your adjusted precision is greater than 1.0 (especially on a test split), you have likely set pi too high.')
+    
     ## training parameters
     report(f'minibatch_size={args.minibatch_size}, epoch_size={args.epoch_size}, num_epochs={args.num_epochs}')
     num_workers = mp.cpu_count() if args.num_workers < 0 else args.num_workers # set num workers to use all CPUs 
@@ -712,7 +640,7 @@ def train_model(classifier, train_images_path:str, train_targets_path:str, test_
                         test_image_path=test_images_path, test_targets_path=test_targets_path, testing_batch_size=args.test_batch_size, 
                         num_workers=0, balance=balance, dims=dims, use_cuda=use_cuda, radius=args.radius)
     
-    fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs,
+    fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs, est_max_prec,
                save_prefix=save_prefix, use_cuda=use_cuda, output=output)
 
     return classifier
