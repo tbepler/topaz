@@ -2,9 +2,9 @@ from __future__ import absolute_import, print_function, division
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
+from typing import Tuple
 
-
-def  match_coordinates(targets:np.ndarray, preds:np.ndarray, radius:float) -> tuple[np.ndarray, np.ndarray]:
+def  match_coordinates(targets:np.ndarray, preds:np.ndarray, radius:float) -> Tuple[np.ndarray, np.ndarray]:
     d2 = np.sum((preds[:,np.newaxis] - targets[np.newaxis])**2, 2)
     cost = d2 - radius*radius
     cost[cost > 0] = 0
@@ -22,7 +22,7 @@ def  match_coordinates(targets:np.ndarray, preds:np.ndarray, radius:float) -> tu
     return assignment, dist
 
 
-def non_maximum_suppression(x, r:int, threshold:float=-np.inf) -> tuple[np.ndarray, np.ndarray]:
+def non_maximum_suppression(x, r:int, threshold:float=-np.inf) -> Tuple[np.ndarray, np.ndarray]:
     ## enumerate coordinate deltas within radius/distance r
     width = r
     ii,jj = np.meshgrid(np.arange(-width,width+1), np.arange(-width,width+1))
@@ -63,7 +63,7 @@ def non_maximum_suppression(x, r:int, threshold:float=-np.inf) -> tuple[np.ndarr
     return scores[:j], coords[:j]
 
 
-def non_maximum_suppression_3d(x:np.ndarray, r:int, scale:float=1.0, threshold:float=-np.inf) -> tuple[np.ndarray, np.ndarray]:
+def non_maximum_suppression_3d(x:np.ndarray, r:int, scale:float=1.0, threshold:float=-np.inf) -> Tuple[np.ndarray, np.ndarray]:
     ## enumerate coordinate deltas within (possibly scaled) radius/distance r
     r = scale*r
     width = int(np.ceil(r))

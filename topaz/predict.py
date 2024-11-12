@@ -2,7 +2,7 @@ from __future__ import absolute_import, print_function, division
 
 import torch
 import numpy as np
-from typing import Iterator, Iterable
+from typing import Iterator, Iterable, List
 
 def batches(X:Iterable[np.ndarray], batch_size:int=1) -> Iterator[torch.Tensor]:
     batch = []
@@ -28,7 +28,7 @@ def score_stream(model:torch.nn.Module, images:Iterable[np.ndarray], use_cuda:bo
                 yield logits[i]
 
 
-def score(model:torch.nn.Module, images:Iterable[np.ndarray], use_cuda:bool=False, batch_size:int=1) -> list[np.ndarray]:
+def score(model:torch.nn.Module, images:Iterable[np.ndarray], use_cuda:bool=False, batch_size:int=1) -> List[np.ndarray]:
     scores = []
     for y in score_stream(model, images, use_cuda=use_cuda, batch_size=batch_size):
         scores.append(y)
