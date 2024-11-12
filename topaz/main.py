@@ -58,7 +58,6 @@ def main():
     parser.add_argument('--version', action='version', version=topaz.__version__)
 
     import topaz.commands.train
-    import topaz.commands.train3d
     import topaz.commands.segment
     import topaz.commands.extract
     import topaz.commands.precision_recall_curve
@@ -87,7 +86,6 @@ def main():
 
     module_groups = [('Particle picking',
                       [topaz.commands.train,
-                       topaz.commands.train3d,
                        topaz.commands.segment,
                        topaz.commands.extract,
                        topaz.commands.precision_recall_curve,
