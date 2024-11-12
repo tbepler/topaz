@@ -446,7 +446,7 @@ def denoise_stream(micrographs:List[str], output_path:str, format:str='mrc', suf
         (image, header, extended_header) = image if type(image) is tuple else (image, None, None)
 
         # process and denoise the micrograph
-        mic = denoise_image(mic, models, lowpass=lowpass, cutoff=pixel_cutoff, gaus=gaus, 
+        mic = denoise_image(image, models, lowpass=lowpass, cutoff=pixel_cutoff, gaus=gaus, 
                             inv_gaus=inv_gaus, deconvolve=deconvolve, deconv_patch=deconv_patch, 
                             patch_size=patch_size, padding=padding, normalize=normalize, use_cuda=use_cuda)
         denoised.append(mic)
