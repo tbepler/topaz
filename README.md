@@ -12,7 +12,7 @@ A pipeline for particle detection in cryo-electron microscopy images using convo
 ## New in v0.3.0
 - Major refactoring of logic out of commands for modularity
 - Refactored datasets and sampling allow larger training sets with mixed micrograph sizes
-- Particle extraction can now be performed in patches
+- Particle extraction can now be performed in patches (thanks to @jake4844 for help with this)
 - Topaz train now additionally reports adjusted_precision, as a proportion of the theoretical max precision (pi)
 - Can now read long argument lists using "@list_of_many_files.txt" in place of filenames or wildcards (thanks to [#192](https://github.com/tbepler/topaz/pull/192) from @nfrasser)
 - 3D particle-picking is in development on the dev-topaz3d branch
