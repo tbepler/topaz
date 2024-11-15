@@ -52,12 +52,13 @@ def generate_description(module_groups, linewidth=78, indent='  ', delim='  '):
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, fromfile_prefix_chars='@')
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter)
 
     import topaz
-    parser.add_argument('--version', action='version', version=topaz.__version__)
+    parser.add_argument('--version', action='version', version='TOPAZ '+topaz.__version__)
 
     import topaz.commands.train
+    import topaz.commands.train3d
     import topaz.commands.segment
     import topaz.commands.extract
     import topaz.commands.precision_recall_curve
@@ -86,6 +87,7 @@ def main():
 
     module_groups = [('Particle picking',
                       [topaz.commands.train,
+                       topaz.commands.train3d,
                        topaz.commands.segment,
                        topaz.commands.extract,
                        topaz.commands.precision_recall_curve,
