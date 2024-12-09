@@ -41,5 +41,6 @@ setup(
     #package_dir = {'': 'topaz'},
     entry_points = {'console_scripts': ['topaz = topaz.main:main']},
     include_package_data = True,
+    python_requires='>=3.8,<=3.12',
     install_requires=requirements,
 )

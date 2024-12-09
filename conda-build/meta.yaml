@@ -15,7 +15,6 @@ requirements:
     run:
         - python>=3.8,<=3.12
         - future
-        - argparse #[py26]
         - numpy>=1.11
         - pandas>=0.20.3
         - scikit-learn>=0.19.0
@@ -23,8 +22,8 @@ requirements:
         - pillow>=6.2.0
         - torch>=1.0.0
         - torchvision
-        - tqdm >=4.65.0
-        - h5py >=3.7.0
+        - tqdm>=4.65.0
+        - h5py>=3.7.0
 
 build:
     noarch: python
