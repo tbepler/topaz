@@ -1,7 +1,18 @@
+import os
+import re
 from setuptools import setup, find_packages
 
+# Read version from _version.py
+version_file = os.path.join(os.path.dirname(__file__), 'topaz', '_version.py')
+with open(version_file) as f:
+    version = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", f.read(), re.M).group(1)
+
+# Read requirements from requirements.txt
+with open('requirements.txt') as f:
+    requirements = [line.strip() for line in f if line.strip()]
+
+
 name = 'topaz-em'
-version = '0.3.1'
 
 description = 'Particle picking with positive-unlabeled CNNs'
 long_description = 'Particle picking software for single particle cryo-electron microscopy using convolutional neural networks and positive-unlabeled learning. Includes methods for micrograph denoising.'
@@ -30,17 +41,5 @@ setup(
     #package_dir = {'': 'topaz'},
     entry_points = {'console_scripts': ['topaz = topaz.main:main']},
     include_package_data = True,
-
-    install_requires=[
-        'torch>=1.0.0',
-        'torchvision',
-        'numpy>=1.11',
-        'pandas',
-        'scikit-learn>=0.19.0',
-        'scipy>=0.17.0',
-        'pillow>=6.2.0',
-        'future',
-        'tqdm',
-        'h5py'
-    ],
+    install_requires=requirements,
 )

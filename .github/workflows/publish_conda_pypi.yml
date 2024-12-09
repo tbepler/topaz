@@ -1,15 +1,27 @@
-name: PyPI Upload
+name: Conda and PyPI Upload
 
 on:
   release:
     types: [published]
 
 jobs:
-  deploy:
+  publish:
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Set up Miniconda
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        auto-update-conda: true
+
+    - name: Publish to Conda
+      uses: darnellgranberry/conda-package-publish-action@master
+      with:
+        subdir: 'conda-build'
+        anacondatoken: ${{ secrets.CONDAAPITOKEN }}
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -19,11 +31,11 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install build
-
+        
     - name: Build package
       run: python -m build
-      
-    - name: Publish package
+
+    - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@v1.12.2
       with:
         user: __token__

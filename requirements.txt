@@ -1,3 +1,4 @@
+python >= 3.8, <= 3.12
 torch >= 1.0.0
 torchvision
 tqdm >= 4.65.0
