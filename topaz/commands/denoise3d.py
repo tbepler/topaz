@@ -72,7 +72,7 @@ def main(args):
     do_train = (args.even_train_path is not None) or (args.odd_train_path is not None)
     if do_train:
         #create denoiser and send model to GPU if using cuda
-        denoiser = Denoise3D(args.arch, use_cuda)
+        denoiser = Denoise3D(args.model, use_cuda)
         
         # create paired datasets for noise2noise training
         train_data, val_data = make_tomogram_datasets(args.even_train_path, args.odd_train_path, 
@@ -85,7 +85,7 @@ def main(args):
     else: # load the saved model(s)
         out_string = '# Warning: no denoising model will be used' if args.model == 'none' else '# Loading model:'+str(args.model)
         print(out_string, file=sys.stderr)
-        denoiser = Denoise3D(args.arch, use_cuda) if args.model != 'none' else None
+        denoiser = Denoise3D(args.model, use_cuda) if args.model != 'none' else None
 
     total = len(args.volumes)
     #terminate if no tomograms given
