@@ -63,7 +63,7 @@ If you do not have the Anaconda python distribution, [please install it followin
 
 We strongly recommend installing Topaz into a separate conda environment. To create a conda environment for Topaz:
 ```
-conda create -n topaz python=3.6 # or 2.7 if you prefer python 2
+conda create -n topaz python=3.8 (3.8-3.12 are currently supported)
 source activate topaz # this changes to the topaz conda environment, 'conda activate topaz' can be used with anaconda >= 4.4 if properly configured
 # source deactivate # returns to the base conda environment
 ```
@@ -100,7 +100,7 @@ To install Topaz for Python 3.X
 pip3 install topaz-em
 ```
 
-for Python 2.7
+for Python 2.7 (deprecated)
 ```
 pip install topaz-em
 ```
