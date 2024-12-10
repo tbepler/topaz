@@ -12,7 +12,6 @@ requirements:
     build:
         - python
         - setuptools
-        - numpy>=1.11
     run:
         - python>=3.8,<=3.12
         - future
