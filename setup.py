@@ -8,7 +8,8 @@ with open(version_file) as f:
     version = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", f.read(), re.M).group(1)
 
 # Read requirements from requirements.txt
-with open('requirements.txt') as f:
+requirements_file = os.path.join(os.path.dirname(__file__), 'requirements.txt')
+with open(requirements_file) as f:
     requirements = [line.strip() for line in f if line.strip()]
 
 
