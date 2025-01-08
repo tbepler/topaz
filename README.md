@@ -75,13 +75,13 @@ To install the precompiled Topaz package and its dependencies, including pytorch
 ```
 conda install topaz fsspec -c tbepler -c pytorch
 ```
-This installs pytorch from the official channel. To install pytorch for specific cuda versions, you will need to add the 'cudatoolkit=X.X' package. E.g. to install pytorch for CUDA 9.0:
+This installs pytorch from the official channel. To install pytorch for specific cuda versions, you will need to add the 'pytorch-cuda=X.X' package. E.g. to install for CUDA 11.8:
 ```
-conda install cudatoolkit=9.0 -c pytorch
+conda install pytorch-cuda=11.8 -c pytorch -c nvidia
 ```
 or combined into a single command:
 ```
-conda install topaz fsspec cudatoolkit=9.0 -c tbepler -c pytorch
+conda install topaz fsspec pytorch-cuda=11.8 -c tbepler -c pytorch -c nvidia
 ```
 See [here](https://pytorch.org/get-started/locally/) for additional pytorch installation instructions.
 
