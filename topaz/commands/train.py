@@ -107,6 +107,9 @@ def add_arguments(parser=None):
 
 
 def main(args):
+    # hard code number of dimensions for model
+    args.dims = 2
+    
     # set the number of threads
     num_threads = args.num_threads
     from topaz.torch import set_num_threads

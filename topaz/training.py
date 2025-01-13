@@ -330,8 +330,8 @@ def make_model(args):
         classifier = load_model(flag)
         classifier.train()
     else:
-        feature_extractor = get_feature_extractor(args.model, units, dropout=dropout, bn=bn
-                                                 , unit_scaling=unit_scaling, pooling=pooling)
+        feature_extractor = get_feature_extractor(args.model, units=units, dropout=dropout, bn=bn
+                                                 , unit_scaling=unit_scaling, pooling=pooling, dims=args.dims)
         classifier = C.LinearClassifier(feature_extractor, dims=2, patch_size=args.patch_size, padding=args.patch_padding, batch_size=args.minibatch_size)
 
     ## if the method is generative, create the generative model as well
