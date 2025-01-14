@@ -16,7 +16,7 @@ def add_arguments(parser=None):
         parser = argparse.ArgumentParser(help)
 
     parser.add_argument('volumes', nargs='*', help='volumes to denoise')
-    parser.add_argument('-o', '--output', help='directory to save denoised volumes')
+    parser.add_argument('-o', '--output', default='', help='directory to save denoised volumes')
     parser.add_argument('--suffix', default='', help='add this suffix to each output file name. if no output directory is specified, denoised tomograms are written to the same location as the input with a default suffix of ".denoised" (default: none)')
 
     parser.add_argument('-m', '--model', default='unet-3d', help='use pretrained denoising model. accepts path to a previously saved model or one of the provided pretrained models. pretrained model options are: unet-3d, unet-3d-10a, unet-3d-20a (default: unet-3d)')

@@ -245,7 +245,7 @@ class GaussianNoise:
 class Denoise():
     ''' Object for micrograph denoising utilities.
     '''
-    def __init__(self, model:Union[torch.nn.Module, str], use_cuda=False):
+    def __init__(self, model:Union[torch.nn.Module, str], use_cuda=False, dims=2):
         if type(model) == torch.nn.Module or type(model) == torch.nn.Sequential:
             self.model = model
         elif type(model) == str:
@@ -258,6 +258,7 @@ class Denoise():
         if use_cuda:
             self.model = self.model.cuda()
         self.device = next(iter(self.model.parameters())).device
+        self.dims = dims
 
     
     def __call__(self, input:Union[np.ndarray, torch.Tensor]):
@@ -277,10 +278,16 @@ class Denoise():
         # convert to tensor if necessary, move to device
         input = torch.from_numpy(input) if type(input) == np.ndarray else input
         input = input.to(self.device)
-        # normalize, add singleton batch and input channel dims 
+        # normalize 
         mu, std = input.mean(), input.std()
-        input = (input - mu) / std 
-        input = input.unsqueeze(0).unsqueeze(0)
+        input = (input - mu) / std
+        
+        # add dimensions as necessary
+        if len(input.shape) == self.dims: # need channel and batch
+            input = input.unsqueeze(0).unsqueeze(0)
+        if len(input.shape) == self.dims+1:
+            input = input.unsqueeze(1) # batch dim already present
+                        
         # predict, remove extra dims
         pred = self.model(input).squeeze()
         # unnormalize
@@ -290,28 +297,29 @@ class Denoise():
 
     @torch.no_grad()
     def denoise_patches(self, x:Union[np.ndarray, torch.Tensor], patch_size:int, padding:int=128) -> np.ndarray:
-        ''' Denoise micrograph patches.
+        ''' Denoise 2D micrograph patches.
         '''
+        # convert input to tensor (avoid doing it for each patch)
         x = torch.from_numpy(x) if type(x) == np.ndarray else x
-        y = torch.zeros_like(x)
+        y = np.zeros_like(x)
 
-        for i in range(0, x.size(2), patch_size):
-            for j in range(0, x.size(3), patch_size):
+        for i in range(0, x.shape[0], patch_size):
+            for j in range(0, x.shape[1], patch_size):
                 # include padding extra pixels on either side
                 si = max(0, i - padding)
-                ei = min(x.size(2), i + patch_size + padding)
+                ei = min(x.shape[0], i + patch_size + padding)
                 sj = max(0, j - padding)
-                ej = min(x.size(3), j + patch_size + padding)
+                ej = min(x.shape[1], j + patch_size + padding)
 
-                xij = x[:,:,si:ei,sj:ej]
-                yij = self._denoise(xij) # denoise the patch
+                xij = x[...,si:ei,sj:ej]
+                yij = self._denoise(xij) # denoise the patch, np array
 
                 # match back without the padding
                 si = i - si
                 sj = j - sj
 
                 y[i:i+patch_size,j:j+patch_size] = yij[si:si+patch_size,sj:sj+patch_size]
-        y = y.squeeze().cpu().numpy()
+        y = y
         return y
 
 
@@ -344,6 +352,9 @@ class Denoise3D(Denoise):
             
             for index,x in batch_iterator:
                 x = super().denoise( (x - mu)/std ) * std + mu
+                
+                # add batch dimension if removed above
+                x = x[None,:,:,:] if len(x.shape) == 3 else x
 
                 # stitch into denoised volume
                 for b in range(len(x)):
@@ -358,7 +369,7 @@ class Denoise3D(Denoise):
 
                     count += 1
                     if verbose:
-                        print(f'# [{volume_num}/{total_volumes}] {round(count*100/total)}', file=sys.stderr, end='\r')
+                        print(f'# [{volume_num}/{total_volumes}] {round(count*100/total)}%', file=sys.stderr, end='\r')
 
             print(' '*100, file=sys.stderr, end='\r')
 
@@ -443,9 +454,10 @@ def denoise_stream(micrographs:List[str], output_path:str, format:str='mrc', suf
     count = 0
     denoised = [] 
 
-    # make the output directory if it doesn't exist
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
+    # make the output directory if it doesn't exist (and we want to create one)
+    if output_path is not None and output_path != '':
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
 
     for path in micrographs:
         name,_ = os.path.splitext(os.path.basename(path))
@@ -496,7 +508,7 @@ def denoise_tomogram(path:str, model:Denoise3D, outdir:str=None, suffix:str='', 
     tomo = gaus.apply(tomo) if gaus is not None else tomo
 
     ## save the denoised tomogram
-    if outdir is None:
+    if not outdir:
         # write denoised tomogram to same location as input, but add the suffix
         if suffix == '': # use default
             suffix = '.denoised'
@@ -524,20 +536,21 @@ def denoise_tomogram_stream(volumes:List[str], model:Denoise3D, output_path:str,
     count = 0
     denoised = [] 
 
-    # make the output directory if it doesn't exist
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
+    # make the output directory if it doesn't exist (and we want to create one)
+    if output_path is not None and output_path != '':
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
     
     # Create Gaussian filter for post-processing
     gaus = GaussianDenoise(gaus, use_cuda=use_cuda) if gaus > 0 else None
 
     for idx, path in enumerate(volumes):
         volume = denoise_tomogram(path, model, outdir=output_path, suffix=suffix, patch_size=patch_size, padding=padding, 
-                                  volume_num=idx, total_volumes=total, gaus=gaus, verbose=verbose)
+                                  volume_num=idx+1, total_volumes=total, gaus=gaus, verbose=verbose)
         denoised.append(volume)
         
         count += 1
-        print(f'# {count} of {total} completed.', file=sys.stderr, end='\r')
+        print(f'# {count} of {total} tomograms denoised.', file=sys.stderr, end='\r')
     print('', file=sys.stderr)
     
     return denoised
