@@ -50,8 +50,7 @@ def generate_description(module_groups, linewidth=78, indent='  ', delim='  '):
     return '\n'.join(description)
 
 
-def main(cmd=None):
-    '''this is main!'''
+def main():
     import argparse
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, fromfile_prefix_chars='@')
 
@@ -125,6 +124,7 @@ def main(cmd=None):
                       ]
                      ),
                     ]
+
     description = generate_description(module_groups)
     
     subparsers = parser.add_subparsers(title='commands', metavar='<command>'
@@ -142,13 +142,9 @@ def main(cmd=None):
     #subparsers.required = 'True'
     #subparsers.dest = 'command'
 
-    if cmd is None:
-        args = parser.parse_args()
-    else:
-        import shlex
-        cmd_args = shlex.split(cmd)
-        args = parser.parse_args(cmd_args)
-    print(args)
+
+    args = parser.parse_args()
+
     args.func(args)
 
 

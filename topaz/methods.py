@@ -321,3 +321,99 @@ class PU:
 
         return (loss.item(),precision,tpr,fpr)
 
+class GE_multinomial:
+    ''' implemented by Katie, Jan 2025 '''
+    def __init__(self, model, optim, criteria, pi, l2=0
+                , slack=1.0 #, labeled_fraction=0
+                , entropy_penalty=0
+                , autoencoder=0
+                , posterior_L1=0):
+        self.model = model
+        self.optim = optim
+        self.criteria = criteria  # should be nn.NLLLoss (negative log likelihood, apt for multiclass)
+        self.slack = slack
+        pi = torch.tensor((pi,), type=torch.float32) if np.isscalar(pi) else pi
+        self.pi = pi # expected frequencies of each particle type in the unlabeled region; these should not include particles from the labeled region
+        self.entropy_penalty = entropy_penalty
+        #self.labeled_fraction = labeled_fraction
+        self.l2 = l2
+        self.autoencoder = autoencoder
+        self.posterior_L1 = posterior_L1
+
+        self.header = ['loss', 'ge_penalty', 'precision', 'adjusted_precision', 'tpr', 'fpr']
+        if self.autoencoder > 0:
+            self.header = ['loss', 'ge_penalty', 'recon_error', 'precision', 'adjusted_precision', 'tpr', 'fpr']
+
+        # Katie: compute Sigma_2, the covariance matrix of class frequencies, as well as its inverse and determinant
+        self.Sigma_2 = -torch.outer(pi, pi)
+        self.Sigma_2[range(len(pi)), range(len(pi))] = pi*(1-pi)  # Binomial variance down diagonal
+        prob_neg = 1 - pi.sum()
+        self.Sigma_2_det = (torch.prod(pi)*prob_neg).item()  # torch.det(self.Sigma_2).item()
+        self.Sigma_2_inverse = 1/prob_neg * torch.ones(*self.Sigma_2.shape)  # torch.linalg.inv(self.Sigma_2)
+        self.Sigma_2_inverse[range(len(self.Sigma_2)), range(len(self.Sigma_2))] = 1/pi + 1/prob_neg
+
+    def step(self, X, Y):
+        ''' 
+        X is the batch with features
+        Y is the class indices of each particle type; the first index (0) corresponds to the unlabeled regions), similar to GE-binomial
+        '''
+        if self.autoencoder > 0:
+            recon_error, score = autoencoder_loss(self.model, X)
+        else:
+            score = self.model(X).squeeze()
+
+        ## select data in the labeled region and calculate classifier loss for predicting particle types
+        ## score is a 2darray with each row representing a vector of scores for each particle type
+
+        ## first, convert scores to probabilities
+        if score.ndim == 1:  ## special case: binomial
+            probs = torch.sigmoid(score)
+            probs = torch.column_stack((1-probs, probs))  # prepend probabilty of not getting a particle
+        else:
+            probs = F.softmax(score, -1)
+        log_probs = torch.log(probs)
+        Y = Y.to(torch.long) # make sure Y is integer index
+        select = (Y.data > 0)
+        classifier_loss = self.criteria(log_probs[select], Y[select])
+
+        ## calculate GE penalty as divergence of empirical distribution and multinomial distribution/prior
+        p_hat = probs[~select, 1:]  # discard junk column
+        Sigma = -torch.einsum('pi,pj->ij',p_hat,p_hat)/p_hat.shape[0]
+        Sigma_1[range(Sigma_1.shape[0]),range(Sigma_1.shape[1])] = (p_hat*(1-p_hat)).mean(0)
+        mu_diff = p_hat.mean(0) - self.pi
+
+        ## GE penalty is the KL divergence of two multivariate normals
+        ge_penalty = 0.5*((self.Sigma_2_inverse @ Sigma).trace() + \
+                mu_diff @ self.Sigma_2_inverse @ mu_diff - \
+                Sigma.shape[0] + \
+                torch.log(self.Sigma_2_det/torch.det(Sigma))
+        loss = classifier_loss + self.slack * ge_penalty
+
+        if self.autoencoder > 0:
+            loss += recon_error * self.autoencoder
+
+        if self.posterior_L1 > 0:
+            r_labeled = torch.mean(torch.abs(score[Y>0]))
+            r_unlabeled = torch.mean(torch.abs(score[Y==0]))
+            r = self.posterior_L1*(r_labeled*self.labeled_fraction + r_unlabeled*(1-self.labeled_fraction))
+            loss = loss + r
+
+        loss.backward()
+
+        precision = (probs[Y>0, 1:].sum()/probs[:,1:].sum()).item()
+        tpr = probs[Y>0, 1:].mean().item()
+        fpr = probs[Y == 0, 1:].mean().item()
+
+        if self.l2 > 0:
+            r = sum(torch.sum(w**2) for w in self.model.features.parameters())
+            r = r + sum(torch.sum(w**2) for w in self.model.classifier.parameters())
+            r = 0.5*self.l2*r
+            r.backward()
+
+        self.optim.step()
+        self.optim.zero_grad()
+
+        if self.autoencoder > 0:
+            return classifier_loss.item(), ge_penalty.item(), recon_error.item(), precision, tpr, fpr
+        
+        return classifier_loss.item(), ge_penalty.item(), precision, tpr, fpr
