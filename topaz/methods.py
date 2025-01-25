@@ -84,7 +84,7 @@ class GE_binomial:
         self.optim = optim
         self.criteria = criteria
         self.slack = slack
-        self.pi = pi # expectation of unlabled only - do not include labeled positives
+        self.pi = pi # expectation of unlabeled only - do not include labeled positives
         self.entropy_penalty = entropy_penalty
         #self.labeled_fraction = labeled_fraction
         self.l2 = l2
@@ -328,11 +328,12 @@ class GE_multinomial:
                 , entropy_penalty=0
                 , autoencoder=0
                 , posterior_L1=0):
+        # import pdb;pdb.set_trace()
         self.model = model
         self.optim = optim
         self.criteria = criteria  # should be nn.NLLLoss (negative log likelihood, apt for multiclass)
         self.slack = slack
-        pi = torch.tensor((pi,), type=torch.float32) if np.isscalar(pi) else pi
+        pi = torch.tensor((pi,), dtype=torch.float32) if np.isscalar(pi) else pi
         self.pi = pi # expected frequencies of each particle type in the unlabeled region; these should not include particles from the labeled region
         self.entropy_penalty = entropy_penalty
         #self.labeled_fraction = labeled_fraction
@@ -345,7 +346,7 @@ class GE_multinomial:
             self.header = ['loss', 'ge_penalty', 'recon_error', 'precision', 'adjusted_precision', 'tpr', 'fpr']
 
         # Katie: compute Sigma_2, the covariance matrix of class frequencies, as well as its inverse and determinant
-        self.Sigma_2 = -torch.outer(pi, pi)
+        self.Sigma_2 = -torch.outer(pi, pi)   # same device as pi, i.e. cpu by default
         self.Sigma_2[range(len(pi)), range(len(pi))] = pi*(1-pi)  # Binomial variance down diagonal
         prob_neg = 1 - pi.sum()
         self.Sigma_2_det = (torch.prod(pi)*prob_neg).item()  # torch.det(self.Sigma_2).item()
@@ -377,16 +378,25 @@ class GE_multinomial:
         classifier_loss = self.criteria(log_probs[select], Y[select])
 
         ## calculate GE penalty as divergence of empirical distribution and multinomial distribution/prior
-        p_hat = probs[~select, 1:]  # discard junk column
-        Sigma = -torch.einsum('pi,pj->ij',p_hat,p_hat)/p_hat.shape[0]
+        p_hat = probs[~select, 1:]  # discard junk column; this is on the correct device
+        
+        Sigma_1 = -torch.einsum('pi,pj->ij',p_hat,p_hat)/p_hat.shape[0]     # this is on the correct device
         Sigma_1[range(Sigma_1.shape[0]),range(Sigma_1.shape[1])] = (p_hat*(1-p_hat)).mean(0)
-        mu_diff = p_hat.mean(0) - self.pi
+        # import pdb;pdb.set_trace()
+        mu_diff = p_hat.mean(0).cpu() - self.pi.cpu()
 
+        # make sure everything is on the correct device
+        mu_diff = mu_diff.to(p_hat.device)
+        self.Sigma_2 = self.Sigma_2.to(p_hat.device)
+        self.Sigma_2_inverse = self.Sigma_2_inverse.to(p_hat.device)
+        self.pi = self.pi.to(p_hat.device)
+
+        
         ## GE penalty is the KL divergence of two multivariate normals
-        ge_penalty = 0.5*((self.Sigma_2_inverse @ Sigma).trace() + \
+        ge_penalty = 0.5*((self.Sigma_2_inverse @ Sigma_1).trace() + \
                 mu_diff @ self.Sigma_2_inverse @ mu_diff - \
-                Sigma.shape[0] + \
-                torch.log(self.Sigma_2_det/torch.det(Sigma))
+                Sigma_1.shape[0] + \
+                torch.log(self.Sigma_2_det/torch.det(Sigma_1)))
         loss = classifier_loss + self.slack * ge_penalty
 
         if self.autoencoder > 0:
@@ -397,6 +407,8 @@ class GE_multinomial:
             r_unlabeled = torch.mean(torch.abs(score[Y==0]))
             r = self.posterior_L1*(r_labeled*self.labeled_fraction + r_unlabeled*(1-self.labeled_fraction))
             loss = loss + r
+
+        print(loss)
 
         loss.backward()
 
@@ -410,10 +422,15 @@ class GE_multinomial:
             r = 0.5*self.l2*r
             r.backward()
 
+        # import pdb;pdb.set_trace()
+        # print(torch.mean(list(self.model.parameters())[0]))
+
         self.optim.step()
         self.optim.zero_grad()
 
         if self.autoencoder > 0:
             return classifier_loss.item(), ge_penalty.item(), recon_error.item(), precision, tpr, fpr
-        
+
+        if np.isnan(ge_penalty.detach().cpu().numpy()):
+                import pdb;pdb.set_trace()
         return classifier_loss.item(), ge_penalty.item(), precision, tpr, fpr
