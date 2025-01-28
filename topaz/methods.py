@@ -22,6 +22,15 @@ def autoencoder_loss(model, X):
 
     return recon_loss, score
 
+
+def KL_normal_normal(mu_1,sigma_1,mu_2,sigma_2_inverse,det_1,det_2):
+    mu_diff = mu_1 - mu_2
+    term_1 = (sigma_2_inverse @ sigma_1).trace()
+    term_2 = mu_diff @ sigma_2_inverse @ mu_diff
+    term_3 = torch.log(det_2/det_1)
+    kl = 0.5*(term_1 + term_2 + term_3 - len(mu_1))
+    return kl
+
 class PN:
     def __init__(self, model, optim, criteria, pi=None, l2=0
                 , autoencoder=0):
@@ -120,20 +129,48 @@ class GE_binomial:
         q_discrete = -0.5*(q_mu-count_vector)**2/(q_var + 1e-10) # add small epsilon to prevent NaN
         q_discrete = F.softmax(q_discrete, dim=0)
 
-        ## KL of w from the binomial distribution with pi
+        ## KL of w from the binomial distribution with pi  (KL of classifier given binomial/pi)
         log_binom = scipy.stats.binom.logpmf(np.arange(0,N+1),N,self.pi)
         log_binom = torch.from_numpy(log_binom).float()
         if q_var.is_cuda:
             log_binom = log_binom.cuda()
         log_binom = Variable(log_binom)
 
-        ge_penalty = -torch.sum(log_binom*q_discrete)
+        ge_penalty = -torch.sum(log_binom*q_discrete)  # cross entropy
 
-        if self.entropy_penalty > 0:
+        if self.entropy_penalty > 0:   # original code; see https://statproofbook.github.io/P/norm-dent.html
             q_entropy = 0.5*(torch.log(q_var) + np.log(2*np.pi) + 1)
             ge_penalty = ge_penalty + q_entropy*self.entropy_penalty
 
+        if self.entropy_penalty < 0:   # katie: get rid of gaussian/classifier's entropy term (if penalty=-1) -> KL-divergence!
+            q_entropy = 0.5*(torch.log(q_var) + np.log(2*np.pi) + 1)
+            ge_penalty = ge_penalty + q_entropy*self.entropy_penalty
+            
         loss = classifier_loss + self.slack*ge_penalty
+
+        ### TRY GAUSSIAN APPROX 
+        gaussian_approx = True
+        KL_only = True
+        if gaussian_approx:
+            binom_var = N*self.pi*(1-self.pi)
+
+            # get KL divergence
+            KL = KL_normal_normal(torch.tensor([q_mu], dtype=torch.float64),
+                                          torch.tensor([[q_var]], dtype=torch.float64),
+                                          torch.tensor([N*self.pi]),
+                                          torch.tensor([[1/binom_var]]),
+                                          q_var,
+                                          binom_var)
+
+            # if you want cross entropy, need to add on the entropy of the classifier's gaussian
+            xentropy = KL + 0.5 + 0.5 * np.log(2 * np.pi) + 0.5 * np.log(binom_var)
+
+            ge_penalty = KL if KL_only else xentropy
+    
+            loss = classifier_loss + self.slack*ge_penalty
+
+        ### END GAUSSIAN APPROX
+
         if self.autoencoder > 0:
             loss = loss + recon_error*self.autoencoder
 
@@ -188,8 +225,6 @@ class GE_KL:
         Y = Variable(Y)
 
         score = self.model(X).view(-1)
-
-        #print(X.size(), Y.size(), score.size(), self.model.width)
 
         select = (Y.data == 1)
         classifier_loss = self.criteria(score[select], Y[select])
@@ -328,10 +363,9 @@ class GE_multinomial:
                 , entropy_penalty=0
                 , autoencoder=0
                 , posterior_L1=0):
-        # import pdb;pdb.set_trace()
         self.model = model
         self.optim = optim
-        self.criteria = criteria  # should be nn.NLLLoss (negative log likelihood, apt for multiclass)
+        self.criteria = criteria  # should be nn.CrossEntropyLoss (categorical cross entropy, apt for multiclass)
         self.slack = slack
         pi = torch.tensor((pi,), dtype=torch.float32) if np.isscalar(pi) else pi
         self.pi = pi # expected frequencies of each particle type in the unlabeled region; these should not include particles from the labeled region
@@ -352,6 +386,7 @@ class GE_multinomial:
         self.Sigma_2_det = (torch.prod(pi)*prob_neg).item()  # torch.det(self.Sigma_2).item()
         self.Sigma_2_inverse = 1/prob_neg * torch.ones(*self.Sigma_2.shape)  # torch.linalg.inv(self.Sigma_2)
         self.Sigma_2_inverse[range(len(self.Sigma_2)), range(len(self.Sigma_2))] = 1/pi + 1/prob_neg
+        self.log_2pe = np.log(2*np.pi*np.e)/2 # for Gaussian entropy calculation
 
     def step(self, X, Y):
         ''' 
@@ -372,17 +407,18 @@ class GE_multinomial:
             probs = torch.column_stack((1-probs, probs))  # prepend probabilty of not getting a particle
         else:
             probs = F.softmax(score, -1)
-        log_probs = torch.log(probs)
+
         Y = Y.to(torch.long) # make sure Y is integer index
         select = (Y.data > 0)
-        classifier_loss = self.criteria(log_probs[select], Y[select])
+        
+        classifier_loss = self.criteria(probs[select], Y[select])
 
         ## calculate GE penalty as divergence of empirical distribution and multinomial distribution/prior
-        p_hat = probs[~select, 1:]  # discard junk column; this is on the correct device
+        p_hat = probs[~select, 1:]  # discard junk column (0th) and consider rows/regions that are unlabeled (not select)
         
         Sigma_1 = -torch.einsum('pi,pj->ij',p_hat,p_hat)/p_hat.shape[0]     # this is on the correct device
         Sigma_1[range(Sigma_1.shape[0]),range(Sigma_1.shape[1])] = (p_hat*(1-p_hat)).mean(0)
-        # import pdb;pdb.set_trace()
+        Sigma_1_det = torch.det(Sigma_1)
         mu_diff = p_hat.mean(0).cpu() - self.pi.cpu()
 
         # make sure everything is on the correct device
@@ -392,11 +428,17 @@ class GE_multinomial:
         self.pi = self.pi.to(p_hat.device)
 
         
-        ## GE penalty is the KL divergence of two multivariate normals
+        ## GE penalty is the KL divergence of two multivariate normals - https://statproofbook.github.io/P/mvn-kl.html
         ge_penalty = 0.5*((self.Sigma_2_inverse @ Sigma_1).trace() + \
                 mu_diff @ self.Sigma_2_inverse @ mu_diff - \
                 Sigma_1.shape[0] + \
                 torch.log(self.Sigma_2_det/torch.det(Sigma_1)))
+
+        x_entropy = True    # see https://statproofbook.github.io/P/mvn-dent.html
+        if x_entropy:   # include entropy of prior/multinomial (approx w/ gaussian), so sum is now cross entropy
+            entropy = p_hat.shape[1]*self.log_2pe + 0.5*torch.log(Sigma_1_det)
+            ge_penalty += entropy
+            
         loss = classifier_loss + self.slack * ge_penalty
 
         if self.autoencoder > 0:
@@ -407,23 +449,24 @@ class GE_multinomial:
             r_unlabeled = torch.mean(torch.abs(score[Y==0]))
             r = self.posterior_L1*(r_labeled*self.labeled_fraction + r_unlabeled*(1-self.labeled_fraction))
             loss = loss + r
-
-        print(loss)
-
+        torch.autograd.set_detect_anomaly(True)
         loss.backward()
+
+        # for name, param in self.model.named_parameters():
+        #     if param.grad is not None:
+        #         print(f"Gradient for {name}: {param.grad.norm()}")
+        # try gradient clipping?
+        # torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
 
         precision = (probs[Y>0, 1:].sum()/probs[:,1:].sum()).item()
         tpr = probs[Y>0, 1:].mean().item()
-        fpr = probs[Y == 0, 1:].mean().item()
+        fpr = probs[Y==0, 1:].mean().item()
 
         if self.l2 > 0:
             r = sum(torch.sum(w**2) for w in self.model.features.parameters())
             r = r + sum(torch.sum(w**2) for w in self.model.classifier.parameters())
             r = 0.5*self.l2*r
             r.backward()
-
-        # import pdb;pdb.set_trace()
-        # print(torch.mean(list(self.model.parameters())[0]))
 
         self.optim.step()
         self.optim.zero_grad()
@@ -432,5 +475,5 @@ class GE_multinomial:
             return classifier_loss.item(), ge_penalty.item(), recon_error.item(), precision, tpr, fpr
 
         if np.isnan(ge_penalty.detach().cpu().numpy()):
-                import pdb;pdb.set_trace()
+            import pdb;pdb.set_trace()
         return classifier_loss.item(), ge_penalty.item(), precision, tpr, fpr
