@@ -399,7 +399,6 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
             slack = 1
         optim = optim(classifier.parameters(), lr=lr)
         criteria = nn.CrossEntropyLoss()
-        # criteria = nn.NLLLoss()  # use negative log likelihood for multiple classes
         trainer = methods.GE_multinomial(classifier, optim, criteria, pi, l2=l2, slack=slack, autoencoder=autoencoder)
 
     else:
