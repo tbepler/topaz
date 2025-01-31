@@ -22,15 +22,6 @@ def autoencoder_loss(model, X):
 
     return recon_loss, score
 
-
-def KL_normal_normal(mu_1,sigma_1,mu_2,sigma_2_inverse,det_1,det_2):
-    mu_diff = mu_1 - mu_2
-    term_1 = (sigma_2_inverse @ sigma_1).trace()
-    term_2 = mu_diff @ sigma_2_inverse @ mu_diff
-    term_3 = torch.log(det_2/det_1)
-    kl = 0.5*(term_1 + term_2 + term_3 - len(mu_1))
-    return kl
-
 class PN:
     def __init__(self, model, optim, criteria, pi=None, l2=0
                 , autoencoder=0):
@@ -86,7 +77,7 @@ class PN:
 class GE_binomial:
     def __init__(self, model, optim, criteria, pi, l2=0
                 , slack=1.0 #, labeled_fraction=0
-                , entropy_penalty=0
+                , entropy_penalty=-1
                 , autoencoder=0
                 , posterior_L1=0):
         self.model = model
@@ -119,8 +110,8 @@ class GE_binomial:
         select = (Y.data == 0)
         N = select.sum().item()
         p_hat = torch.sigmoid(score[select])
-        q_mu = p_hat.sum()
-        q_var = torch.sum(p_hat*(1-p_hat))
+        q_mu = p_hat.sum()  # expected number of positives according to classifier in whole image
+        q_var = torch.sum(p_hat*(1-p_hat))  # linearity of variance of independent variables
 
         count_vector = torch.arange(0,N+1).float()
         count_vector = count_vector.to(q_mu.device)
@@ -132,10 +123,21 @@ class GE_binomial:
         ## KL of w from the binomial distribution with pi  (KL of classifier given binomial/pi)
         log_binom = scipy.stats.binom.logpmf(np.arange(0,N+1),N,self.pi)
         log_binom = torch.from_numpy(log_binom).float()
+
+        # ## GAUSSIAN APPROX?
+        # gaussian_approx = False
+        # KL_only = True
+        # if gaussian_approx:
+        #     # Gaussian log PDF approximation
+        #     log_gauss = scipy.stats.norm.logpdf(np.arange(0, N + 1), loc=N*self.pi, scale=np.sqrt(N * self.pi * (1 - self.pi)))
+        #     log_binom = torch.from_numpy(log_gauss).float()
+        #####
         if q_var.is_cuda:
             log_binom = log_binom.cuda()
         log_binom = Variable(log_binom)
 
+
+        # import pdb;pdb.set_trace()
         ge_penalty = -torch.sum(log_binom*q_discrete)  # cross entropy
 
         if self.entropy_penalty > 0:   # original code; see https://statproofbook.github.io/P/norm-dent.html
@@ -148,19 +150,35 @@ class GE_binomial:
             
         loss = classifier_loss + self.slack*ge_penalty
 
-        ### TRY GAUSSIAN APPROX 
-        gaussian_approx = True
-        KL_only = True
+        ### TRY GAUSSIAN APPROX CLOSED FORM - seems to suck???
+        gaussian_approx = False
+        KL_only = False
         if gaussian_approx:
+            # import pdb;pdb.set_trace()
             binom_var = N*self.pi*(1-self.pi)
 
-            # get KL divergence
+            def KL_normal_normal(mu_1,sigma_1,mu_2,sigma_2_inverse,det_1,det_2):
+                mu_diff = mu_1 - mu_2
+                term_1 = (sigma_2_inverse @ sigma_1).trace()
+                term_2 = mu_diff @ sigma_2_inverse @ mu_diff
+                term_3 = torch.log(det_2/det_1)
+                kl = 0.5*(term_1 + term_2 + term_3 - len(mu_1))
+                return kl
+
+            # compute KL divergence of classifier's gaussian from binomial prior (approximated as gaussian)
             KL = KL_normal_normal(torch.tensor([q_mu], dtype=torch.float64),
                                           torch.tensor([[q_var]], dtype=torch.float64),
                                           torch.tensor([N*self.pi]),
                                           torch.tensor([[1/binom_var]]),
                                           q_var,
                                           binom_var)
+            # import pdb;pdb.set_trace()
+            mu_1 = q_mu.cpu().detach().numpy()   # classifier dist
+            mu_2 = N*self.pi  # prior
+            sigma_1 = np.sqrt(q_var.cpu().detach().numpy())
+            sigma_2 = np.sqrt(N*self.pi*(1-self.pi))
+            KL = 0.5*(  (mu_1-mu_2)**2/sigma_2**2 + (sigma_1/sigma_2)**2 - np.log((sigma_1/sigma_2)**2 + 1e-8) - 1)
+            
 
             # if you want cross entropy, need to add on the entropy of the classifier's gaussian
             xentropy = KL + 0.5 + 0.5 * np.log(2 * np.pi) + 0.5 * np.log(binom_var)
@@ -168,8 +186,6 @@ class GE_binomial:
             ge_penalty = KL if KL_only else xentropy
     
             loss = classifier_loss + self.slack*ge_penalty
-
-        ### END GAUSSIAN APPROX
 
         if self.autoencoder > 0:
             loss = loss + recon_error*self.autoencoder
@@ -180,6 +196,7 @@ class GE_binomial:
             r = self.posterior_L1*(r_labeled*self.labeled_fraction + r_unlabeled*(1-self.labeled_fraction))
             loss = loss + r
 
+        print(loss)
         loss.backward()
 
         p_hat = torch.sigmoid(score)
@@ -198,8 +215,14 @@ class GE_binomial:
 
         if self.autoencoder > 0:
             return classifier_loss.item(), ge_penalty.item(), recon_error.item(), precision, tpr, fpr
+
+        # print(f'tpr, fpr: {tpr, fpr}')
         
-        return classifier_loss.item(), ge_penalty.item(), precision, tpr, fpr
+        #return classifier_loss.item(), ge_penalty.item(), precision, tpr, fpr
+
+        # JUST FOR THE SAKE OF SEEING LOSS/ENTROPY/KL
+        return classifier_loss.item(), ge_penalty.item(), 0.5*(torch.log(q_var) + np.log(2*np.pi) + 1), \
+                ge_penalty.item() - 0.5*(torch.log(q_var) + np.log(2*np.pi) + 1)   # KL here; entropy before
 
 
 class GE_KL:
@@ -428,7 +451,7 @@ class GE_multinomial:
         self.pi = self.pi.to(p_hat.device)
 
         
-        ## GE penalty is the KL divergence of two multivariate normals - https://statproofbook.github.io/P/mvn-kl.html
+        ## KL divergence of two multivariate normals - https://statproofbook.github.io/P/mvn-kl.html
         ge_penalty = 0.5*((self.Sigma_2_inverse @ Sigma_1).trace() + \
                 mu_diff @ self.Sigma_2_inverse @ mu_diff - \
                 Sigma_1.shape[0] + \
@@ -449,12 +472,9 @@ class GE_multinomial:
             r_unlabeled = torch.mean(torch.abs(score[Y==0]))
             r = self.posterior_L1*(r_labeled*self.labeled_fraction + r_unlabeled*(1-self.labeled_fraction))
             loss = loss + r
-        torch.autograd.set_detect_anomaly(True)
+        torch.autograd.set_detect_anomaly(True)   # break if any NaNs arise
         loss.backward()
 
-        # for name, param in self.model.named_parameters():
-        #     if param.grad is not None:
-        #         print(f"Gradient for {name}: {param.grad.norm()}")
         # try gradient clipping?
         # torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
 
