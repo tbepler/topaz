@@ -61,7 +61,7 @@ def add_arguments(parser=None):
     # training parameters
     training.add_argument('-r', '--radius', default=3, type=int, help='pixel radius around particle centers to consider positive (default: 3)')
 
-    methods = ['PN', 'GE-KL', 'GE-binomial', 'PU']
+    methods = ['PN', 'GE-KL', 'GE-binomial', 'PU', 'GE-multinomial']
     training.add_argument('--method', choices=methods, default='GE-binomial', help='objective function to use for learning the region classifier (default: GE-binomial)')
     training.add_argument('--slack', default=-1, type=float, help='weight on GE penalty (default: 10 for GE-KL, 1 for GE-binomial)')
 

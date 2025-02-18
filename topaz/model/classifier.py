@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 class LinearClassifier(nn.Module):
     '''A simple convolutional layer without non-linear activation.'''
 
-    def __init__(self, features, dims=2, patch_size:int=None, padding:int=None, batch_size:int=1):
+    def __init__(self, features, dims=2, num_classes=1, patch_size:int=None, padding:int=None, batch_size:int=1):
         '''
         Args:
             features (:obj:): the sizes associated with the layer
@@ -26,7 +26,7 @@ class LinearClassifier(nn.Module):
         self.features = features
         self.dims = dims
         conv = nn.Conv3d if dims == 3 else nn.Conv2d
-        self.classifier = conv(features.latent_dim, 1, 1)
+        self.classifier = conv(features.latent_dim, num_classes, 1)
         self.patch_size = patch_size
         self.padding = padding
         self.batch_size = batch_size

@@ -359,9 +359,9 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
     # but during training, we iterate over unlabeled data with labeled positives removed
     # therefore, we expected the fraction of positives in the unlabeled data
     # to be pi - fraction of labeled positives
-    # if we are using the 'GE-KL' or 'GE-binomial' loss functions
+    # if we are using the 'GE-KL' or 'GE-binomial' or 'GE-multinomial' loss functions
     p_observed = positive_fraction
-    if pi <= p_observed and method in ['GE-KL', 'GE-binomial']:
+    if pi <= p_observed and method in ['GE-KL', 'GE-binomial', 'GE-multinomial']:
         # if pi <= p_observed, then we think the unlabeled data is all negatives
         # report this to the user and switch method to 'PN' if it isn't already
         print(f'WARNING: pi={pi} but the observed fraction of positives is {p_observed} and method is set to {method}.', file=sys.stderr) 
@@ -369,7 +369,7 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
         print(f'WARNING: if you meant to use {method}, please set pi > {p_observed}.', file=sys.stderr)
         pi = p_observed
         method = 'PN'
-    elif method in ['GE-KL', 'GE-binomial']:
+    elif method in ['GE-KL', 'GE-binomial', 'GE-multinomial']:
         pi = pi - p_observed
 
     split = 'pn'
@@ -393,6 +393,13 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
         split = 'pu'
         optim = optim(classifier.parameters(), lr=lr)
         trainer = methods.PU(classifier, optim, criteria, pi, l2=l2, autoencoder=autoencoder)
+
+    elif method == 'GE-multinomial':
+        if slack < 0:
+            slack = 1
+        optim = optim(classifier.parameters(), lr=lr)
+        criteria = nn.CrossEntropyLoss()
+        trainer = methods.GE_multinomial(classifier, optim, criteria, pi, l2=l2, slack=slack, autoencoder=autoencoder)
 
     else:
         raise Exception('Invalid method: ' + method)
