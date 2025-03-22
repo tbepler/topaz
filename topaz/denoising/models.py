@@ -635,7 +635,7 @@ def save_model(model, epoch, save_prefix, digits=3):
     torch.save(model, path)
 
 
-def __epoch(model, dataloader, loss_fn, optim, train=True, use_cuda=False) -> float:
+def __epoch(model, dataloader, loss_fn, optim, train=True, use_cuda=False, dims:int=2) -> float:
     #set train or evaluate mode
     model.train(train)
     
@@ -647,10 +647,10 @@ def __epoch(model, dataloader, loss_fn, optim, train=True, use_cuda=False) -> fl
             source = source.cuda()
             target = target.cuda()
 
-        # set input_channels to 1 (BW imgs) for Conv layers
-        source = source.unsqueeze(1)
-        pred = model(source).squeeze(1)
-
+        if dims==2: # add batch,channel dimensions for 2D (3D loader handles)
+            source = source.unsqueeze(1)
+            target = target.unsqueeze(1)
+        pred = model(source)
         loss = loss_fn(pred, target)
         
         if train:
@@ -670,7 +670,7 @@ def __epoch(model, dataloader, loss_fn, optim, train=True, use_cuda=False) -> fl
 
 
 def train_model(model, train_dataset, val_dataset, loss_fn:str='L2', optim:str='adam', lr:float=0.001, weight_decay:float=0, batch_size:int=10, num_epochs:int=500, 
-                shuffle:bool=True, use_cuda:bool=False, num_workers:int=1, verbose:bool=True, save_best:bool=False, save_interval:int=None, save_prefix:str=None):
+                shuffle:bool=True, use_cuda:bool=False, num_workers:int=1, verbose:bool=True, save_best:bool=False, save_interval:int=None, save_prefix:str=None, dims:int=2):
     
     output = sys.stdout
     log = sys.stderr
@@ -730,9 +730,9 @@ def train_model(model, train_dataset, val_dataset, loss_fn:str='L2', optim:str='
         if gamma is not None:
             loss_fn.gamma = 2 - (epoch-1)*2/num_epochs
         
-        train_loss = __epoch(model, train_data, loss_fn, train=True, use_cuda=use_cuda)
+        train_loss = __epoch(model, train_data, loss_fn, optim, train=True, use_cuda=use_cuda, dims=dims)
         with torch.no_grad():
-            val_loss = __epoch(model, val_data, loss_fn, optim, train=False, use_cuda=use_cuda)
+            val_loss = __epoch(model, val_data, loss_fn, optim, train=False, use_cuda=use_cuda, dims=dims)
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 if save_best and save_prefix is not None:

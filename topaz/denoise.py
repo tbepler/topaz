@@ -259,7 +259,7 @@ class Denoise():
             self.model = self.model.cuda()
         self.device = next(iter(self.model.parameters())).device
         self.dims = dims
-
+        self.use_cuda = use_cuda
     
     def __call__(self, input:Union[np.ndarray, torch.Tensor]):
         self._denoise(input)
@@ -267,7 +267,8 @@ class Denoise():
     
     def train(self, train_dataset:DenoiseDataset, val_dataset:DenoiseDataset, loss_fn:str='L2', optim:str='adam', lr:float=0.001, weight_decay:float=0, batch_size:int=10, num_epochs:int=500, 
                         shuffle:bool=True, num_workers:int=1, verbose:bool=True, save_best:bool=False, save_interval:int=None, save_prefix:str=None) -> None:
-        train_model(self.model, train_dataset, val_dataset, loss_fn, optim, lr, weight_decay, batch_size, num_epochs, shuffle, self.use_cuda, num_workers, verbose, save_best, save_interval, save_prefix)
+        train_model(self.model, train_dataset, val_dataset, loss_fn, optim, lr, weight_decay, batch_size, num_epochs, shuffle, self.use_cuda, num_workers, verbose, save_best, save_interval, 
+                    save_prefix, dims=self.dims)
 
     
     @torch.no_grad()        

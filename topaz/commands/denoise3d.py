@@ -72,8 +72,7 @@ def main(args):
     do_train = (args.even_train_path is not None) or (args.odd_train_path is not None)
     if do_train:
         #create denoiser and send model to GPU if using cuda
-        denoiser = Denoise3D(args.model, use_cuda)
-        
+        denoiser = Denoise3D(args.model, use_cuda=use_cuda, dims=3)
         # create paired datasets for noise2noise training
         train_data, val_data = make_tomogram_datasets(args.even_train_path, args.odd_train_path, 
                                                       args.patch_size, args.N_train, args.N_test)

@@ -32,10 +32,11 @@ def add_arguments(parser=None):
     parser.add_argument('--stack', action='store_true', help='denoise a MRC stack rather than list of micorgraphs')
 
     parser.add_argument('--save-prefix', help='path prefix to save denoising model')
+    parser.add_argument('--save-interval', default=10, type=int, help='save frequency in epochs (default: 10)')
     parser.add_argument('-m', '--model', nargs='+', default=['unet'], help='use pretrained denoising model(s). can accept arguments for multiple models the outputs of which will be averaged. pretrained model options are: unet, unet-small, fcnn, affine. to use older unet version specify unet-v0.2.1 (default: unet)')
 
-    parser.add_argument('-a', '--dir-a', nargs='+', help='directory of training images part A')
-    parser.add_argument('-b', '--dir-b', nargs='+', help='directory of training images part B')
+    parser.add_argument('-a', '--dir-a', help='directory of training images part A')
+    parser.add_argument('-b', '--dir-b', help='directory of training images part B')
     parser.add_argument('--hdf', help='path to HDF5 file containing training image stack as an alternative to dirA/dirB')
     parser.add_argument('--preload', action='store_true', help='preload micrographs into RAM')
     parser.add_argument('--holdout', type=float, default=0.1, help='fraction of training micrograph pairs to holdout for validation (default: 0.1)')
@@ -84,7 +85,7 @@ def main(args):
     do_train = (args.dir_a is not None and args.dir_b is not None) or (args.hdf is not None)
     if do_train:
         #create denoiser and send model to GPU if using cuda
-        denoiser = Denoise(args.arch, use_cuda)
+        denoiser = Denoise(args.arch, use_cuda, dims=2)
         
         # create paired datasets for noise2noise training
         if args.hdf is None: #use dirA/dirB
