@@ -6,7 +6,7 @@ package:
 
 source:
     git_url: https://github.com/tbepler/topaz.git
-    git_tag: v0.3.7 # Update to the latest release tag
+    git_tag: v0.3.8 # Update to the latest release tag
 
 requirements:
     build:
