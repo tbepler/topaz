@@ -50,15 +50,15 @@ def train_test_split_micrographs(seed, n, path, format, image_dir, file_ext):
 
     paths_train = []
     for image_name in image_names_train:
-        path = get_image_path(image_name, root, ext)
-        if path is not None:
-            paths_train.append(path)
+        image_path = get_image_path(image_name, root, ext)
+        if image_path is not None:
+            paths_train.append(image_path)
 
     paths_test = []
     for image_name in image_names_test:
-        path = get_image_path(image_name, root, ext)
-        if path is not None:
-            paths_test.append(path)
+        image_path = get_image_path(image_name, root, ext)
+        if image_path is not None:
+            paths_test.append(image_path)
 
     image_list_train = pd.DataFrame({'image_name': image_names_train, 'path': paths_train})
     image_list_test = pd.DataFrame({'image_name': image_names_test, 'path': paths_test})
@@ -66,6 +66,7 @@ def train_test_split_micrographs(seed, n, path, format, image_dir, file_ext):
 
     ## write the files to the same location as the original labels
     root = os.path.dirname(path)
+    root = '.' if root == '' else root
     basename = os.path.splitext(path)[0]
 
         ## write the split targets table
