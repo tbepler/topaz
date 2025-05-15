@@ -250,7 +250,7 @@ def score_images(model:Union[torch.nn.Module, str], paths:Union[List[str], Itera
             
             yield path, scores            
     else:
-        # TODO: scoring without model? check if 2d and use pretrained
+        # if images are already scored (segmented), load score arrays as "images"
         for path in paths:
             image = load_image(path, make_image=False, return_header=False)
             yield path, image
