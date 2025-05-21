@@ -228,6 +228,9 @@ def write(f, array, header=None, extended_header=b'', ax=1, ay=1, az=1, alpha=0,
                             0, # nlabl
                             b'\x00'*800, # labels
                           )
+    else: # make sure header matches float32
+        header = header._replace(mode=2)
+        
     ## write the header
     buf = header_struct.pack(*list(header))
     f.write(buf)
