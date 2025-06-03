@@ -587,7 +587,8 @@ def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator,
             # report proportion of ideal precision given pi
             adjusted_precision = precision / est_max_prec
             dashes = '\t'.join(['-'] * (len(metric_list) - 5)) # fill for training-specific metrics 
-            line = f'{epoch}\t{it}\ttest\t{loss}\t{dashes}\t{precision}\t{adjusted_precision}\t{tpr}\t{fpr}\t{auprc}'
+            dashes = '\t' + dashes + '\t' if len(dashes) > 0 else '\t' # return 1 tab if dashes is empty (i.e. no training-specific metrics)
+            line = f'{epoch}\t{it}\ttest\t{loss}{dashes}{precision}\t{adjusted_precision}\t{tpr}\t{fpr}\t{auprc}'
             print(line, file=output)
             output.flush()
 
