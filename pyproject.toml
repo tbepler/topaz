@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "topaz-em"
+description = "Particle picking with positive-unlabeled CNNs"
+readme = "README.md"
+requires-python = ">=3.8,<=3.12"
+license = { text = "GPLv3" }
+authors = [
+  { name = "Tristan Bepler", email = "tbepler@mit.edu" }
+]
+keywords = ["cryoEM", "particle-picking", "CNN", "positive-unlabeled", "denoise", "topaz"]
+classifiers = [
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12"
+]
+
+# These fields are filled dynamically from files
+dynamic = ["version", "dependencies"]
+
+[project.urls]
+Homepage = "https://github.com/tbepler/topaz"
+
+[project.scripts]
+topaz = "topaz.main:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "topaz.__version__"}
+dependencies = { file = "requirements.txt" }
+
+[tool.setuptools.packages.find]
+include = ["topaz*"]
