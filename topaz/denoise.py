@@ -442,7 +442,7 @@ def denoise_stack(path:str, output_path:str, models:List[Denoise], lowpass:float
     # write the denoised stack
     print('# writing to', output_path, file=sys.stderr)
     with open(output_path, 'wb') as f:
-        mrc.write(f, denoised, header=header, extender_header=extended_header)
+        mrc.write(f, denoised, header=header, extended_header=extended_header)
     
     return denoised
 
