@@ -4,7 +4,7 @@ from __future__ import division, print_function
 import argparse
 import sys
 
-from topaz.cuda import set_device
+import torch
 from topaz.denoise import Denoise3D, denoise_tomogram_stream
 from topaz.denoising.datasets import make_tomogram_datasets
 
@@ -58,6 +58,32 @@ def add_arguments(parser=None):
     return parser
 
 
+# use DataParallel to denoise with multiple GPUs
+def set_device(device, log=sys.stderr):
+    # set the device or devices
+    d = device
+    use_cuda = (d != -1) and torch.cuda.is_available()
+    num_devices = 1
+    if use_cuda:
+        device_count = torch.cuda.device_count()
+        try:
+            if d >= 0:
+                assert d < device_count
+                torch.cuda.set_device(d)
+                print('# using CUDA device:', d, file=log)
+            elif d == -2:
+                print('# using all available CUDA devices:', device_count, file=log)
+                num_devices = device_count
+            else:
+                raise ValueError
+        except (AssertionError, ValueError):
+            print('ERROR: Invalid device id or format', file=log)
+            sys.exit(1)
+        except Exception:
+            print('ERROR: Something went wrong with setting the compute device', file=log)
+            sys.exit(2)
+    return use_cuda, num_devices
+
 
 def main(args):
     # set the number of threads
@@ -66,13 +92,16 @@ def main(args):
     set_num_threads(num_threads)
 
     ## set the device
-    use_cuda = set_device(args.device)
+    use_cuda, num_devices = set_device(args.device)
     print(f'# using device={args.device} with cuda={use_cuda}', file=sys.stderr)
     
     do_train = (args.even_train_path is not None) or (args.odd_train_path is not None)
     if do_train:
         #create denoiser and send model to GPU if using cuda
         denoiser = Denoise3D(args.model, use_cuda=use_cuda, dims=3)
+        if args.device == -2: # multi-GPU
+            denoiser.model = torch.nn.DataParallel(denoiser.model)
+        
         # create paired datasets for noise2noise training
         train_data, val_data = make_tomogram_datasets(args.even_train_path, args.odd_train_path, 
                                                       args.patch_size, args.N_train, args.N_test)
@@ -85,6 +114,8 @@ def main(args):
         out_string = '# Warning: no denoising model will be used' if args.model == 'none' else '# Loading model:'+str(args.model)
         print(out_string, file=sys.stderr)
         denoiser = Denoise3D(args.model, use_cuda, dims=3) if args.model != 'none' else None
+        if args.device == -2: # multi-GPU
+            denoiser.model = torch.nn.DataParallel(denoiser.model)
 
     total = len(args.volumes)
     #terminate if no tomograms given
