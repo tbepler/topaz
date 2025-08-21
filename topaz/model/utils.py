@@ -9,6 +9,33 @@ from PIL import Image
 from topaz.utils.data.loader import load_image
 
 
+def load_state_dict_from_pkg(pkg: str, path: str, map_location="cpu"):
+    """
+    Load a torch state_dict from a packaged resource.
+
+    Args:
+        pkg (str): Package name, e.g. topaz.__name__ or __name__.
+        path (str): Path inside the package, e.g. 'pretrained/detector/model.pth'.
+        map_location: Passed to torch.load (default: 'cpu').
+
+    Returns:
+        dict: state_dict suitable for model.load_state_dict().
+    """
+    try:
+        # Preferred modern API
+        import importlib.resources as ir
+        with ir.files(pkg).joinpath(path).open("rb") as f:
+            return torch.load(f, map_location=map_location)
+    except Exception:
+        # Fallback to legacy pkg_resources
+        try:
+            import pkg_resources
+            with pkg_resources.resource_stream(pkg, path) as f:
+                return torch.load(f, map_location=map_location)
+        except Exception as e:
+            raise RuntimeError(f"Could not load resource {pkg}/{path}") from e
+
+
 def insize_from_outsize(layers, outsize):
     """ calculates in input size of a convolution stack given the layers and output size """
     for layer in layers[::-1]:
