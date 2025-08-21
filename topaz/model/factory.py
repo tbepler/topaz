@@ -55,12 +55,9 @@ def load_model(path):
         return model
 
     # load the pretrained model
-    import pkg_resources
     pkg = topaz.__name__
-    path = 'pretrained/detector/' + name
-    f = pkg_resources.resource_stream(pkg, path)
-
-    state_dict = torch.load(f)
+    path = f'pretrained/detector/{name}'
+    state_dict = load_state_dict_from_pkg(pkg, path)
     model.load_state_dict(state_dict)
 
     return model
