@@ -6,13 +6,12 @@ import time
 from collections import OrderedDict
 
 import numpy as np
-import pkg_resources
 import torch
 from torch import nn
 import torch.nn.functional as F
-from topaz.filters import AffineDenoise
 from torch.utils.data import DataLoader
-
+from topaz.filters import AffineDenoise
+from topaz.model.utils import load_state_dict_from_pkg
 
 class L0Loss:
     def __init__(self, eps=1e-8, gamma=2):
@@ -614,9 +613,8 @@ def load_model(name, base_kernel_width=11):
     if pretrained:
         print('# loading pretrained model:', name, file=log)
         pkg = __name__
-        path = '../pretrained/denoise/' + name
-        f = pkg_resources.resource_stream(pkg, path)
-        state_dict = torch.load(f) # load the parameters
+        path = f'../pretrained/denoise/{name}'
+        state_dict = load_state_dict_from_pkg(pkg, path)
         model.load_state_dict(state_dict)
     elif type(model) is OrderedDict and '3d' in name:
         state = model
