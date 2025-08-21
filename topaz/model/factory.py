@@ -6,6 +6,7 @@ import topaz
 from topaz.model.features.basic import BasicConv
 from topaz.model.features.resnet import ResNet16, ResNet8, ResNet6
 from topaz.model.classifier import LinearClassifier
+from topaz.model.utils import load_state_dict_from_pkg
 
 resnet16 = ResNet16
 resnet8 = ResNet8
