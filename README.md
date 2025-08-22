@@ -101,10 +101,6 @@ To install Topaz for Python 3.X
 pip3 install topaz-em
 ```
 
-for Python 2.7 (deprecated)
-```
-pip install topaz-em
-```
 See [here](https://pytorch.org/get-started/locally/) for additional pytorch installation instructions, including how to install pytorch for specific CUDA versions.
 
 That's it! Topaz is now installed through pip.
@@ -179,7 +175,7 @@ See https://conda.io/docs/user-guide/tasks/manage-environments.html or https://v
 
 #### Install the dependencies 
 
-Tested with python 3.6 and 2.7
+Tested with python 3.8-3.12
 
 - pytorch (>= 1.0.0)
 - torchvision

@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "topaz-em"
 description = "Particle picking with positive-unlabeled CNNs"
 readme = "README.md"
-requires-python = ">=3.8,<=3.12"
+requires-python = ">=3.8,<=3.13"
 license = { text = "GPLv3" }
 authors = [
   { name = "Tristan Bepler", email = "tbepler@mit.edu" }
