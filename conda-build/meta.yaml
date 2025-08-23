@@ -8,6 +8,11 @@ source:
     git_url: https://github.com/tbepler/topaz.git
     git_tag: v0.3.11 # Update to the latest release tag
 
+channels:
+  - conda-forge
+  - defaults
+channel_priority: strict
+
 requirements:
     build:
         - python
@@ -28,7 +33,7 @@ requirements:
 build:
     noarch: python
     number: 0
-    script: "{{ PYTHON }} setup.py install --single-version-externally-managed --record=record.txt"
+    script: "{{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv"
 
 
 about:
