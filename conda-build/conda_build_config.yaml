@@ -1,4 +1,8 @@
-name: conda-publish-env
+name: conda-build-env
+
+python:
+  - 3.11
+
 dependencies: 
   - python
   - setuptools
