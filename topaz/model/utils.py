@@ -25,13 +25,13 @@ def load_state_dict_from_pkg(pkg: str, path: str, map_location="cpu"):
         # Preferred modern API
         import importlib.resources as ir
         with ir.files(pkg).joinpath(path).open("rb") as f:
-            return torch.load(f, map_location=map_location)
+            return torch.load(f, map_location=map_location, weights_only=False)
     except Exception:
         # Fallback to legacy pkg_resources
         try:
             import pkg_resources
             with pkg_resources.resource_stream(pkg, path) as f:
-                return torch.load(f, map_location=map_location)
+                return torch.load(f, map_location=map_location, weights_only=False)
         except Exception as e:
             raise RuntimeError(f"Could not load resource {pkg}/{path}") from e
 

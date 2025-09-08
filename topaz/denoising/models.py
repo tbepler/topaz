@@ -607,7 +607,7 @@ def load_model(name, base_kernel_width=11):
         model = UDenoiseNet3D(base_width=7)
     else:
         # if not set to a pretrained model, try loading path directly
-        model = torch.load(name)
+        model = torch.load(name, weights_only=False)
 
     # load model parameters/state
     if pretrained:

@@ -299,7 +299,7 @@ def make_model(args):
     '''Load or create 2D models.'''
     report('Loading model:', args.model)
     if args.model.endswith('.sav'): # loading pretrained model
-        model = torch.load(args.model)
+        model = torch.load(args.model, weights_only=False)
         model.train()
         return model
 
