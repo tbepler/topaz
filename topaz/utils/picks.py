@@ -97,7 +97,7 @@ def create_particle_stack(input_file:str, output_file:str, threshold:float, size
             print('#', image_name, len(coords), 'particles', file=sys.stderr)
 
             # load the micrograph
-            image_name = image_name + image_ext
+            image_name = str(image_name) + image_ext
             path = os.path.join(image_root, image_name) 
             with open(path, 'rb') as fm:
                 content = fm.read()
