@@ -60,7 +60,7 @@ def segment_images(model, paths:List[str], output_dir:str, use_cuda:bool, verbos
             if patch_size is not None:
                 # patches move on and off GPU as processed, returns numpy array
                 # use half of receptive field as padding
-                score = predict_in_patches(model, X, patch_size=patch_size*2, patch_padding=model.width//2, is_3d=is_3d, use_cuda= use_cuda)
+                score = predict_in_patches(model, X, patch_size=patch_size*2, is_3d=is_3d, use_cuda= use_cuda)
             else:
                 if use_cuda:
                     X = X.cuda()
@@ -80,22 +80,34 @@ def segment_images(model, paths:List[str], output_dir:str, use_cuda:bool, verbos
 
 
 
-def predict_in_patches(model, X, patch_size, is_3d=False, use_cuda=False):
+def predict_in_patches(model, X, patch_size, is_3d=False, use_cuda=False, rotate=False):
     ''' Predict on an image in patches and reassemble the image. Assumes batch and channel dimensions are present. '''
     # use half of receptive field as padding
     patch_padding = model.width//2
     
     # Split image into smaller patches
     patches = get_patches(X, patch_size, patch_padding=patch_padding, is_3d=is_3d)
+    
+    # can augment the patches with rotations and average predictions
+    rotation_range = 4 if rotate else 1
+    
     # Predict on the patches
     scores = []
     for patch in patches:
         with torch.no_grad():
-            patch = patch.cuda() if use_cuda else patch # send only patch to GPU
-            score = model(patch).data[0,0].cpu().numpy()
-            score = score[..., patch_padding:-patch_padding, patch_padding:-patch_padding]
-            if is_3d:
-                score = score[..., patch_padding:-patch_padding, :, :]
+            patch_predictions = []
+            for k in range(rotation_range):
+                rotated_patch = torch.rot90(patch, k, dims=(-2,-1)) # rotate the patch
+                rotated_patch = rotated_patch.cuda() if use_cuda else rotated_patch # send to GPU
+                score = model(rotated_patch).detach()[0,0]
+                score = torch.rot90(score, -k, dims=(-2,-1)).cpu() # rotate back, return to CPU
+                score = score[..., patch_padding:-patch_padding, patch_padding:-patch_padding]
+                if is_3d:
+                    score = score[..., patch_padding:-patch_padding, :, :]
+                patch_predictions.append(score)
+            # average the predictions
+            score = torch.stack(patch_predictions).mean(dim=0)
+            score = score.numpy()
         scores.append(score)
 
     # Reassemble the image
