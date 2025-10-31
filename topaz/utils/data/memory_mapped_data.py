@@ -213,16 +213,20 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
             img = self.images[img_set_idx][img_idx]
             crop,label = img.get_UN_crop(), 0.
         
-        # apply random transformations (2D only)
+        # apply random transformations
         crop = crop.unsqueeze(0) # add C dim (rotate/flip expects this)
         if self.rotate:
             angle = self.rng.uniform(0, 360)
             crop = torchvision.transforms.functional.rotate(crop, angle)
-            # remove extra crop/padding
+            # remove the extra padding we added before
             size_diff = crop.shape[-1] - self.crop_size
             xmin, xmax = size_diff//2, size_diff//2 + self.crop_size
             ymin, ymax = size_diff//2, size_diff//2 + self.crop_size
-            crop = crop[..., ymin:ymax, xmin:xmax]
+            if self.dims == 3:
+                zmin, zmax = size_diff//2, size_diff//2 + self.crop_size
+                crop = crop[..., zmin:zmax, ymin:ymax, xmin:xmax]
+            else:
+                crop = crop[..., ymin:ymax, xmin:xmax]
         if self.flip:
             if self.rng.random() < 0.5:
                 crop = torchvision.transforms.functional.hflip(crop)

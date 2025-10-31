@@ -18,6 +18,7 @@ import topaz.utils.files as file_utils
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim.lr_scheduler import SequentialLR, LinearLR, CosineAnnealingLR
 from torch.utils.data.dataloader import DataLoader
 from topaz.metrics import average_precision
 from topaz.model.classifier import classify_patches
@@ -353,8 +354,12 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
                              , lr=1e-3, l2=0, method='GE-binomial', pi=0, slack=-1
                              , autoencoder=0):
     criteria = nn.BCEWithLogitsLoss()
-    optim = torch.optim.Adam
-
+    # optim = torch.optim.Adam(classifier.parameters(), lr=lr)
+    optim = torch.optim.AdamW(classifier.parameters(), lr=lr, weight_decay=l2)
+    if isinstance(optim, torch.optim.AdamW):
+        # if using AdamW, set l2 to 0
+        l2 = 0
+    
     # pi sets the expected fraction of positives
     # but during training, we iterate over unlabeled data with labeled positives removed
     # therefore, we expected the fraction of positives in the unlabeled data
@@ -374,24 +379,20 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
 
     split = 'pn'
     if method == 'PN':
-        optim = optim(classifier.parameters(), lr=lr)
         trainer = methods.PN(classifier, optim, criteria, pi=pi, l2=l2, autoencoder=autoencoder)
 
     elif method == 'GE-KL':
         if slack < 0:
             slack = 10
-        optim = optim(classifier.parameters(), lr=lr)
         trainer = methods.GE_KL(classifier, optim, criteria, pi, l2=l2, slack=slack)
 
     elif method == 'GE-binomial':
         if slack < 0:
             slack = 1
-        optim = optim(classifier.parameters(), lr=lr)
         trainer = methods.GE_binomial(classifier, optim, criteria, pi, l2=l2, slack=slack, autoencoder=autoencoder)
 
     elif method == 'PU':
         split = 'pu'
-        optim = optim(classifier.parameters(), lr=lr)
         trainer = methods.PU(classifier, optim, criteria, pi, l2=l2, autoencoder=autoencoder)
 
     else:
@@ -488,8 +489,10 @@ def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, 
     train_image_paths = convert_path_to_grouped_list(train_image_path, train_targets)
 
     expanded_train_targets, mask_size = expand_target_points(train_targets, radius, dims)
+    # train_dataset = MultipleImageSetDataset(train_image_paths, expanded_train_targets, epoch_size*minibatch_size, crop, positive_balance=balance, split=split, 
+    #                                         rotate=(dims==2), flip=(dims==2), mode='training', dims=dims, radius=radius, use_cuda=use_cuda, mask_size=mask_size)
     train_dataset = MultipleImageSetDataset(train_image_paths, expanded_train_targets, epoch_size*minibatch_size, crop, positive_balance=balance, split=split, 
-                                            rotate=(dims==2), flip=(dims==2), mode='training', dims=dims, radius=radius, use_cuda=use_cuda, mask_size=mask_size)
+                                            rotate=True, flip=True, mode='training', dims=dims, radius=radius, use_cuda=use_cuda, mask_size=mask_size)
     train_dataloader = DataLoader(train_dataset, batch_size=minibatch_size, shuffle=True, num_workers=num_workers)
     report(f'Loaded {train_dataset.num_images} training micrographs with ~{int(train_dataset.num_pixels//mask_size)} labeled particles')
 
@@ -541,6 +544,7 @@ def evaluate_model(classifier, criteria, data_iterator, use_cuda=False):
     tpr = y_hat[Y_true == 1].mean()
     fpr = y_hat[Y_true == 0].mean()
     
+    # TODO: this is super memory intensive for 3D/large datasets
     auprc = average_precision(Y_true, scores)
 
     classifier.unfill()
@@ -570,7 +574,18 @@ def fit_epoch(step_method, data_iterator, est_max_prec=1.0, epoch=1, it=1, use_c
 
 def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator, num_epochs, est_max_prec
               , save_prefix=None, use_cuda=False, output=sys.stdout):
-    ## fit the model, report train/test stats, save model if required
+    '''Fit the model, report train/test stats, save model if required.'''
+    
+    # configure the learning rate scheduler (linear warmup, cosine anneal)
+    optim = step_method.optim
+    initial_lr = optim.param_groups[-1]['lr'] # likely brittle
+    min_lr = initial_lr / 100
+    warmup_epochs = max(1, num_epochs // 10)
+    # scheduler1 = LinearLR(optim, start_factor=0.0, end_factor=1.0, total_iters=warmup_epochs)
+    scheduler1 = LinearLR(optim, start_factor=0.5, end_factor=1.0, total_iters=warmup_epochs)
+    scheduler2 = CosineAnnealingLR(optim, T_max=num_epochs - warmup_epochs, eta_min=min_lr)
+    scheduler = SequentialLR(optim, schedulers=[scheduler1, scheduler2], milestones=[warmup_epochs])
+    
     metric_list = step_method.header # loss, potentially another metric, precision, tpr, fpr
     line = '\t'.join(['epoch', 'iter', 'split'] + metric_list + ['auprc'])
     print(line, file=output)
@@ -580,7 +595,8 @@ def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator,
         ## update the model
         classifier.train()
         it = fit_epoch(step_method, train_iterator, est_max_prec=est_max_prec, epoch=epoch, it=it, use_cuda=use_cuda, output=output)
-
+        scheduler.step() # update the learning rate
+        
         ## measure validation performance
         if test_iterator is not None:
             loss,precision,tpr,fpr,auprc = evaluate_model(classifier, criteria, test_iterator, use_cuda=use_cuda)
@@ -589,6 +605,7 @@ def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator,
             dashes = '\t'.join(['-'] * (len(metric_list) - 5)) # fill for training-specific metrics 
             dashes = '\t' + dashes + '\t' if len(dashes) > 0 else '\t' # return 1 tab if dashes is empty (i.e. no training-specific metrics)
             line = f'{epoch}\t{it}\ttest\t{loss}{dashes}{precision}\t{adjusted_precision}\t{tpr}\t{fpr}\t{auprc}'
+            
             print(line, file=output)
             output.flush()
 
