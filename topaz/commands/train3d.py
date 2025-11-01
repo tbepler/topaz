@@ -2,6 +2,7 @@
 from __future__ import division, print_function
 
 import argparse
+import os
 import sys
 
 import topaz.cuda
@@ -82,6 +83,9 @@ def add_arguments(parser=None):
     model.add_argument('--ngf', default=32, type=int, help='scaled number of units per layer in generative model, only used if autoencoder > 0 (default: 32)')
     model.add_argument('-s', '--patch-size', type=int, default=96, help='classify micrographs in patches of this size. not used if < 1 (default: 96)')
     model.add_argument('-p', '--patch-padding', type=int, default=48, help='padding around each patch to remove edge artifacts (default: 48)')
+    
+    # add argument for pretrained model weights
+    model.add_argument('-w', '--weights-path', type=str, default=None, help='path to pretrained model weights (default: None)')
 
     outputs = parser.add_argument_group('output file arguments (optional)')
     outputs.add_argument('--save-prefix', help='path prefix to save trained models each epoch')
@@ -108,6 +112,19 @@ def main(args):
     else:
         raise ValueError(f'Unsupported architecture: {args.model}. \
             Current 3D support includes resnet8 and resnet16.')
+    
+    # load pretrained weights if given
+    if args.weights_path is not None:
+        if args.model_name not in args.weights_path:
+            report(f'Warning: the specified weights path {args.weights_path} may not match the chosen model architecture {args.model}.')
+        if not os.path.isfile(args.weights_path):
+            raise ValueError(f'Weights path {args.weights_path} does not exist or is not a file.')
+        
+        weights = torch.load(args.weights_path, map_location='cpu', weights_only=False)
+        feature_extractor.load_state_dict(weights)
+        report(f'Loaded pretrained weights from {args.weights_path}')    
+    
+    # add the final classifier layer
     classifier = LinearClassifier(feature_extractor, dims=3, patch_size=feature_extractor.width, 
                                   padding=feature_extractor.width//2, batch_size=args.minibatch_size)
     print('Model created') #width 71 pixels
