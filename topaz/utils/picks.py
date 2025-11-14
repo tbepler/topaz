@@ -69,7 +69,7 @@ def scale_coordinates(input_file:str, scale:float, output_file:str=None):
         
         
 def create_particle_stack(input_file:str, output_file:str, threshold:float, size:int, 
-                          resize:int, image_root:str, image_ext:str, metadata:str):
+                          resize:int, image_root:str, image_ext:str, metadata_file:str):
     particles = pd.read_csv(input_file, sep='\t')
 
     print('#', 'Loaded', len(particles), 'particles', file=sys.stderr)
@@ -181,8 +181,8 @@ def create_particle_stack(input_file:str, output_file:str, threshold:float, size
         metadata['NrOfFrames'] = mz
 
     micrograph_metadata = None
-    if metadata is not None:
-        with open(metadata, 'r') as f:
+    if metadata_file is not None:
+        with open(metadata_file, 'r') as f:
             micrograph_metadata = star.parse_star(f)
         metadata = pd.merge(metadata, micrograph_metadata, on='MicrographName', how='left')
 
