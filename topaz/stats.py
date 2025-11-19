@@ -34,7 +34,7 @@ def calculate_pi(expected_num_particles, radius, total_pixels, dims=2):
 
 
 def normalize(x, alpha=900, beta=1, num_iters=100, sample=1
-             , method='gmm', use_cuda=False, verbose=False):
+             , method='gmm', use_cuda=False, verbose=False, seed=0):
     if method == 'affine':
         mu = x.mean()
         std = x.std()
@@ -51,11 +51,12 @@ def normalize(x, alpha=900, beta=1, num_iters=100, sample=1
     # fit the parameters of the model
     x_sample = x
     scale = 1
+    randomGenerator = np.random.RandomState(None if seed == 0 else seed)
     if sample > 1:
         # estimate parameters using sample from x
         n = int(np.round(x.size/sample))
         scale = x.size/n
-        x_sample = np.random.choice(x.ravel(), size=n, replace=False)
+        x_sample = randomGenerator.choice(x.ravel(), size=n, replace=False)
 
     mu, std, pi, logp, mus, stds, pis, logps = norm_fit(x_sample, alpha=alpha, beta=beta
                                                        , scale=scale
@@ -281,7 +282,7 @@ def gmm_fit_numpy(x, pi=0.5, alpha=0.5, beta=0.5, tol=1e-3, num_iters=50, verbos
 
 class Normalize:
     def __init__(self, dest, scale, affine, num_iters, alpha, beta
-                , sample, metadata, formats, use_cuda):
+                , sample, metadata, formats, use_cuda, seed=0):
         self.dest = dest
         self.scale = scale
         self.affine = affine
@@ -292,6 +293,7 @@ class Normalize:
         self.metadata = metadata
         self.formats = formats
         self.use_cuda = use_cuda
+        self.seed = seed
 
     def __call__(self, path):
         # load the image
@@ -313,7 +315,7 @@ class Normalize:
         if self.affine:
             method = 'affine'
         x,metadata = normalize(x, alpha=self.alpha, beta=self.beta, num_iters=self.num_iters, 
-                               method=method, sample=self.sample, use_cuda=self.use_cuda)
+                               method=method, sample=self.sample, use_cuda=self.use_cuda, seed=self.seed)
 
         # save the image and the metadata
         name,_ = os.path.splitext(os.path.basename(path))
@@ -336,12 +338,12 @@ class Normalize:
 
 
 def normalize_images(paths:List[str], dest:str, num_workers:int, scale:int, affine:bool, niters:int, alpha:float, 
-                     beta:float, sample:int, metadata:bool, formats:List[str], use_cuda:bool, verbose:bool):
+                     beta:float, sample:int, metadata:bool, formats:List[str], use_cuda:bool, verbose:bool, seed:int):
     if not os.path.exists(dest):
         os.makedirs(dest)
 
     process = Normalize(dest, scale, affine, niters, alpha, beta,
-                        sample, metadata, formats, use_cuda)
+                        sample, metadata, formats, use_cuda, seed=seed)
 
     if num_workers > 1:
         pool = mp.Pool(num_workers)
