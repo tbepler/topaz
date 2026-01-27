@@ -562,7 +562,7 @@ def fit_epoch(step_method, data_iterator, est_max_prec=1.0, epoch=1, it=1, use_c
         metrics.insert(precision_index + 1, adjusted_precision)  # insert after precision
 
         line = f'{epoch}\t{it}\ttrain\t' + '\t'.join([str(metric) for metric in metrics]) + '\t-'
-        print(line, file=output)
+        print(line, file=output, flush=True)
         #output.flush()
         it += 1
     return it
@@ -573,7 +573,7 @@ def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator,
     ## fit the model, report train/test stats, save model if required
     metric_list = step_method.header # loss, potentially another metric, precision, tpr, fpr
     line = '\t'.join(['epoch', 'iter', 'split'] + metric_list + ['auprc'])
-    print(line, file=output)
+    print(line, file=output, flush=True)
 
     it = 1
     for epoch in range(1,num_epochs+1):
