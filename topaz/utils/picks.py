@@ -47,6 +47,10 @@ def as_mask(shape:Tuple[int], radius:float, x_coord:List[float], y_coord:List[fl
     conv = conv3d if dims == 3 else conv2d
     mask = conv(mask, filter, padding='same').squeeze()
     mask = (mask > 0).float() # binarize
+    
+    # return the data to CPU for downstream use
+    mask = mask.cpu()
+    
     return mask
 
 
