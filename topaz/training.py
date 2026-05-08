@@ -10,6 +10,7 @@ from typing import List, Literal, Tuple, Union
 import numpy as np
 import pandas as pd
 from PIL import Image
+import psutil
 
 import topaz.methods as methods
 import topaz.model.classifier as C
@@ -401,7 +402,7 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
 
 
 class TestingImageDataset():
-    def __init__(self, images_path:str, targets:pd.DataFrame, radius:int=3, dims:int=2, use_cuda:bool=False):
+    def __init__(self, images_path:str, targets:pd.DataFrame, radius:int=3, dims:int=2, use_cuda:bool=False, preload:bool=False):
         # get list of paths only (names not needed)
         if os.path.isdir(images_path):
             glob_base = images_path + os.sep + '*' # only get mrc files, need the header
@@ -418,13 +419,26 @@ class TestingImageDataset():
         self.radius = radius
         self.dims = dims
         self.use_cuda = use_cuda
-        
+        self.preload = preload
+        if preload:
+            self.preloaded = []
+            for path in self.image_paths:
+                self.preloaded.append(self.load_image_and_mask(path))
+        else:
+            self.preloaded = None
+
     def __len__(self):
         return len(self.image_paths)
     
     def __getitem__(self, i):
-        path = self.image_paths[i]
-        # load the entire image
+        if self.preload is True:
+            return self.preloaded[i]
+        else:
+            path = self.image_paths[i]
+            return self.load_image_and_mask(path)
+    
+    def load_image_and_mask(self, path:str):
+        # first load the image itself
         img = load_image(path, make_image=False, return_header=False)
         img = torch.from_numpy(img.copy())
         # create the target's binary mask
@@ -436,10 +450,6 @@ class TestingImageDataset():
         y = img_targets['y_coord'].values
         z = img_targets['z_coord'].values if self.dims==3  else None
         mask = as_mask(img.shape, self.radius, x, y, z, use_cuda=self.use_cuda)
-        
-        if self.use_cuda:
-            img = img.cuda()
-            mask = mask.cuda()
             
         return img,mask
     
@@ -478,7 +488,7 @@ def expand_target_points(targets:pd.DataFrame, radius:int, dims:int=2) -> pd.Dat
 
 def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, split:Literal['pn','pu'], minibatch_size:int, epoch_size:int, 
                         test_image_path:str=None, test_targets_path:str=None, testing_batch_size:int=1, num_workers:int=0, balance:float=0.5, 
-                        dims:int=2, use_cuda:bool=False, radius:int=3) -> Tuple[DataLoader, DataLoader]:
+                        dims:int=2, use_cuda:bool=False, radius:int=3, preload:bool=True) -> Tuple[DataLoader, DataLoader]:
     '''make train and test dataloaders'''
     train_targets = file_utils.read_coordinates(train_targets_path)    
     if len(train_targets) == 0:
@@ -489,14 +499,14 @@ def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, 
 
     expanded_train_targets, mask_size = expand_target_points(train_targets, radius, dims)
     train_dataset = MultipleImageSetDataset(train_image_paths, expanded_train_targets, epoch_size*minibatch_size, crop, positive_balance=balance, split=split, 
-                                            rotate=(dims==2), flip=(dims==2), mode='training', dims=dims, radius=radius, use_cuda=use_cuda, mask_size=mask_size)
+                                            rotate=True, flip=True, mode='training', dims=dims, radius=radius, use_cuda=use_cuda, mask_size=mask_size, preload=preload)
     train_dataloader = DataLoader(train_dataset, batch_size=minibatch_size, shuffle=True, num_workers=num_workers)
     report(f'Loaded {train_dataset.num_images} training micrographs with ~{int(train_dataset.num_pixels//mask_size)} labeled particles')
 
     if test_targets_path is not None:
         test_targets = file_utils.read_coordinates(test_targets_path)
-        test_dataset = TestingImageDataset(test_image_path, test_targets, radius=radius, dims=dims, use_cuda=use_cuda)
-        test_dataloader = DataLoader(test_dataset, batch_size=testing_batch_size, shuffle=False, num_workers=num_workers)
+        test_dataset = TestingImageDataset(test_image_path, test_targets, radius=radius, dims=dims, use_cuda=use_cuda, preload=preload)
+        test_dataloader = DataLoader(test_dataset, batch_size=testing_batch_size, shuffle=False, num_workers=0) # don't use multiple workers for testing
         report(f'Loaded {len(test_dataset)} testing micrographs with {len(test_targets)} labeled particles')
         return train_dataloader, test_dataloader
     else:
@@ -637,9 +647,22 @@ def train_model(classifier, train_images_path:str, train_targets_path:str, test_
     num_workers = mp.cpu_count() if args.num_workers < 0 else args.num_workers # set num workers to use all CPUs 
     balance = None if args.natural else args.minibatch_balance # ratio of positive to negative in minibatch
     
+    if args.preload == 'auto':
+        # compute the dataset's memory footprint (assuming float32)
+        dataset_memory_footprint = total_regions * 4 / (1024**3) # in GB
+        # check the available system memory
+        available_memory = psutil.virtual_memory().available / (1024**3) # in GB
+        # if dataset is larger than 80% of available memory, don't preload
+        if dataset_memory_footprint > 0.8 * available_memory:
+            report(f'WARNING: the dataset is estimated to require {dataset_memory_footprint:.2f} GB of memory, which is more than 80% of the available system memory ({available_memory:.2f} GB). Setting preload to False.', file=sys.stderr)
+            args.preload = False
+        else:
+            report(f'Estimated dataset memory footprint: {dataset_memory_footprint:.2f} GB. Available system memory: {available_memory:.2f} GB. Setting preload to True.', file=sys.stderr)
+            args.preload = True
+        
     train_iterator,test_iterator = make_data_iterators(train_images_path, train_targets_path, classifier.width, split, args.minibatch_size, args.epoch_size, 
                         test_image_path=test_images_path, test_targets_path=test_targets_path, testing_batch_size=args.test_batch_size, 
-                        num_workers=0, balance=balance, dims=dims, use_cuda=use_cuda, radius=args.radius)
+                        num_workers=num_workers, balance=balance, dims=dims, use_cuda=use_cuda, radius=args.radius, preload=args.preload)
     
     fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs, est_max_prec,
                save_prefix=save_prefix, use_cuda=use_cuda, output=output)
