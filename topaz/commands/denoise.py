@@ -29,7 +29,7 @@ def add_arguments(parser=None):
     parser.add_argument('--format', dest='format_', default='mrc', help='output format for the images (default: mrc)')
     parser.add_argument('--normalize', action='store_true', help='normalize the micrographs')
 
-    parser.add_argument('--stack', action='store_true', help='denoise a MRC stack rather than list of micorgraphs')
+    parser.add_argument('--stack', action='store_true', help='denoise a MRC stack rather than list of micrographs')
 
     parser.add_argument('--save-prefix', help='path prefix to save denoising model')
     parser.add_argument('--save-interval', default=10, type=int, help='save frequency in epochs (default: 10)')
@@ -127,7 +127,7 @@ def main(args):
         # stream the micrographs and denoise them
         denoised = denoise_stream(args.micrographs, args.output, args.format_, args.suffix, models, args.lowpass, args.pixel_cutoff, 
                                   gaus, inv_gaus, args.deconvolve, args.deconv_patch, args.patch_size, args.patch_padding,
-                                  normalize, use_cuda)
+                                  normalize, use_cuda, return_images=False)
     return denoised
 
 if __name__ == '__main__':

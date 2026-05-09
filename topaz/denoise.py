@@ -449,7 +449,7 @@ def denoise_stack(path:str, output_path:str, models:List[Denoise], lowpass:float
 
 def denoise_stream(micrographs:List[str], output_path:str, format:str='mrc', suffix:str='', models:List[Denoise]=None, lowpass:float=1, 
                    pixel_cutoff:float=0, gaus=None, inv_gaus=None, deconvolve:bool=True, deconv_patch:int=1, patch_size:int=1024, 
-                   padding:int=500, normalize:bool=True, use_cuda:bool=False):
+                   padding:int=500, normalize:bool=True, use_cuda:bool=False, return_images:bool=False):
     # stream the micrographs and denoise them
     total = len(micrographs)
     count = 0
@@ -470,7 +470,6 @@ def denoise_stream(micrographs:List[str], output_path:str, format:str='mrc', suf
         mic = denoise_image(image, models, lowpass=lowpass, cutoff=pixel_cutoff, gaus=gaus, 
                             inv_gaus=inv_gaus, deconvolve=deconvolve, deconv_patch=deconv_patch, 
                             patch_size=patch_size, padding=padding, normalize=normalize, use_cuda=use_cuda)
-        denoised.append(mic)
 
         # write the micrograph
         if not output_path:
@@ -482,6 +481,11 @@ def denoise_stream(micrographs:List[str], output_path:str, format:str='mrc', suf
         else:
             outpath = output_path + os.sep + name + suffix + '.' + format
         save_image(mic, outpath, header=header, extended_header=extended_header) #, mi=None, ma=None)
+
+        if return_images: # return denoised images if used elsewhere
+            denoised.append(mic)
+        else: # return paths to denoised images to save memory when not needed (already saved to disk)
+            denoised.append(outpath)
 
         count += 1
         print(f'# {count} of {total} completed.', file=sys.stderr, end='\r')
