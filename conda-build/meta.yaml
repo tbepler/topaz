@@ -6,7 +6,7 @@ package:
 
 source:
     git_url: https://github.com/tbepler/topaz.git
-    git_tag: v0.3.18 # Update to the latest release tag
+    git_tag: v0.3.19 # Update to the latest release tag
 
 channels:
   - conda-forge
@@ -22,6 +22,7 @@ requirements:
         - future
         - numpy>=1.11
         - pandas>=0.20.3
+        - psutil>=5.8.0
         - scikit-learn>=0.19.0
         - scipy>=0.17.0
         - pillow>=6.2.0
