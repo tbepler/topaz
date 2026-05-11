@@ -492,7 +492,7 @@ def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, 
     '''make train and test dataloaders'''
     train_targets = file_utils.read_coordinates(train_targets_path)    
     if len(train_targets) == 0:
-        report('ERROR: no training particles specified. Check that micrograph names in the particles file match those in the micrographs file/directory.', file=sys.stderr)
+        report('ERROR: no training particles specified. Check that micrograph names in the particles file match those in the micrographs file/directory.')
         raise Exception('No training particles.')
     
     train_image_paths = convert_path_to_grouped_list(train_image_path, train_targets)
@@ -654,10 +654,10 @@ def train_model(classifier, train_images_path:str, train_targets_path:str, test_
         available_memory = psutil.virtual_memory().available / (1024**3) # in GB
         # if dataset is larger than 80% of available memory, don't preload
         if dataset_memory_footprint > 0.8 * available_memory:
-            report(f'WARNING: the dataset is estimated to require {dataset_memory_footprint:.2f} GB of memory, which is more than 80% of the available system memory ({available_memory:.2f} GB). Setting preload to False.', file=sys.stderr)
+            report(f'WARNING: the dataset is estimated to require {dataset_memory_footprint:.2f} GB of memory, which is more than 80% of the available system memory ({available_memory:.2f} GB). Setting preload to False.')
             args.preload = False
         else:
-            report(f'Estimated dataset memory footprint: {dataset_memory_footprint:.2f} GB. Available system memory: {available_memory:.2f} GB. Setting preload to True.', file=sys.stderr)
+            report(f'Estimated dataset memory footprint: {dataset_memory_footprint:.2f} GB. Available system memory: {available_memory:.2f} GB. Setting preload to True.')
             args.preload = True
         
     train_iterator,test_iterator = make_data_iterators(train_images_path, train_targets_path, classifier.width, split, args.minibatch_size, args.epoch_size, 
