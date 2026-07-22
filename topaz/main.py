@@ -52,7 +52,7 @@ def generate_description(module_groups, linewidth=78, indent='  ', delim='  '):
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, fromfile_prefix_chars='@')
 
     import topaz
     parser.add_argument('--version', action='version', version='TOPAZ '+topaz.__version__)
