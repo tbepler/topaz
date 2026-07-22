@@ -29,30 +29,33 @@ self.layers = nn.Sequential(
 )
 """
 class ConvGenerator(nn.Module):
-    def __init__(self, nin, units=32, depth=3, activation=nn.LeakyReLU):
+    def __init__(self, nin, units=32, depth=3, activation=nn.LeakyReLU, dims=2):
         super(ConvGenerator, self).__init__()
+        self.dims = dims
+        conv_transpose = nn.ConvTranspose2d if dims == 2 else nn.ConvTranspose3d
+        batch_norm = nn.BatchNorm2d if dims == 2 else nn.BatchNorm3d
 
         ngf = units
 
         scale = 2**depth # 8
         layers = [
             # input is Z, going into a convolution
-            nn.ConvTranspose2d(     nin, ngf * scale, 4, 1, 0, bias=False),
-            nn.BatchNorm2d(ngf * scale),
+            conv_transpose(     nin, ngf * scale, 4, 1, 0, bias=False),
+            batch_norm(ngf * scale),
             activation(),
             # state size. (ngf*8) x 4 x 4
             ]
 
         for _ in range(depth):
             layers += [ 
-                nn.ConvTranspose2d(ngf * scale, ngf * scale//2, 4, 2, 1, bias=False),
-                nn.BatchNorm2d(ngf * scale//2),
+                conv_transpose(ngf * scale, ngf * scale//2, 4, 2, 1, bias=False),
+                batch_norm(ngf * scale//2),
                 activation(),
                 ]
             scale = scale//2
 
         layers += [
-            nn.ConvTranspose2d(    ngf,      1, 3, 2, 1, bias=False),
+            conv_transpose(    ngf,      1, 3, 2, 1, bias=False),
             ]
 
         self.layers = nn.Sequential(*layers)
@@ -60,7 +63,8 @@ class ConvGenerator(nn.Module):
 
 
     def forward(self, z):
-        if len(z.size()) < 4:
-            z = z.view(-1,z.size(1),1,1)
+        if len(z.size()) < self.dims + 2:
+            spatial_dims = [1] * self.dims
+            z = z.view(-1, z.size(1), *spatial_dims)
         return self.layers(z)
 
