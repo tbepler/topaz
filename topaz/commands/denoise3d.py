@@ -20,6 +20,7 @@ def add_arguments(parser=None):
     parser.add_argument('--suffix', help='optional suffix to append to file paths. if not output is specfied, denoised volumes are written to the same location as the input with the suffix appended to the name (default .denoised)')
 
     parser.add_argument('-m', '--model', default='unet-3d', help='use pretrained denoising model. accepts path to a previously saved model or one of the provided pretrained models. pretrained model options are: unet-3d, unet-3d-10a, unet-3d-20a (default: unet-3d)')
+    parser.add_argument('--arch', choices=['unet-3d', 'unet-3d-10a', 'unet-3d-20a'], default='unet-3d', help='denoising model architecture (default: unet-3d)')
 
     ## training parameters
     parser.add_argument('-a', '--even-train-path', help='path to even training data')
@@ -92,9 +93,9 @@ def main(args):
     if total < 1:
         return
     
-    print(f'# denoising {total} tomograms with patch size={args.patch_size} and padding={args.padding}', file=sys.stderr)
+    print(f'# denoising {total} tomograms with patch size={args.patch_size} and padding={args.patch_padding}', file=sys.stderr)
     # denoise the volumes
-    denoised = denoise_tomogram_stream(volumes=args.volumes, model=denoiser, output_path=args.output, suffix=args.suffix, gaus=args.gaus, 
+    denoised = denoise_tomogram_stream(volumes=args.volumes, model=denoiser, output_path=args.output, suffix=args.suffix, gaus=args.gaussian, 
                                        patch_size=args.patch_size, padding=args.patch_padding, verbose=True, use_cuda=use_cuda)
     return denoised
 
