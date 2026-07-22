@@ -486,6 +486,12 @@ def expand_target_points(targets:pd.DataFrame, radius:int, dims:int=2) -> pd.Dat
         return expanded[['image_name', 'x_coord', 'y_coord']], mask_size
 
 
+def worker_init_fn(worker_id):
+    worker_info = torch.utils.data.get_worker_info()
+    seed = worker_info.seed % 2**32
+    torch.manual_seed(seed) # seed torch RNG for augmentation
+    worker_info.dataset._set_all_rng_seeds(seed) # first seeds the dataset, then each image's rng
+
 def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, split:Literal['pn','pu'], minibatch_size:int, epoch_size:int, 
                         test_image_path:str=None, test_targets_path:str=None, testing_batch_size:int=1, num_workers:int=0, balance:float=0.5, 
                         dims:int=2, use_cuda:bool=False, radius:int=3, preload:bool=True) -> Tuple[DataLoader, DataLoader]:

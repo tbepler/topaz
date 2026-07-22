@@ -236,6 +236,15 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
             missing = unseen_targets.image_name.unique().tolist()
             report(f'WARNING: {len(missing)} micrographs listed in the coordinates file are missing from the {mode} images. Image names are listed below.')
             report(f'WARNING: missing micrographs are: {missing}')
+     
+    def _set_all_rng_seeds(self, seed):
+        '''First set the seed for the dataset using the given seed.
+        Then seed each image's rng by sampling the dataset rng.'''
+        self.rng = np.random.default_rng(seed)
+        for group in self.images:
+            for image in group:
+                image_seed = self.rng.integers(0, 2**32 - 1, size=1).item()
+                image.rng = np.random.default_rng(image_seed)
             
     def __len__(self):
         return self.number_samples # how many crops we want in each epoch
@@ -246,7 +255,7 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
         # sample an image from the set
         if self.rng.random() < self.positive_balance:
             # sample a positive coordinate
-            target = self.targets.sample()
+            target = self.targets.sample(random_state=self.rng)
             name = target['image_name'].item()
             # get the image with a matching name
             img = self.name_dict[name]
