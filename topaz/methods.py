@@ -22,6 +22,14 @@ def autoencoder_loss(model, X):
 
     return recon_loss, score
 
+def calculate_precision_tpr_fpr(score, Y):
+    p_hat = torch.sigmoid(score)
+    precision = p_hat[Y == 1].sum().item()/p_hat.sum().item() if p_hat.sum().item() > 0 else 0.
+    tpr = p_hat[Y == 1].mean().item()
+    fpr = p_hat[Y == 0].mean().item()
+    return precision, tpr, fpr
+
+
 class PN:
     def __init__(self, model, optim, criteria, pi=None, l2=0
                 , autoencoder=0):
@@ -55,11 +63,8 @@ class PN:
             full_loss = full_loss + recon_error*self.autoencoder
         full_loss.backward()
 
-        p_hat = torch.sigmoid(score)
-        precision = p_hat[Y == 1].sum().item()/p_hat.sum().item()
-        tpr = p_hat[Y == 1].mean().item()
-        fpr = p_hat[Y == 0].mean().item()
-
+        precision, tpr, fpr = calculate_precision_tpr_fpr(score, Y)
+        
         if self.l2 > 0:
             r = sum(torch.sum(w**2) for w in self.model.features.parameters())
             r = r + sum(torch.sum(w**2) for w in self.model.classifier.parameters())
@@ -145,10 +150,7 @@ class GE_binomial:
 
         loss.backward()
 
-        p_hat = torch.sigmoid(score)
-        precision = p_hat[Y == 1].sum().item()/p_hat.sum().item()
-        tpr = p_hat[Y == 1].mean().item()
-        fpr = p_hat[Y == 0].mean().item()
+        precision, tpr, fpr = calculate_precision_tpr_fpr(score, Y)
 
         if self.l2 > 0:
             r = sum(torch.sum(w**2) for w in self.model.features.parameters())
@@ -240,10 +242,7 @@ class GE_KL:
         loss = classifier_loss + ge_penalty + entropy_loss
         loss.backward()
 
-        p_hat = torch.sigmoid(score)
-        precision = p_hat[Y == 1].sum().item()/p_hat.sum().item()
-        tpr = p_hat[Y == 1].mean().item()
-        fpr = p_hat[Y == 0].mean().item()
+        precision, tpr, fpr = calculate_precision_tpr_fpr(score, Y)
 
         if self.l2 > 0:
             r = 0.5*self.l2*sum(torch.sum(w**2) for w in self.model.parameters())
@@ -302,10 +301,7 @@ class PU:
             backprop_loss = backprop_loss + recon_error*self.autoencoder
         backprop_loss.backward()
 
-        p_hat = torch.sigmoid(score)
-        precision = p_hat[Y == 1].sum().item()/p_hat.sum().item()
-        tpr = p_hat[Y == 1].mean().item()
-        fpr = p_hat[Y == 0].mean().item()
+        precision, tpr, fpr = calculate_precision_tpr_fpr(score, Y)
 
         if self.l2 > 0:
             r = sum(torch.sum(w**2) for w in self.model.features.parameters())
