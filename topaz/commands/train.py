@@ -5,14 +5,24 @@ import argparse
 import sys
 
 import topaz.cuda
-from topaz.training import load_data,make_model,train_model
+from topaz.training import make_model, train_model
 from topaz.utils.printing import report
 
 
 name = 'train'
 help = 'train 2D region classifier from images with labeled coordinates'
 
+
+
 def add_arguments(parser=None):
+    def str2bool(v):
+        if v.lower() in ('yes', 'true', 't', '1'):
+            return True
+        elif v.lower() in ('no', 'false', 'f', '0'):
+            return False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected.')
+        
     if parser is None:
         parser = argparse.ArgumentParser(help)
 
@@ -77,7 +87,8 @@ def add_arguments(parser=None):
     training.add_argument('--minibatch-balance', default=0.0625, type=float, help='fraction of minibatch that is positive data points (default: 0.0625)')
     training.add_argument('--epoch-size', default=1000, type=int, help='number of parameter updates per epoch (default: 1000)')
     training.add_argument('--num-epochs', default=10, type=int, help='maximum number of training epochs (default: 10)')
-
+    # option to preload datasets into memory 
+    training.add_argument('--preload', type=str2bool, default=True, help='option to load the entire dataset into memory before training (default: True)')
 
     model = parser.add_argument_group('model arguments (optional)')
 
@@ -125,9 +136,9 @@ def main(args):
     report('Using device={} with cuda={}'.format(args.device, use_cuda))
     if use_cuda:
         classifier.cuda()
-        if args.num_workers != 0: 
-            report('When using GPU to load data, we only load in this process. Setting num_workers = 0.')
-            args.num_workers = 0
+        # if args.num_workers != 0: 
+        #     report('When using GPU to load data, we only load in this process. Setting num_workers = 0.')
+        #     args.num_workers = 0
     
     ## fit the model, report train/test stats, save model if required
     output = sys.stdout if args.output is None else open(args.output, 'w')
