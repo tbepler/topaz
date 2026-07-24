@@ -5,16 +5,25 @@ import argparse
 import os
 import sys
 
+import torch
 import topaz.cuda
 from topaz.model.features.resnet import ResNet8, ResNet16
 from topaz.model.classifier import LinearClassifier
-from topaz.training import load_data, train_model
+from topaz.training import train_model
 from topaz.utils.printing import report
 
 name = 'train3d'
 help = 'train 3D region classifier from volumes with labeled coordinates'
 
 def add_arguments(parser=None):
+    def str2bool(v):
+        if v.lower() in ('yes', 'true', 't', '1'):
+            return True
+        elif v.lower() in ('no', 'false', 'f', '0'):
+            return False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected.')
+    
     if parser is None:
         parser = argparse.ArgumentParser(help)
 
@@ -63,6 +72,7 @@ def add_arguments(parser=None):
     training.add_argument('--l2', default=0.0, type=float, help='l2 regularizer on the model parameters (default: 0)')
 
     training.add_argument('--learning-rate', default=0.0002, type=float, help='learning rate for the optimizer (default: 0.0002)') 
+    training.add_argument('--warmup-epochs', default=1, type=int, help='number of warmup epochs to gradually increase the learning rate from 0.5x to 1.0x the set learning rate (default: 1)')
 
     training.add_argument('--natural', action='store_true', help='sample unbiasedly from the data to form minibatches rather than sampling particles and not particles at ratio given by minibatch-balance parameter')
 
@@ -70,6 +80,8 @@ def add_arguments(parser=None):
     training.add_argument('--minibatch-balance', default=0.0625, type=float, help='fraction of minibatch that is positive data points (default: 0.0625)')
     training.add_argument('--epoch-size', default=1000, type=int, help='number of parameter updates per epoch (default: 1000)')
     training.add_argument('--num-epochs', default=10, type=int, help='maximum number of training epochs (default: 10)')
+    # option to preload datasets into memory 
+    training.add_argument('--preload', type=str2bool, default=False, help='option to load the entire dataset into memory before training (default: False)')
 
 
     model = parser.add_argument_group('model arguments (optional)')
@@ -84,8 +96,13 @@ def add_arguments(parser=None):
     model.add_argument('-s', '--patch-size', type=int, default=96, help='classify micrographs in patches of this size. not used if < 1 (default: 96)')
     model.add_argument('-p', '--patch-padding', type=int, default=48, help='padding around each patch to remove edge artifacts (default: 48)')
     
+    pretrained = parser.add_argument_group('pretrained model arguments (optional)')
     # add argument for pretrained model weights
-    model.add_argument('-w', '--weights-path', type=str, default=None, help='path to pretrained model weights (default: None)')
+    pretrained.add_argument('-w', '--weights-path', type=str, default=None, help='path to pretrained model weights (default: None)')
+    # determine if to finetune entire model or just classifier layer
+    pretrained.add_argument('--final-layer-only', action='store_true', help='option to train only the classifier layer, not the feature backbone (default: False)')
+    # add burn-in period (number of epochs) where only the classifier layer is trained before unfreezing the feature extractor
+    pretrained.add_argument('--burn-in', type=int, default=0, help='number of epochs to train only the classifier layer before unfreezing the feature extractor (default: 0)') # default 0 b/c for non-pretrained
 
     outputs = parser.add_argument_group('output file arguments (optional)')
     outputs.add_argument('--save-prefix', help='path prefix to save trained models each epoch')
@@ -113,21 +130,56 @@ def main(args):
         raise ValueError(f'Unsupported architecture: {args.model}. \
             Current 3D support includes resnet8 and resnet16.')
     
+    # ensure pretrained weights are given if related arguments are set
+    if args.weights_path is None and (args.final_layer_only or args.burn_in > 0):
+        raise ValueError("final_layer_only or burn_in requires pretrained weights (--weights_path must be specified).")
+
+    # set the train
+    if args.final_layer_only is True:
+        mode = "last_layer_only"
+    elif args.burn_in > 0:
+        mode = "pretrained_burnin"
+    else:
+        mode = "whole_model" # training whole model w/ or w/o trained weights
+    
+    # configure burn-in and warmup epochs, don't use them simultaneously
+    if mode == "whole_model":
+        burn_in = 0
+        warmup_epochs = args.warmup_epochs
+    elif mode == "pretrained_burnin":
+        burn_in = min(args.burn_in, args.num_epochs)
+        warmup_epochs = 0
+    elif mode == "last_layer_only":
+        burn_in = args.num_epochs
+        warmup_epochs = 0
+    
     # load pretrained weights if given
-    if args.weights_path is not None:
-        if args.model_name not in args.weights_path:
+    if args.weights_path is not None:        
+        if args.model not in args.weights_path:
             report(f'Warning: the specified weights path {args.weights_path} may not match the chosen model architecture {args.model}.')
         if not os.path.isfile(args.weights_path):
             raise ValueError(f'Weights path {args.weights_path} does not exist or is not a file.')
         
         weights = torch.load(args.weights_path, map_location='cpu', weights_only=False)
         feature_extractor.load_state_dict(weights)
-        report(f'Loaded pretrained weights from {args.weights_path}')    
+        report(f'Loaded pretrained weights from {args.weights_path}')
+    
+    # set requires_grad according to burn-in period
+    if burn_in > 0:
+        for p in feature_extractor.parameters():
+            p.requires_grad = False
+        if burn_in == args.num_epochs:
+            report("Training only the final classifier layer.")
+        else:
+            report(f"Freezing feature extractor for {burn_in} epochs.")
+    else:
+        report("Training entire model.")
     
     # add the final classifier layer
     classifier = LinearClassifier(feature_extractor, dims=3, patch_size=feature_extractor.width, 
                                   padding=feature_extractor.width//2, batch_size=args.minibatch_size)
-    print('Model created') #width 71 pixels
+    classifier.train()
+    report('Model created') #width 71 pixels
     if args.describe: ## print description of model and terminate
         print(classifier)
         sys.exit()
@@ -137,9 +189,9 @@ def main(args):
     report(f'Using device={args.device} with cuda={use_cuda}')
     if use_cuda:
         classifier.cuda()
-        if args.num_workers != 0: 
-            report('When using GPU to load data, we only load in this process. Setting num_workers = 0.')
-            args.num_workers = 0
+        # if args.num_workers != 0: 
+        #     report('When using GPU to load data, we only load in this process. Setting num_workers = 0.')
+        #     args.num_workers = 0
         
     
     ## fit the model, report train/test stats, save model if required
@@ -148,7 +200,7 @@ def main(args):
 
     report('Training...')
     classifier = train_model(classifier, args.train_images, args.train_targets, args.test_images, args.test_targets, 
-                             use_cuda, save_prefix, output, args, dims=3)
+                             use_cuda, save_prefix, output, args, dims=3, burn_in=burn_in, warmup_epochs=warmup_epochs)
     report('Done!')
     return classifier
 

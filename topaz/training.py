@@ -6,6 +6,7 @@ import multiprocessing as mp
 import os
 import sys
 from typing import List, Literal, Tuple, Union
+import time
 
 import numpy as np
 import pandas as pd
@@ -402,7 +403,7 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
 
 
 class TestingImageDataset():
-    def __init__(self, images_path:str, targets:pd.DataFrame, radius:int=3, dims:int=2, use_cuda:bool=False):
+    def __init__(self, images_path:str, targets:pd.DataFrame, radius:int=3, dims:int=2, use_cuda:bool=False, preload:bool=False):
         # get list of paths only (names not needed)
         if os.path.isdir(images_path):
             glob_base = images_path + os.sep + '*' # only get mrc files, need the header
@@ -414,20 +415,35 @@ class TestingImageDataset():
                 image_paths = [name+'.mrc' for name in image_names] # these are paths that can be loaded
             else:
                 image_paths = image_df['path'].tolist()
+        
         self.image_paths = image_paths
         self.targets = targets
         self.radius = radius
         self.dims = dims
         self.use_cuda = use_cuda
-        
+        self.preload = preload
+        if preload:
+            self.preloaded = []
+            for path in self.image_paths:
+                self.preloaded.append(self.load_image_and_mask(path))
+        else:
+            self.preloaded = None
+
     def __len__(self):
         return len(self.image_paths)
     
     def __getitem__(self, i):
-        path = self.image_paths[i]
-        # load the entire image
+        if self.preload:
+            return self.preloaded[i]
+        else:
+            path = self.image_paths[i]
+            return self.load_image_and_mask(path)
+    
+    def load_image_and_mask(self, path:str):
+        # first load the image itself
         img = load_image(path, make_image=False, return_header=False)
         img = torch.from_numpy(img.copy())
+        
         # create the target's binary mask
         img_name = os.path.splitext(path.split('/')[-1])[0]
         # image_name_matches = self.targets['image_name'].str.contains(img_name)
@@ -443,7 +459,7 @@ class TestingImageDataset():
             mask = mask.cuda()
             
         return img,mask
-    
+
 
 def expand_target_points(targets:pd.DataFrame, radius:int, dims:int=2) -> pd.DataFrame:
     '''Expand target point coordinates into coordinates of a sphere with the given radius.'''
@@ -479,7 +495,7 @@ def expand_target_points(targets:pd.DataFrame, radius:int, dims:int=2) -> pd.Dat
 
 def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, split:Literal['pn','pu'], minibatch_size:int, epoch_size:int, 
                         test_image_path:str=None, test_targets_path:str=None, testing_batch_size:int=1, num_workers:int=0, balance:float=0.5, 
-                        dims:int=2, use_cuda:bool=False, radius:int=3) -> Tuple[DataLoader, DataLoader]:
+                        dims:int=2, use_cuda:bool=False, radius:int=3, preload:bool=True) -> Tuple[DataLoader, DataLoader]:
     '''make train and test dataloaders'''
     train_targets = file_utils.read_coordinates(train_targets_path)    
     if len(train_targets) == 0:
@@ -492,14 +508,14 @@ def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, 
     # train_dataset = MultipleImageSetDataset(train_image_paths, expanded_train_targets, epoch_size*minibatch_size, crop, positive_balance=balance, split=split, 
     #                                         rotate=(dims==2), flip=(dims==2), mode='training', dims=dims, radius=radius, use_cuda=use_cuda, mask_size=mask_size)
     train_dataset = MultipleImageSetDataset(train_image_paths, expanded_train_targets, epoch_size*minibatch_size, crop, positive_balance=balance, split=split, 
-                                            rotate=True, flip=True, mode='training', dims=dims, radius=radius, use_cuda=use_cuda, mask_size=mask_size)
+                                            rotate=True, flip=True, mode='training', dims=dims, radius=radius, use_cuda=use_cuda, mask_size=mask_size, preload=preload)
     train_dataloader = DataLoader(train_dataset, batch_size=minibatch_size, shuffle=True, num_workers=num_workers)
     report(f'Loaded {train_dataset.num_images} training micrographs with ~{int(train_dataset.num_pixels//mask_size)} labeled particles')
 
     if test_targets_path is not None:
         test_targets = file_utils.read_coordinates(test_targets_path)
-        test_dataset = TestingImageDataset(test_image_path, test_targets, radius=radius, dims=dims, use_cuda=use_cuda)
-        test_dataloader = DataLoader(test_dataset, batch_size=testing_batch_size, shuffle=False, num_workers=num_workers)
+        test_dataset = TestingImageDataset(test_image_path, test_targets, radius=radius, dims=dims, use_cuda=use_cuda, preload=preload)
+        test_dataloader = DataLoader(test_dataset, batch_size=testing_batch_size, shuffle=False, num_workers=0) # don't use multiple workers for testing
         report(f'Loaded {len(test_dataset)} testing micrographs with {len(test_targets)} labeled particles')
         return train_dataloader, test_dataloader
     else:
@@ -573,18 +589,25 @@ def fit_epoch(step_method, data_iterator, est_max_prec=1.0, epoch=1, it=1, use_c
 
 
 def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator, num_epochs, est_max_prec
-              , save_prefix=None, use_cuda=False, output=sys.stdout):
+              , save_prefix=None, use_cuda=False, output=sys.stdout, burn_in:int=0, warmup_epochs:int=0):
     '''Fit the model, report train/test stats, save model if required.'''
     
     # configure the learning rate scheduler (linear warmup, cosine anneal)
     optim = step_method.optim
     initial_lr = optim.param_groups[-1]['lr'] # likely brittle
     min_lr = initial_lr / 100
-    warmup_epochs = max(1, num_epochs // 10)
-    # scheduler1 = LinearLR(optim, start_factor=0.0, end_factor=1.0, total_iters=warmup_epochs)
-    scheduler1 = LinearLR(optim, start_factor=0.5, end_factor=1.0, total_iters=warmup_epochs)
-    scheduler2 = CosineAnnealingLR(optim, T_max=num_epochs - warmup_epochs, eta_min=min_lr)
-    scheduler = SequentialLR(optim, schedulers=[scheduler1, scheduler2], milestones=[warmup_epochs])
+    
+    if warmup_epochs > 0 and burn_in > 0:
+        raise ValueError('Cannot use both warmup_epochs and burn_in > 0 simultaneously.')
+    if warmup_epochs >= num_epochs:
+        raise ValueError('warmup_epochs must be less than num_epochs.')
+    
+    if warmup_epochs > 0 and burn_in == 0: 
+        scheduler1 = LinearLR(optim, start_factor=0.5, end_factor=1.0, total_iters=warmup_epochs)
+        scheduler2 = CosineAnnealingLR(optim, T_max=num_epochs - warmup_epochs, eta_min=min_lr)
+        scheduler = SequentialLR(optim, schedulers=[scheduler1, scheduler2], milestones=[warmup_epochs])
+    else:
+        scheduler = CosineAnnealingLR(optim, T_max=num_epochs, eta_min=min_lr)
     
     metric_list = step_method.header # loss, potentially another metric, precision, tpr, fpr
     line = '\t'.join(['epoch', 'iter', 'split'] + metric_list + ['auprc'])
@@ -592,10 +615,19 @@ def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator,
 
     it = 1
     for epoch in range(1,num_epochs+1):
+        epoch_start_time = time.time()
+        ## unfreeze feature extractor after burn-in period
+        if (epoch == burn_in + 1) and (burn_in > 0):
+            for param in classifier.features.parameters():
+                param.requires_grad = True
+            report('Unfroze feature extractor backbone for fine-tuning.')
+        
         ## update the model
         classifier.train()
         it = fit_epoch(step_method, train_iterator, est_max_prec=est_max_prec, epoch=epoch, it=it, use_cuda=use_cuda, output=output)
         scheduler.step() # update the learning rate
+        train_finished_time = time.time()
+        report(f'Epoch {epoch} training completed in {train_finished_time - epoch_start_time:.2f} seconds.')
         
         ## measure validation performance
         if test_iterator is not None:
@@ -608,6 +640,7 @@ def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator,
             
             print(line, file=output)
             output.flush()
+            test_finished_time = time.time()
 
         ## save the model
         if save_prefix is not None:
@@ -618,10 +651,11 @@ def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator,
             torch.save(classifier, path)
             if use_cuda:
                 classifier.cuda()
+        epoch_time = time.time() - epoch_start_time
 
 
 def train_model(classifier, train_images_path:str, train_targets_path:str, test_images_path:str, test_targets_path:str, use_cuda:bool, 
-                save_prefix:str, output, args, dims:int=2):
+                save_prefix:str, output, args, dims:int=2, burn_in:int=0, warmup_epochs:int=0):
     num_positive_regions, total_regions, num_images = report_data_stats(train_images_path, train_targets_path, test_images_path, test_targets_path,
                                                             radius=args.radius, dims=dims)
 
@@ -654,11 +688,19 @@ def train_model(classifier, train_images_path:str, train_targets_path:str, test_
     num_workers = mp.cpu_count() if args.num_workers < 0 else args.num_workers # set num workers to use all CPUs 
     balance = None if args.natural else args.minibatch_balance # ratio of positive to negative in minibatch
     
+    # warn the user if they want to preload a large dataset into memory
+    print(f'Preloading: {args.preload}', file=sys.stderr)
+    if args.preload:
+        if dims == 2 and num_images > 2000:
+            report(f'WARNING: you have set preload to True and there are {num_images} micrographs. This may consume a large amount of memory.', file=sys.stderr)
+        elif dims == 3 and num_images > 25:
+            report(f'WARNING: you have set preload to True and there are {num_images} tomograms. This may consume a large amount of memory.', file=sys.stderr)
+    
     train_iterator,test_iterator = make_data_iterators(train_images_path, train_targets_path, classifier.width, split, args.minibatch_size, args.epoch_size, 
                         test_image_path=test_images_path, test_targets_path=test_targets_path, testing_batch_size=args.test_batch_size, 
-                        num_workers=0, balance=balance, dims=dims, use_cuda=use_cuda, radius=args.radius)
+                        num_workers=num_workers, balance=balance, dims=dims, use_cuda=use_cuda, radius=args.radius, preload=args.preload)
     
     fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs, est_max_prec,
-               save_prefix=save_prefix, use_cuda=use_cuda, output=output)
+               save_prefix=save_prefix, use_cuda=use_cuda, output=output, burn_in=burn_in, warmup_epochs=warmup_epochs)
 
     return classifier
