@@ -493,6 +493,12 @@ def expand_target_points(targets:pd.DataFrame, radius:int, dims:int=2) -> pd.Dat
         return expanded[['image_name', 'x_coord', 'y_coord']], mask_size
 
 
+def worker_init_fn(worker_id):
+    worker_info = torch.utils.data.get_worker_info()
+    seed = worker_info.seed % 2**32
+    torch.manual_seed(seed) # seed torch RNG for augmentation
+    worker_info.dataset._set_all_rng_seeds(seed) # first seeds the dataset, then each image's rng
+
 def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, split:Literal['pn','pu'], minibatch_size:int, epoch_size:int, 
                         test_image_path:str=None, test_targets_path:str=None, testing_batch_size:int=1, num_workers:int=0, balance:float=0.5, 
                         dims:int=2, use_cuda:bool=False, radius:int=3, preload:bool=True) -> Tuple[DataLoader, DataLoader]:
@@ -509,7 +515,7 @@ def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, 
     #                                         rotate=(dims==2), flip=(dims==2), mode='training', dims=dims, radius=radius, use_cuda=use_cuda, mask_size=mask_size)
     train_dataset = MultipleImageSetDataset(train_image_paths, expanded_train_targets, epoch_size*minibatch_size, crop, positive_balance=balance, split=split, 
                                             rotate=True, flip=True, mode='training', dims=dims, radius=radius, use_cuda=use_cuda, mask_size=mask_size, preload=preload)
-    train_dataloader = DataLoader(train_dataset, batch_size=minibatch_size, shuffle=True, num_workers=num_workers)
+    train_dataloader = DataLoader(train_dataset, batch_size=minibatch_size, shuffle=True, num_workers=num_workers, worker_init_fn=worker_init_fn)
     report(f'Loaded {train_dataset.num_images} training micrographs with ~{int(train_dataset.num_pixels//mask_size)} labeled particles')
 
     if test_targets_path is not None:
