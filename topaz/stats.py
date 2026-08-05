@@ -16,13 +16,16 @@ from topaz.utils.image import downsample, save_image
 
 def pixels_given_radius(radius, dims=2):
     '''Given a radius, calculate the number of pixels in a particle.'''
-    grid = np.linspace(-radius, radius, 2*radius+1)
-    xx,yy,zz = np.meshgrid(grid, grid, grid)
-    d2 = xx**2 + yy**2
+    filter_range = torch.arange(start=-radius, end=radius+1)
+    grid = torch.meshgrid([filter_range]*dims, indexing='xy')
+    xgrid, ygrid = grid[0], grid[1]
+    d2 = xgrid**2 + ygrid**2
     if dims == 3:
-        d2 += zz**2
-    mask = (d2 <= radius**2).astype(int)
-    return mask.sum()
+        zgrid = grid[2]
+        d2 += zgrid**2
+    mask = (d2 <= radius**2).int()
+    mask_size = mask.sum().item()
+    return mask_size
 
 
 def calculate_pi(expected_num_particles, radius, total_pixels, dims=2):
