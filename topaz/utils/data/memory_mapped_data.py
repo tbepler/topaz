@@ -83,10 +83,10 @@ class CroppableImage:
             y = self.rng.choice(self.shape[-2])
             if self.dims == 3:
                 z = self.rng.choice(self.shape[-3])
-                idx, dist = self.positive_tree.query([[z, y, x]])
+                dist, idx = self.positive_tree.query([[z, y, x]])
             else:
                 z = None
-                idx, dist = self.positive_tree.query([[y, x]])
+                dist, idx = self.positive_tree.query([[y, x]])
             if dist > 0:
                 return z, y, x
 
