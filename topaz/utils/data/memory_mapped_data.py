@@ -7,7 +7,6 @@ import torchvision
 from topaz.mrc import parse_header, get_mode_from_header
 from typing import List, Literal
 from sklearn.neighbors import KDTree
-from topaz.stats import calculate_pi
 from topaz.utils.printing import report
 from topaz.utils.data.loader import load_image
 
@@ -84,10 +83,10 @@ class CroppableImage:
             y = self.rng.choice(self.shape[-2])
             if self.dims == 3:
                 z = self.rng.choice(self.shape[-3])
-                idx, dist = self.positive_tree.query([[z, y, x]])
+                dist, idx = self.positive_tree.query([[z, y, x]])
             else:
                 z = None
-                idx, dist = self.positive_tree.query([[y, x]])
+                dist, idx = self.positive_tree.query([[y, x]])
             if dist > 0:
                 return z, y, x
 
