@@ -11,6 +11,7 @@ import time
 import numpy as np
 import pandas as pd
 from PIL import Image
+import psutil
 
 import topaz.methods as methods
 import topaz.model.classifier as C
@@ -695,13 +696,19 @@ def train_model(classifier, train_images_path:str, train_targets_path:str, test_
     balance = None if args.natural else args.minibatch_balance # ratio of positive to negative in minibatch
     
     # warn the user if they want to preload a large dataset into memory
-    print(f'Preloading: {args.preload}', file=sys.stderr)
-    if args.preload:
-        if dims == 2 and num_images > 2000:
-            report(f'WARNING: you have set preload to True and there are {num_images} micrographs. This may consume a large amount of memory.', file=sys.stderr)
-        elif dims == 3 and num_images > 25:
-            report(f'WARNING: you have set preload to True and there are {num_images} tomograms. This may consume a large amount of memory.', file=sys.stderr)
-    
+    if args.preload == 'auto':
+        # compute the dataset's memory footprint (assuming float32)
+        dataset_memory_footprint = total_regions * 4 / (1024**3) # in GB
+        # check the available system memory
+        available_memory = psutil.virtual_memory().available / (1024**3) # in GB
+        # if dataset is larger than 80% of available memory, don't preload
+        if dataset_memory_footprint > 0.8 * available_memory:
+            report(f'WARNING: the dataset is estimated to require {dataset_memory_footprint:.2f} GB of memory, which is more than 80% of the available system memory ({available_memory:.2f} GB). Setting preload to False.')
+            args.preload = False
+        else:
+            report(f'Estimated dataset memory footprint: {dataset_memory_footprint:.2f} GB. Available system memory: {available_memory:.2f} GB. Setting preload to True.')
+            args.preload = True
+
     train_iterator,test_iterator = make_data_iterators(train_images_path, train_targets_path, classifier.width, split, args.minibatch_size, args.epoch_size, 
                         test_image_path=test_images_path, test_targets_path=test_targets_path, testing_batch_size=args.test_batch_size, 
                         num_workers=num_workers, balance=balance, dims=dims, use_cuda=use_cuda, radius=args.radius, preload=args.preload)
