@@ -17,6 +17,11 @@ class CroppableImage:
     
     Subclasses must call _load(image_path) to set self.array and self.shape
     before calling super().__init__().
+    
+    NOTE: `targets` passed in must already be the *expanded* per-pixel mask coordinates
+    (from expand_target_points[_multiclass]), not just particle centers. positive_tree is
+    built over all expanded positive pixels, so get_random_negative_crop_indices checks
+    `dist > 0` (any positive pixel) rather than `dist > radius`.
     """
     def __init__(self, image_path: str, targets: pd.DataFrame, crop_size: int,
                  split: str = 'pn', dims: int = 2, mask_size: int = 123):
@@ -111,7 +116,7 @@ class CroppableImage:
                 (self.targets['x_coord'] < 0) | (self.targets['x_coord'] >= self.shape[-1]) |
                 (self.targets['y_coord'] < 0) | (self.targets['y_coord'] >= self.shape[-2])
             )
-        if out_of_bounds.any():
+        if out_of_bounds.any() and int(out_of_bounds.sum() // self.mask_size) > 0:
             report(f'WARNING: ~{int(out_of_bounds.sum() // self.mask_size)} particles are out of bounds '
                    f'for image {self.image_path}. Did you scale the micrographs and particle coordinates correctly?')
             self.targets = self.targets[~out_of_bounds]
