@@ -20,8 +20,8 @@ def as_mask(shape:Tuple[int], radius:float, x_coord:List[float], y_coord:List[fl
     dims = 3 if z_coord is not None else 2
     filter_width = int(np.floor(radius)) * 2 + 1
     center = filter_width // 2
-    x_coord, y_coord = torch.Tensor(x_coord).long(), torch.Tensor(y_coord).long()
-    z_coord = torch.Tensor(z_coord).long() if dims == 3 else None
+    x_coord, y_coord = torch.Tensor(x_coord.copy()).long(), torch.Tensor(y_coord.copy()).long()
+    z_coord = torch.Tensor(z_coord.copy()).long() if dims == 3 else None
     
     # places ones at coordinate centers
     coords = (z_coord, y_coord, x_coord) if dims == 3 else (y_coord, x_coord)
