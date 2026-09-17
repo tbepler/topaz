@@ -5,9 +5,12 @@ on:
     types: [published]
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
+  test:
+    uses: ./.github/workflows/tests.yml
 
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: Set up Miniconda
