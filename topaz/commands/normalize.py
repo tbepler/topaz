@@ -38,6 +38,7 @@ def add_arguments(parser=None):
     parser.add_argument('--format', dest='format_', default='mrc', help='image format(s) to write. choices are mrc, tiff, and png. images can be written in multiple formats by specifying each in a comma separated list, e.g. mrc,png would write mrc and png format images (default: mrc)')
     
     parser.add_argument('-v', '--verbose', action='store_true', help='verbose output')
+    parser.add_argument('--seed', default=0, type=int, help='seed to be used in the normalize process. default is 0 (random seed)')
 
     return parser
 
@@ -54,7 +55,7 @@ def main(args):
     num_workers = 0 if use_cuda else args.num_workers
 
     normalize_images(args.files, args.destdir, num_workers, args.scale, args.affine, args.niters, args.alpha, args.beta,
-                        args.sample, args.metadata, formats, use_cuda, args.verbose)
+                        args.sample, args.metadata, formats, use_cuda, args.verbose, seed=args.seed)
 
 
 if __name__ == '__main__':
