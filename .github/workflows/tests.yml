@@ -9,23 +9,45 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        include:
+          # setup-python can't install 3.8 on ubuntu-24.04 (ubuntu-latest default) --
+          # see https://github.com/actions/setup-python/issues/879 -- so pin 3.8's to 22.04
+          - python-version: "3.8"
+            os: ubuntu-22.04
+          - python-version: "3.9"
+            os: ubuntu-latest
+          - python-version: "3.10"
+            os: ubuntu-latest
+          - python-version: "3.11"
+            os: ubuntu-latest
+          - python-version: "3.12"
+            os: ubuntu-latest
+          - python-version: "3.13"
+            os: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+        cache: 'pip'
+    - name: Install package
       run: |
         python -m pip install --upgrade pip
         python -m pip install flake8 pytest
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        python -m pip install .
+    - name: Verify CLI entry point
+      run: |
+        # 'topaz' here is the console_scripts entry point that `pip install .` just
+        # generated from setup.py -- a real installed artifact, separate from the
+        # topaz/ source folder in this checkout. Running it from /tmp costs nothing
+        # and removes any doubt about which one actually ran.
+        cd /tmp && topaz --help
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
