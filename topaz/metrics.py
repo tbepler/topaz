@@ -14,7 +14,8 @@ def precision_recall_curve(target, pred, N=None):
         n = N
     
     ## copy the target and prediction into matrix
-    matrix = np.stack([-pred,target], 1)
+    ## float32 is required: the row sort below reinterprets each row as an 'f4,f4' record
+    matrix = np.stack([-pred,target], 1).astype(np.float32)
     matrix.view('f4,f4').sort(order='f0', axis=0) # sort the rows
 
     # if we have duplicate predictions (i.e. targets with the same score)
@@ -57,7 +58,8 @@ def average_precision(target, pred, N=None):
         n = N
     
     ## copy the target and prediction into matrix
-    matrix = np.stack([-pred,target], 1)
+    ## float32 is required: the row sort below reinterprets each row as an 'f4,f4' record
+    matrix = np.stack([-pred,target], 1).astype(np.float32)
     matrix.view('f4,f4').sort(order='f0', axis=0) # sort the rows
 
     # if we have duplicate predictions (i.e. targets with the same score)
