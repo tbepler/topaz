@@ -70,10 +70,8 @@ def downsample_file(path:str, scale:int, output:str, verbose:bool):
 
     small = downsample(image, scale)
     if header:
-        # update image size (pixels) in header if present
-        new_height, new_width = small.shape
-        header = header._replace(ny=new_height)
-        header = header._replace(nx=new_width)
+        # update image size and pixel size in the header if present
+        header = mrc.resize_header(header, small.shape)
 
     if verbose:
         print('Downsample image:', path, file=sys.stderr)

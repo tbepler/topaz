@@ -10,6 +10,7 @@ import numpy as np
 import scipy.stats
 
 import torch
+import topaz.mrc as mrc
 from topaz.utils.data.loader import load_image
 from topaz.utils.image import downsample, save_image
 
@@ -306,10 +307,8 @@ class Normalize:
         if self.scale > 1:
             x = downsample(x, self.scale)
             if header:
-                # update image size (pixels) in header if present
-                new_height, new_width = x.shape
-                header = header._replace(ny=new_height)
-                header = header._replace(nx=new_width)
+                # update image size and pixel size in the header if present
+                header = mrc.resize_header(header, x.shape)
 
         # normalize it
         method = 'gmm'
