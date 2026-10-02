@@ -203,11 +203,13 @@ def main(args):
                 sys.exit(1)
             dfs = []
             for image_name,group in coords.groupby('image_name'):
-                impath = os.path.join(args.imagedir, image_name) + '.' + args.image_ext
+                # --image-ext is documented with its dot (default '.mrc'), but accept 'mrc' and '*' too
+                ext = args.image_ext if args.image_ext.startswith('.') else '.' + args.image_ext
+                impath = os.path.join(args.imagedir, image_name) + ext
                 # use glob incase image_ext is '*'
                 impath = glob.glob(impath)[0]
-                im = load_image(impath)
-                height = im.height
+                im = load_image(impath, make_image=False, return_header=False)
+                height = im.shape[-2]
 
                 group = mirror_y_axis(group, height)
                 dfs.append(group)
