@@ -71,3 +71,7 @@ docs/_build/
 # PyBuilder
 target/
 .vscode/
+
+# data and models created by the tutorial notebooks
+tutorial/data/
+tutorial/saved_models/
