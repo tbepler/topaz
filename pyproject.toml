@@ -25,6 +25,9 @@ classifiers = [
 # These fields are filled dynamically from files
 dynamic = ["version", "dependencies"]
 
+[project.optional-dependencies]
+test = ["pytest>=7", "pytest-timeout"]
+
 [project.urls]
 Homepage = "https://github.com/tbepler/topaz"
 
@@ -37,3 +40,17 @@ dependencies = { file = "requirements.txt" }
 
 [tool.setuptools.packages.find]
 include = ["topaz*"]
+
+[tool.pytest.ini_options]
+testpaths = ["test"]
+addopts = "-ra --strict-markers --import-mode=importlib"
+timeout = 600
+markers = [
+  "smoke: L0, no data; imports, parsers, --help, CLI surface, model construction (auto-applied in test/smoke)",
+  "unit: L1, pure numerics on in-code arrays (auto-applied in test/unit)",
+  "io: L2, image and coordinate file formats (auto-applied in test/io)",
+  "integration: L3, loaders and CLI runs on committed fixtures (auto-applied in test/integration)",
+  "cli: exercises the installed `topaz` console script via subprocess",
+  "differential: L5, comparisons against frozen v0.2.5 outputs (auto-applied in test/differential)",
+  "slow: excluded from the all-Python CI legs; runs on the 3.11 leg only",
+]
