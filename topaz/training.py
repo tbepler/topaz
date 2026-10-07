@@ -67,15 +67,41 @@ def filter_targets_missing_images(images:pd.DataFrame, targets:pd.DataFrame, mod
     return targets
 
 
-def convert_path_to_grouped_list(images_path:str, targets:pd.DataFrame) -> List[List[str]]:
+IMAGE_EXTENSIONS = ('.mrc', '.tif', '.tiff', '.png', '.jpg', '.jpeg')
+
+def find_images_in_directory(images_dir:str, image_ext:str='') -> pd.DataFrame:
+    '''Table of image_name and path for the images in a directory: every supported format, or only
+    files with image_ext when given (e.g. '.tiff' or 'tiff'). Paths are sorted for a stable order.'''
+    if image_ext:
+        extensions = (image_ext.lower() if image_ext.startswith('.') else '.' + image_ext.lower(),)
+    else:
+        extensions = IMAGE_EXTENSIONS
+    paths = sorted(p for p in glob.glob(os.path.join(images_dir, '*')) if os.path.splitext(p)[1].lower() in extensions)
+    names = [os.path.splitext(os.path.basename(p))[0] for p in paths]
+    duplicates = sorted({n for n in names if names.count(n) > 1})
+    if duplicates:
+        raise ValueError(f'micrographs found with more than one file extension in {images_dir}: {duplicates[:5]}. '
+                         'Set --image-ext to choose one.')
+    return pd.DataFrame({'path': paths, 'image_name': names})
+
+
+def image_num_pixels(path:str) -> int:
+    '''Number of pixels (voxels) in an image, read from the MRC header or the image file's metadata.'''
+    if path.endswith('.mrc'):
+        with open(path, 'rb') as f:
+            header = parse_header(f.read(1024))
+        return header.nz * header.ny * header.nx
+    with Image.open(path) as im:
+        width, height = im.size
+    return width * height
+
+
+def convert_path_to_grouped_list(images_path:str, targets:pd.DataFrame, image_ext:str='') -> List[List[str]]:
     '''Find image paths under a given path and group them by source.'''
     if os.path.isdir(images_path):
-        glob_base = images_path + os.sep + '*' # only get mrc files, need the header
-        image_paths = glob.glob(glob_base+'.mrc')# + glob.glob(glob_base+'.tiff') + glob.glob(glob_base+'.png')
-        image_names = [os.path.splitext(os.path.basename(x))[0] for x in image_paths]
-        image_paths = pd.DataFrame({'path': image_paths, 'image_name': image_names})
+        image_paths = find_images_in_directory(images_path, image_ext)
     else:
-        image_paths = pd.read_csv(images_path, sep='\s+') # training image file list
+        image_paths = pd.read_csv(images_path, sep=r'\s+') # training image file list
     
     if 'source' not in image_paths.columns:
         if 'source' not in targets.columns:
@@ -257,12 +283,9 @@ def extract_image_stats(image_paths:List[List[str]], targets:pd.DataFrame, mode:
     for source, source_paths in enumerate(image_paths):
         source_positive_regions = 0
         source_total_regions = 0
-        # Read each image's header and sum the total number of regions
+        # Sum the total number of regions (from MRC headers or image metadata)
         for path in source_paths:
-            with open(path, 'rb') as f:
-                header_bytes = f.read(1024)
-            header = parse_header(header_bytes)
-            source_total_regions += header.nz * header.ny * header.nx
+            source_total_regions += image_num_pixels(path)
             # Read image's positives from targets
             image_name = os.path.splitext(os.path.basename(path))[0]
             target = targets[targets['image_name'] == image_name] # name must have no extension
@@ -278,20 +301,20 @@ def extract_image_stats(image_paths:List[List[str]], targets:pd.DataFrame, mode:
 
 
 def report_data_stats(train_images_path:str, train_targets_path:str, test_images_path:str=None, test_targets_path:str=None, 
-                      radius:int=3, dims:int=2) -> Tuple[int,int,int]:
+                      radius:int=3, dims:int=2, image_ext:str='') -> Tuple[int,int,int]:
     '''Report number of positive regions and total regions in the training and testing data.'''
     report('source\tsplit\tp_observed\tnum_positive_regions\ttotal_regions')
     # Read targets into dataframe
     train_targets = file_utils.read_coordinates(train_targets_path)
     # Convert paths to grouped lists of paths
-    train_grouped = convert_path_to_grouped_list(train_images_path, train_targets)
+    train_grouped = convert_path_to_grouped_list(train_images_path, train_targets, image_ext)
     num_train_images = sum(len(group) for group in train_grouped)
     # Calculate the number of positive and total regions
     num_positive_regions, total_regions = extract_image_stats(train_grouped, train_targets, mode='train', radius=radius, dims=dims)
     # Repeat on testing set if given
     if (test_images_path is not None) and (test_targets_path is not None):
         test_targets = file_utils.read_coordinates(test_targets_path)
-        test_grouped = convert_path_to_grouped_list(test_images_path, test_targets)
+        test_grouped = convert_path_to_grouped_list(test_images_path, test_targets, image_ext)
         test_positive, test_total = extract_image_stats(test_grouped, test_targets, mode='test', radius=radius, dims=dims)
     return num_positive_regions, total_regions, num_train_images
 
@@ -402,13 +425,13 @@ def make_training_step_method(classifier, num_positive_regions, positive_fractio
 
 
 class TestingImageDataset():
-    def __init__(self, images_path:str, targets:pd.DataFrame, radius:int=3, dims:int=2, use_cuda:bool=False, preload:bool=False):
+    def __init__(self, images_path:str, targets:pd.DataFrame, radius:int=3, dims:int=2, use_cuda:bool=False, preload:bool=False,
+                 image_ext:str=''):
         # get list of paths only (names not needed)
         if os.path.isdir(images_path):
-            glob_base = images_path + os.sep + '*' # only get mrc files, need the header
-            image_paths = glob.glob(glob_base+'.mrc')# + glob.glob(glob_base+'.tiff') + glob.glob(glob_base+'.png')
+            image_paths = find_images_in_directory(images_path, image_ext)['path'].tolist()
         else:
-            image_df = pd.read_csv(images_path, sep='\s+')
+            image_df = pd.read_csv(images_path, sep=r'\s+')
             image_names = image_df['image_name'].tolist() # these names should have no extension
             if 'path' not in image_df.columns:
                 image_paths = [name+'.mrc' for name in image_names] # these are paths that can be loaded
@@ -440,7 +463,7 @@ class TestingImageDataset():
     def load_image_and_mask(self, path:str):
         # first load the image itself
         img = load_image(path, make_image=False, return_header=False)
-        img = torch.from_numpy(img.copy())
+        img = torch.from_numpy(np.array(img, dtype=np.float32)) # ensure image is float32 (not uint8 or other types)
         # create the target's binary mask
         img_name = os.path.splitext(path.split('/')[-1])[0]
         # image_name_matches = self.targets['image_name'].str.contains(img_name)
@@ -454,7 +477,7 @@ class TestingImageDataset():
         return img,mask
     
 
-def expand_target_points(targets:pd.DataFrame, radius:int, dims:int=2) -> pd.DataFrame:
+def expand_target_points(targets:pd.DataFrame, radius:int, dims:int=2) -> Tuple[pd.DataFrame, int]:
     '''Expand target point coordinates into coordinates of a sphere with the given radius.'''
     # make the spherically mask array of offsets to apply to the coordinates
     sphere_width = int(np.floor(radius)) * 2 + 1
@@ -467,7 +490,7 @@ def expand_target_points(targets:pd.DataFrame, radius:int, dims:int=2) -> pd.Dat
         zgrid = grid[2]
         d2 += (zgrid-center)**2
     mask = (d2 <= radius**2).float()
-    mask_size = mask.sum()
+    mask_size = int( mask.sum().item() )
     
     sphere_offsets = mask.nonzero() - center
     if dims == 3:
@@ -494,14 +517,14 @@ def worker_init_fn(worker_id):
 
 def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, split:Literal['pn','pu'], minibatch_size:int, epoch_size:int, 
                         test_image_path:str=None, test_targets_path:str=None, testing_batch_size:int=1, num_workers:int=0, balance:float=0.5, 
-                        dims:int=2, use_cuda:bool=False, radius:int=3, preload:bool=True) -> Tuple[DataLoader, DataLoader]:
+                        dims:int=2, use_cuda:bool=False, radius:int=3, preload:bool=True, image_ext:str='') -> Tuple[DataLoader, DataLoader]:
     '''make train and test dataloaders'''
     train_targets = file_utils.read_coordinates(train_targets_path)    
     if len(train_targets) == 0:
         report('ERROR: no training particles specified. Check that micrograph names in the particles file match those in the micrographs file/directory.')
         raise Exception('No training particles.')
     
-    train_image_paths = convert_path_to_grouped_list(train_image_path, train_targets)
+    train_image_paths = convert_path_to_grouped_list(train_image_path, train_targets, image_ext)
 
     expanded_train_targets, mask_size = expand_target_points(train_targets, radius, dims)
     train_dataset = MultipleImageSetDataset(train_image_paths, expanded_train_targets, epoch_size*minibatch_size, crop, positive_balance=balance, split=split, 
@@ -511,7 +534,7 @@ def make_data_iterators(train_image_path:str, train_targets_path:str, crop:int, 
 
     if test_targets_path is not None:
         test_targets = file_utils.read_coordinates(test_targets_path)
-        test_dataset = TestingImageDataset(test_image_path, test_targets, radius=radius, dims=dims, use_cuda=use_cuda, preload=preload)
+        test_dataset = TestingImageDataset(test_image_path, test_targets, radius=radius, dims=dims, use_cuda=use_cuda, preload=preload, image_ext=image_ext)
         test_dataloader = DataLoader(test_dataset, batch_size=testing_batch_size, shuffle=False, num_workers=0) # don't use multiple workers for testing
         report(f'Loaded {len(test_dataset)} testing micrographs with {len(test_targets)} labeled particles')
         return train_dataloader, test_dataloader
@@ -622,7 +645,7 @@ def fit_epochs(classifier, criteria, step_method, train_iterator, test_iterator,
 def train_model(classifier, train_images_path:str, train_targets_path:str, test_images_path:str, test_targets_path:str, use_cuda:bool, 
                 save_prefix:str, output, args, dims:int=2):
     num_positive_regions, total_regions, num_images = report_data_stats(train_images_path, train_targets_path, test_images_path, test_targets_path,
-                                                            radius=args.radius, dims=dims)
+                                                            radius=args.radius, dims=dims, image_ext=args.image_ext)
 
     ## make the training step method
     if args.num_particles > 0:
@@ -668,7 +691,8 @@ def train_model(classifier, train_images_path:str, train_targets_path:str, test_
         
     train_iterator,test_iterator = make_data_iterators(train_images_path, train_targets_path, classifier.width, split, args.minibatch_size, args.epoch_size, 
                         test_image_path=test_images_path, test_targets_path=test_targets_path, testing_batch_size=args.test_batch_size, 
-                        num_workers=num_workers, balance=balance, dims=dims, use_cuda=use_cuda, radius=args.radius, preload=args.preload)
+                        num_workers=num_workers, balance=balance, dims=dims, use_cuda=use_cuda, radius=args.radius, preload=args.preload,
+                        image_ext=args.image_ext)
     
     fit_epochs(classifier, criteria, trainer, train_iterator, test_iterator, args.num_epochs, est_max_prec,
                save_prefix=save_prefix, use_cuda=use_cuda, output=output)
