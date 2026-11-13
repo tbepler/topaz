@@ -28,7 +28,7 @@ def add_arguments(parser=None):
 
     parser.add_argument('--num-workers', type=int, default=0, help='number of processes to use for extracting in parallel, 0 uses main process, -1 uses all CPUs (default: 0)')
     parser.add_argument('-j', '--num-threads', type=int, default=0, help='number of threads for pytorch, 0 uses pytorch defaults, <0 uses all cores (default: 0)')
-    parser.add_argument('-p', '--patch-size', type=int, default=0, help='patch size for scoring micrographs in pieces (default: 0, no patching)')
+    parser.add_argument('-p', '--patch-size', type=int, default=0, help='score micrographs in patches of this size to save memory; larger patches are faster but use more memory, and padding of half the model\'s receptive field is added automatically (default: 0, no patching)')
     parser.add_argument('--batch-size', type=int, default=1, help='batch size for scoring micrographs with model (default: 1)')
 
 
