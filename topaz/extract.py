@@ -104,9 +104,10 @@ def nms_iterator(paths_scores:Iterable[np.ndarray], radius:int, threshold:float,
             yield name, score, coords
 
 
-def iterate_score_target_pairs(scores, targets:pd.DataFrame) -> Iterator[Tuple[np.ndarray, np.ndarray]]:
+def iterate_score_target_pairs(scores, targets:pd.DataFrame, dims:int=2) -> Iterator[Tuple[np.ndarray, np.ndarray]]:
+    columns = ['x_coord', 'y_coord', 'z_coord'][:dims]
     for image_name,score in scores.items():
-        target = targets.loc[targets.image_name == image_name][['x_coord', 'y_coord']].values
+        target = targets.loc[targets.image_name == image_name][columns].values
         yield score,target
 
 
@@ -122,7 +123,7 @@ class ExtractMatches:
         if self.dims == 2: 
             score,coords = non_maximum_suppression(score, self.radius, threshold=self.threshold)
         elif self.dims == 3:
-            score,coords = non_maximum_suppression_3d(score, self.radius*2, threshold=self.threshold)
+            score,coords = non_maximum_suppression_3d(score, self.radius, threshold=self.threshold)
         
         radius = self.radius if (self.match_radius is None) else self.match_radius
         assignment, dist = match_coordinates(target, coords, radius)
@@ -141,18 +142,18 @@ def extract_auprc(targets:np.ndarray, scores:np.ndarray, radius:float, threshold
 
     if pool is not None:
         process = ExtractMatches(radius, threshold, match_radius, dims=dims)
-        iterator = iterate_score_target_pairs(scores, targets)
+        iterator = iterate_score_target_pairs(scores, targets, dims=dims)
         for assignment,score,this_mse,n in pool.imap_unordered(process, iterator):
             mse += this_mse
             hits.append(assignment)
             preds.append(score)
             N += n
     else:
-        for score,target in iterate_score_target_pairs(scores, targets):
+        for score,target in iterate_score_target_pairs(scores, targets, dims=dims):
             if dims == 2:
                 score,coords = non_maximum_suppression(score, radius, threshold=threshold)
             elif dims == 3:
-                score,coords = non_maximum_suppression_3d(score, radius*2, threshold=threshold)
+                score,coords = non_maximum_suppression_3d(score, radius, threshold=threshold)
                        
             radius_to_use = radius if (match_radius is None) else match_radius
             assignment, dist = match_coordinates(target, coords, radius_to_use)
@@ -177,7 +178,7 @@ class Process:
         self.target_scores = target_scores
         self.threshold = threshold
         self.match_radius = match_radius
-        self.dims = 2
+        self.dims = dims
 
     def __call__(self, r):
         auprc, rmse, recall, n = extract_auprc(self.targets, self.target_scores, r, self.threshold, match_radius=self.match_radius, dims=self.dims)
@@ -239,9 +240,7 @@ def score_images(model:Union[torch.nn.Module, str], paths:Union[List[str], Itera
             image = image.unsqueeze(0).unsqueeze(0) # add batch and channel dimensions
             
             if patch_size:
-                patch_overlap = model.width // 2 # patch_overlap == receptive field // 2
-                # TODO: does this need further refactoring?
-                scores = predict_in_patches(model, image, patch_size+2*patch_overlap, is_3d=is_3d, use_cuda=use_cuda)
+                scores = predict_in_patches(model, image, patch_size, is_3d=is_3d, use_cuda=use_cuda)
                 scores = scores[0,0] # remove added dimensions
             else:
                 if use_cuda:
@@ -315,7 +314,7 @@ def extract_particles(paths:List[str], model:Union[torch.nn.Module, str], device
         # prepare output file or directory
         if not per_micrograph:
             # if output is a directory, create a file within
-            output = sys.path.join(output, 'extracted_particles.txt') \
+            output = os.path.join(output, 'extracted_particles.txt') \
                 if (output is not None and os.path.isdir(output)) else output
             # open file (or stdout) for writing
             f = sys.stdout if (output is None) else open(output, 'w')
