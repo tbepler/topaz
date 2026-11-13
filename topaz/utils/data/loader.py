@@ -81,7 +81,7 @@ def load_png(path:str, standardize:bool=False) -> np.ndarray:
     x = unquantize(x)
     if standardize:
         x = (x - x.mean())/x.std()
-    return image
+    return x
 
 
 def load_jpeg(path:str, standardize:bool=False) -> np.ndarray:
@@ -94,7 +94,7 @@ def load_jpeg(path:str, standardize:bool=False) -> np.ndarray:
     x = unquantize(x)
     if standardize:
         x = (x - x.mean())/x.std()
-    return image
+    return x
 
 
 def load_pil(path:str, standardize=False):

@@ -18,7 +18,7 @@ requirements:
         - python
         - setuptools
     run:
-        - python>=3.8,<=3.13
+        - python>=3.8,<3.14
         - future
         - numpy>=1.11
         - pandas>=0.20.3

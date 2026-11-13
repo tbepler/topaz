@@ -24,7 +24,7 @@ def add_arguments(parser=None):
 
     parser.add_argument('-d', '--device', default=0, type=int, help='which device to use, <0 corresponds to CPU (default: GPU if available)')
     parser.add_argument('-j', '--num-threads', type=int, default=0, help='number of threads for pytorch, 0 uses pytorch defaults, <0 uses all cores (default: 0)')
-    parser.add_argument('-p', '--patch-size', type=int, default=None, help='size of patches to predict on, None will predict on the whole image (default: None)')
+    parser.add_argument('-p', '--patch-size', type=int, default=None, help='predict in patches of this size to save memory; larger patches are faster but use more memory, and padding of half the model\'s receptive field is added automatically (default: None, predict on the whole image)')
 
     parser.add_argument('-v', '--verbose', action='store_true', help='verbose mode')
 

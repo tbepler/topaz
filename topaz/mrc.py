@@ -202,10 +202,43 @@ def make_header(shape, cella, cellb, mz=1, dtype=np.float32, order=(1,2,3), dmin
 
 
 
+def _rescale_cell_length(length, size, sampling):
+    """Cell length along one axis after resampling, given the old grid size and sampling.
+
+    The new sampling will equal the new grid size, so length*size/sampling keeps the field of view
+    and scales the pixel size (length/sampling) by exactly the resampling factor.
+    """
+    if sampling <= 0:  # no sampling recorded (common in real files): assume it equals the grid size
+        sampling = size
+    if sampling <= 0:  # no grid size either: nothing to rescale by
+        return length
+    return length*size/sampling
+
+
+def resize_header(header, shape):
+    """Header for the same field of view resampled to `shape` ((ny, nx) or (nz, ny, nx)).
+
+    Pixel size is cella/mxyz (MRC2014): sampling is set to the new grid size and the cell length
+    rescaled so the pixel size changes by exactly the resampling factor, whatever convention the
+    original header used for mxyz. A header with no pixel size recorded (sampling and cell lengths
+    of 0) keeps cell lengths of 0.
+    """
+    ny, nx = shape[-2:]
+    header = header._replace(xlen=_rescale_cell_length(header.xlen, header.nx, header.mx),
+                             ylen=_rescale_cell_length(header.ylen, header.ny, header.my),
+                             nx=nx, ny=ny, mx=nx, my=ny)
+    if len(shape) == 3:
+        nz = shape[0]
+        header = header._replace(zlen=_rescale_cell_length(header.zlen, header.nz, header.mz), nz=nz, mz=nz)
+    return header
+
+
 def write(f, array, header=None, extended_header=b'', ax=1, ay=1, az=1, alpha=0, beta=0, gamma=0):
     # make sure the array contains float32
     array = array.astype(np.float32)
 
+    if extended_header is None: # callers pass None when the source image had no MRC header (e.g. TIFF/PNG)
+        extended_header = b''
     exthd_size = len(extended_header)
     if header is None:
         header = MRCHeader( array.shape[2], array.shape[1], array.shape[0], # nx, ny, nz
@@ -228,8 +261,11 @@ def write(f, array, header=None, extended_header=b'', ax=1, ay=1, az=1, alpha=0,
                             0, # nlabl
                             b'\x00'*800, # labels
                           )
-    else: # make sure header matches float32
-        header = header._replace(mode=2)
+    else: # keep the caller's header metadata, but update the array statistics
+        header = header._replace(mode=2, # float32
+                                 nx=array.shape[2], ny=array.shape[1], nz=array.shape[0],
+                                 amin=array.min(), amax=array.max(), amean=array.mean(), rms=array.std(),
+                                 next=exthd_size)
         
     ## write the header
     buf = header_struct.pack(*list(header))

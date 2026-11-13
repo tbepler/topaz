@@ -579,7 +579,7 @@ model_name_dict = {
 }
 
 def load_model(name, base_kernel_width=11):
-    ''' paths here should be ../pretrained/denoise
+    ''' pretrained weights are package resources at topaz/pretrained/denoise
     '''
     log = sys.stderr
     
@@ -612,8 +612,8 @@ def load_model(name, base_kernel_width=11):
     # load model parameters/state
     if pretrained:
         print('# loading pretrained model:', name, file=log)
-        pkg = __name__
-        path = f'../pretrained/denoise/{name}'
+        pkg = 'topaz'
+        path = f'pretrained/denoise/{name}'
         state_dict = load_state_dict_from_pkg(pkg, path)
         model.load_state_dict(state_dict)
     elif type(model) is OrderedDict and '3d' in name:

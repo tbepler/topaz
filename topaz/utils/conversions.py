@@ -14,7 +14,7 @@ from topaz.utils.data.loader import load_image
 
 
 def mirror_y_axis(coords, n):
-    coords = coords.clone()
+    coords = coords.copy()
     coords['y_coord'] = n-1-coords['y_coord']
     return coords
 

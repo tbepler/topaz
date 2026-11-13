@@ -96,7 +96,7 @@ def read_via_csv(path):
                     scores[i] = float(att['score'])
 
 
-    table = table.drop(['file_size', 'file_attributes', 'region_count', 'region_id', 'region_shape_attributes', 'region_attributes'], 1)
+    table = table.drop(['file_size', 'file_attributes', 'region_count', 'region_id', 'region_shape_attributes', 'region_attributes'], axis=1)
     table['x_coord'] = x_coord
     table['y_coord'] = y_coord
 
@@ -231,8 +231,10 @@ def write_coordinates(path, table, format='auto', boxsize=0, image_ext='.mrc', s
         write_via_csv(path, table)
 
     else: # write default coordinates format
-        # filter columns to only include image name, x, y, score (if score is present)
+        # filter columns to only include image name, x, y, z (if present, 3D), score (if present)
         columns = ['image_name', 'x_coord', 'y_coord']
+        if 'z_coord' in table.columns:
+            columns.append('z_coord')
         if 'score' in table.columns:
             columns.append('score')
         table = table[columns]
@@ -260,8 +262,10 @@ def write_table(f, table, format='auto', boxsize=0, image_ext=''):
         write_via_csv(f, table)
 
     else: # write default coordinates format
-        # filter columns to only include image name, x, y, score (if score is present)
+        # filter columns to only include image name, x, y, z (if present, 3D), score (if present)
         columns = ['image_name', 'x_coord', 'y_coord']
+        if 'z_coord' in table.columns:
+            columns.append('z_coord')
         if 'score' in table.columns:
             columns.append('score')
         table = table[columns]

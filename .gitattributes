@@ -1,1 +1,2 @@
-*.mrc filter=lfs diff=lfs merge=lfs -text
+# MRC files are binary; they are stored directly in the repository (no Git LFS)
+*.mrc binary

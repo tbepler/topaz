@@ -71,7 +71,7 @@ class CroppableImage:
             crop = self.array[max(0, ymin):ymax, max(0, xmin):xmax]
             crop = np.pad(crop, (ypad, xpad))
 
-        crop = torch.from_numpy(crop)
+        crop = torch.from_numpy(np.array(crop, dtype=np.float32)) # ensure crops are float32 (not uint8 or other types)
         return crop
 
     def get_random_crop_indices(self):
@@ -218,7 +218,9 @@ class MultipleImageSetDataset(torch.utils.data.Dataset):
                 image_name_matches = unseen_targets['image_name'] == img_name
                 img_targets = unseen_targets[image_name_matches]
                 # choose subclass based on preload flag (preload for 2D micrographs or small datasets, memory-map for large 3D tomograms)
-                image = PreloadedImage(path, img_targets, crop_size, split, dims=dims, mask_size=mask_size) if preload \
+                # only MRC files can be memory-mapped; other formats are always preloaded
+                image = PreloadedImage(path, img_targets, crop_size, split, dims=dims, mask_size=mask_size) \
+                    if preload or not path.endswith('.mrc') \
                     else MemoryMappedImage(path, img_targets, crop_size, split, dims=dims, mask_size=mask_size) 
                 # find image's out-of-bounds particles from its targets
                 valid_img_targets = image.targets

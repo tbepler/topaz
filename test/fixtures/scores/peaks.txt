@@ -1,0 +1,10 @@
+image_name	x_coord	y_coord	z_coord	score
+scores2d	12	12		4.0
+scores2d	18	12		3.0
+scores2d	20	40		2.5
+scores2d	50	30		1.0
+scores2d	44	52		0.5
+scores3d	10	10	10.0	4.0
+scores3d	16	10	10.0	3.0
+scores3d	8	20	22.0	2.0
+scores3d	24	24	20.0	1.0

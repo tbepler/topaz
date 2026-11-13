@@ -9,29 +9,59 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        include:
+          # setup-python has no 3.8 build for ubuntu-24.04 or later, and no 3.9 build for
+          # ubuntu-26.04 (the current ubuntu-latest) -- see
+          # https://github.com/actions/setup-python/issues/879 -- so pin both to 22.04
+          - python-version: "3.8"
+            os: ubuntu-22.04
+          - python-version: "3.9"
+            os: ubuntu-22.04
+          - python-version: "3.10"
+            os: ubuntu-latest
+          - python-version: "3.11"
+            os: ubuntu-latest
+          - python-version: "3.12"
+            os: ubuntu-latest
+          - python-version: "3.13"
+            os: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+        cache: 'pip'
+    - name: Install package
       run: |
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        python -m pip install flake8
+        python -m pip install .[test]
+    - name: Verify CLI entry point
+      run: |
+        # 'topaz' here is the console_scripts entry point that `pip install .` just
+        # generated from setup.py -- a real installed artifact, separate from the
+        # topaz/ source folder in this checkout. Running it from /tmp costs nothing
+        # and removes any doubt about which one actually ran.
+        cd /tmp && topaz --help
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Test with pytest
+    # Run `pytest`, not `python -m pytest`: the latter puts the checkout on sys.path, so tests would
+    # import ./topaz instead of the installed package (test/conftest.py refuses to run in that case).
+    - name: Test with pytest (fast layers, all Python versions)
       run: |
-        python -m pytest
+        pytest -m "not slow"
+    - name: Test with pytest (slow layers, Python 3.11 only)
+      if: matrix.python-version == '3.11'
+      run: |
+        # exit code 5 = no tests collected (no slow tests exist yet)
+        pytest -m slow || [ $? -eq 5 ]
