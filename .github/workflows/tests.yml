@@ -14,12 +14,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # setup-python can't install 3.8 on ubuntu-24.04 (ubuntu-latest default) --
-          # see https://github.com/actions/setup-python/issues/879 -- so pin 3.8's to 22.04
+          # setup-python has no 3.8 build for ubuntu-24.04 or later, and no 3.9 build for
+          # ubuntu-26.04 (the current ubuntu-latest) -- see
+          # https://github.com/actions/setup-python/issues/879 -- so pin both to 22.04
           - python-version: "3.8"
             os: ubuntu-22.04
           - python-version: "3.9"
-            os: ubuntu-latest
+            os: ubuntu-22.04
           - python-version: "3.10"
             os: ubuntu-latest
           - python-version: "3.11"
