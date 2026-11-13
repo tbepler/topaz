@@ -103,6 +103,36 @@ def test_resize_header_scales_pixel_size(convention):
     assert after == pytest.approx((before[0] * 4, before[1] * 4))
 
 
+@pytest.mark.parametrize('shape, new_shape', [((256, 320), (64, 80)), ((8, 256, 320), (4, 64, 80))])
+def test_resize_header_without_pixel_size(shape, new_shape):
+    """Many real MRC files (the tutorial micrographs among them) leave the sampling and cell lengths at 0.
+    The grid size must still be updated, and the cell lengths stay 0 (no pixel size to carry over).
+    Regression: this divided by zero, so `topaz preprocess` crashed on such files."""
+    nz, ny, nx = (1,) + shape if len(shape) == 2 else shape
+    header = mrc.make_header((nz, ny, nx), (0, 0, 0), (90, 90, 90))._replace(mx=0, my=0, mz=0)
+    resized = mrc.resize_header(header, new_shape)
+    assert (resized.nx, resized.ny) == new_shape[::-1][:2]
+    assert (resized.mx, resized.my) == (resized.nx, resized.ny)
+    assert (resized.xlen, resized.ylen, resized.zlen) == (0, 0, 0)
+    if len(new_shape) == 3:
+        assert (resized.nz, resized.mz) == (new_shape[0], new_shape[0])
+
+
+def test_resize_header_sampling_missing_but_cell_length_present():
+    """A missing sampling is taken to equal the grid size, so the recorded cell length still gives the right pixel size."""
+    header = realistic_header((256, 320), 1.06)._replace(mx=0, my=0)
+    resized = mrc.resize_header(header, (64, 80))
+    assert (resized.xlen / resized.mx, resized.ylen / resized.my) == pytest.approx((4.24, 4.24))
+
+
+def test_resize_header_with_empty_grid():
+    """A header whose grid size and sampling are both 0 has nothing to rescale by: no error, cell lengths kept."""
+    header = realistic_header((256, 320), 1.06)._replace(nx=0, ny=0, mx=0, my=0)
+    resized = mrc.resize_header(header, (64, 80))
+    assert (resized.nx, resized.ny, resized.mx, resized.my) == (80, 64, 80, 64)
+    assert (resized.xlen, resized.ylen) == pytest.approx((header.xlen, header.ylen))
+
+
 def test_downsample_file_header(tmp_path):
     """Regression: through 0.3.20 a downsampled MRC kept the original pixel size and data statistics."""
     x = np.random.default_rng(0).standard_normal((1, 256, 256)).astype(np.float32)

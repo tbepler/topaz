@@ -202,19 +202,34 @@ def make_header(shape, cella, cellb, mz=1, dtype=np.float32, order=(1,2,3), dmin
 
 
 
+def _rescale_cell_length(length, size, sampling):
+    """Cell length along one axis after resampling, given the old grid size and sampling.
+
+    The new sampling will equal the new grid size, so length*size/sampling keeps the field of view
+    and scales the pixel size (length/sampling) by exactly the resampling factor.
+    """
+    if sampling <= 0:  # no sampling recorded (common in real files): assume it equals the grid size
+        sampling = size
+    if sampling <= 0:  # no grid size either: nothing to rescale by
+        return length
+    return length*size/sampling
+
+
 def resize_header(header, shape):
     """Header for the same field of view resampled to `shape` ((ny, nx) or (nz, ny, nx)).
 
     Pixel size is cella/mxyz (MRC2014): sampling is set to the new grid size and the cell length
     rescaled so the pixel size changes by exactly the resampling factor, whatever convention the
-    original header used for mxyz.
+    original header used for mxyz. A header with no pixel size recorded (sampling and cell lengths
+    of 0) keeps cell lengths of 0.
     """
     ny, nx = shape[-2:]
-    header = header._replace(xlen=header.xlen*header.nx/header.mx, ylen=header.ylen*header.ny/header.my,
+    header = header._replace(xlen=_rescale_cell_length(header.xlen, header.nx, header.mx),
+                             ylen=_rescale_cell_length(header.ylen, header.ny, header.my),
                              nx=nx, ny=ny, mx=nx, my=ny)
     if len(shape) == 3:
         nz = shape[0]
-        header = header._replace(zlen=header.zlen*header.nz/header.mz, nz=nz, mz=nz)
+        header = header._replace(zlen=_rescale_cell_length(header.zlen, header.nz, header.mz), nz=nz, mz=nz)
     return header
 
 
