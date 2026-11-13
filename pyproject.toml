@@ -46,11 +46,10 @@ testpaths = ["test"]
 addopts = "-ra --strict-markers --import-mode=importlib"
 timeout = 600
 markers = [
-  "smoke: L0, no data; imports, parsers, --help, CLI surface, model construction (auto-applied in test/smoke)",
-  "unit: L1, pure numerics on in-code arrays (auto-applied in test/unit)",
-  "io: L2, image and coordinate file formats (auto-applied in test/io)",
-  "integration: L3, loaders and CLI runs on committed fixtures (auto-applied in test/integration)",
-  "cli: exercises the installed `topaz` console script via subprocess",
-  "differential: L5, comparisons against frozen v0.2.5 outputs (auto-applied in test/differential)",
+  "smoke: no data; imports, parsers, --help, CLI surface, model construction (auto-applied in test/smoke)",
+  "unit: numerics on small in-memory arrays (auto-applied in test/unit)",
+  "io: image and coordinate file formats (auto-applied in test/io)",
+  "integration: loaders and whole topaz commands on committed fixtures (auto-applied in test/integration)",
+  "cli: runs a whole topaz command, either the installed console script or its main() in-process",
   "slow: excluded from the all-Python CI legs; runs on the 3.11 leg only",
 ]

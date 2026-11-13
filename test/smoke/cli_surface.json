@@ -1,0 +1,2234 @@
+{
+ "boxes_to_coordinates": {
+  "--image-ext": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "'tiff'",
+   "dest": "image_ext",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--imagedir": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "imagedir",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--invert-y": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "invert_y",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "-o|--output": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "output",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "files": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "files",
+   "nargs": "+",
+   "required": true,
+   "type": null
+  }
+ },
+ "convert": {
+  "--amplitude-contrast": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-1",
+   "dest": "amplitude_contrast",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--boxsize": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "boxsize",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--detector-pixel-size": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-1",
+   "dest": "detector_pixel_size",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--from": {
+   "action": "_StoreAction",
+   "choices": [
+    "'auto'",
+    "'coord'",
+    "'csv'",
+    "'star'",
+    "'box'"
+   ],
+   "default": "'auto'",
+   "dest": "_from",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--image-ext": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "'.mrc'",
+   "dest": "image_ext",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--imagedir": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "imagedir",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--invert-y": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "invert_y",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "--magnification": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-1",
+   "dest": "magnification",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--suffix": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "''",
+   "dest": "suffix",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--to": {
+   "action": "_StoreAction",
+   "choices": [
+    "'auto'",
+    "'coord'",
+    "'csv'",
+    "'star'",
+    "'json'",
+    "'box'"
+   ],
+   "default": "'auto'",
+   "dest": "to",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--voltage": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-1",
+   "dest": "voltage",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "-o|--output": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "output",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-s|--down-scale": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "1",
+   "dest": "down_scale",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "-t|--threshold": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-inf",
+   "dest": "threshold",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "-v|--verbose": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "verbose",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-x|--up-scale": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "1",
+   "dest": "up_scale",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "files": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "files",
+   "nargs": "+",
+   "required": true,
+   "type": null
+  }
+ },
+ "coordinates_to_boxes": {
+  "--boxsize": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "boxsize",
+   "nargs": null,
+   "required": true,
+   "type": "int"
+  },
+  "--destdir": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "destdir",
+   "nargs": null,
+   "required": true,
+   "type": null
+  },
+  "--image-ext": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "'tiff'",
+   "dest": "image_ext",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--imagedir": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "imagedir",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--invert-y": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "invert_y",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "paths": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "paths",
+   "nargs": "+",
+   "required": true,
+   "type": null
+  }
+ },
+ "coordinates_to_eman2_json": {
+  "--destdir": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "destdir",
+   "nargs": null,
+   "required": true,
+   "type": null
+  },
+  "--image-ext": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "'tiff'",
+   "dest": "image_ext",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--imagedir": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "imagedir",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--invert-y": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "invert_y",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "paths": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "paths",
+   "nargs": "+",
+   "required": true,
+   "type": null
+  }
+ },
+ "coordinates_to_star": {
+  "--amplitude-contrast": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-1",
+   "dest": "amplitude_contrast",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--defocus-angle": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-1",
+   "dest": "defocus_angle",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--defocus-u": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-1",
+   "dest": "defocus_u",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--defocus-v": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-1",
+   "dest": "defocus_v",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--detector-pixel-size": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-1",
+   "dest": "detector_pixel_size",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--image-ext": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "'.mrc'",
+   "dest": "image_ext",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--magnification": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-1",
+   "dest": "magnification",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--spherical-aberation": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-1",
+   "dest": "spherical_aberation",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--voltage": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-1",
+   "dest": "voltage",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "file": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "file",
+   "nargs": null,
+   "required": true,
+   "type": null
+  }
+ },
+ "denoise": {
+  "--arch": {
+   "action": "_StoreAction",
+   "choices": [
+    "'unet'",
+    "'unet-small'",
+    "'unet2'",
+    "'unet3'",
+    "'fcnet'",
+    "'fcnet2'",
+    "'affine'"
+   ],
+   "default": "'unet'",
+   "dest": "arch",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--batch-size": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "4",
+   "dest": "batch_size",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--criteria": {
+   "action": "_StoreAction",
+   "choices": [
+    "'L0'",
+    "'L1'",
+    "'L2'"
+   ],
+   "default": "'L2'",
+   "dest": "criteria",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--deconv-patch": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "1",
+   "dest": "deconv_patch",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--deconvolve": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "deconvolve",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "--format": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "'mrc'",
+   "dest": "format_",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--gaussian": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "gaussian",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--hdf": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "hdf",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--holdout": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0.1",
+   "dest": "holdout",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--inv-gaussian": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "inv_gaussian",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--lowpass": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "1",
+   "dest": "lowpass",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--lr": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0.001",
+   "dest": "lr",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--method": {
+   "action": "_StoreAction",
+   "choices": [
+    "'noise2noise'",
+    "'masked'"
+   ],
+   "default": "'noise2noise'",
+   "dest": "method",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--normalize": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "normalize",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "--num-epochs": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "100",
+   "dest": "num_epochs",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--num-workers": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "16",
+   "dest": "num_workers",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--optim": {
+   "action": "_StoreAction",
+   "choices": [
+    "'adam'",
+    "'adagrad'",
+    "'sgd'"
+   ],
+   "default": "'adagrad'",
+   "dest": "optim",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--pixel-cutoff": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "pixel_cutoff",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--preload": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "preload",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "--save-interval": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "10",
+   "dest": "save_interval",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--save-prefix": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "save_prefix",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--stack": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "stack",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "--suffix": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "''",
+   "dest": "suffix",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-a|--dir-a": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "dir_a",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-b|--dir-b": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "dir_b",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-c|--crop": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "800",
+   "dest": "crop",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-d|--device": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "device",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-j|--num-threads": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "num_threads",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-m|--model": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "['unet']",
+   "dest": "model",
+   "nargs": "+",
+   "required": false,
+   "type": null
+  },
+  "-o|--output": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "''",
+   "dest": "output",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-p|--patch-padding": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "500",
+   "dest": "patch_padding",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-s|--patch-size": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "1024",
+   "dest": "patch_size",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "micrographs": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "micrographs",
+   "nargs": "*",
+   "required": true,
+   "type": null
+  }
+ },
+ "denoise3d": {
+  "--N-test": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "200",
+   "dest": "N_test",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--N-train": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "1000",
+   "dest": "N_train",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--base-kernel-width": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "11",
+   "dest": "base_kernel_width",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--batch-size": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "10",
+   "dest": "batch_size",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--criteria": {
+   "action": "_StoreAction",
+   "choices": [
+    "'L1'",
+    "'L2'"
+   ],
+   "default": "'L2'",
+   "dest": "criteria",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--lr": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0.001",
+   "dest": "lr",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--momentum": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0.8",
+   "dest": "momentum",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--num-epochs": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "500",
+   "dest": "num_epochs",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--num-workers": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "1",
+   "dest": "num_workers",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--optim": {
+   "action": "_StoreAction",
+   "choices": [
+    "'adam'",
+    "'adagrad'",
+    "'sgd'"
+   ],
+   "default": "'adagrad'",
+   "dest": "optim",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--save-interval": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "10",
+   "dest": "save_interval",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--save-prefix": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "save_prefix",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--suffix": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "''",
+   "dest": "suffix",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-a|--even-train-path": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "even_train_path",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-b|--odd-train-path": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "odd_train_path",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-c|--crop": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "96",
+   "dest": "crop",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-d|--device": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-2",
+   "dest": "device",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-g|--gaussian": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "gaussian",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "-j|--num-threads": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "num_threads",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-m|--model": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "'unet-3d'",
+   "dest": "model",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-o|--output": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "''",
+   "dest": "output",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-p|--patch-padding": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "48",
+   "dest": "patch_padding",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-s|--patch-size": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "96",
+   "dest": "patch_size",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-w|--weight_decay": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "weight_decay",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "volumes": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "volumes",
+   "nargs": "*",
+   "required": true,
+   "type": null
+  }
+ },
+ "downsample": {
+  "-o|--output": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "output",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-s|--scale": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "4",
+   "dest": "scale",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-v|--verbose": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "verbose",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "file": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "file",
+   "nargs": null,
+   "required": true,
+   "type": null
+  }
+ },
+ "extract": {
+  "--assignment-radius": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "assignment_radius",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--batch-size": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "1",
+   "dest": "batch_size",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--dims": {
+   "action": "_StoreAction",
+   "choices": [
+    "2",
+    "3"
+   ],
+   "default": "2",
+   "dest": "dims",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--format": {
+   "action": "_StoreAction",
+   "choices": [
+    "'coord'",
+    "'csv'",
+    "'star'",
+    "'json'",
+    "'box'"
+   ],
+   "default": "'coord'",
+   "dest": "format",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--max-radius": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "100",
+   "dest": "max_radius",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--min-radius": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "5",
+   "dest": "min_radius",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--num-workers": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "num_workers",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--only-validate": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "only_validate",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "--per-micrograph": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "per_micrograph",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "--step-radius": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "5",
+   "dest": "step_radius",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--suffix": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "''",
+   "dest": "suffix",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--targets": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "targets",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-d|--device": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "device",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-j|--num-threads": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "num_threads",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-m|--model": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "'resnet16'",
+   "dest": "model",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-o|--output": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "output",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-p|--patch-size": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "patch_size",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-r|--radius": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "radius",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-s|--down-scale": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "1",
+   "dest": "down_scale",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "-t|--threshold": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-6",
+   "dest": "threshold",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "-v|--verbose": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "verbose",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "-x|--up-scale": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "1",
+   "dest": "up_scale",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "paths": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "paths",
+   "nargs": "*",
+   "required": true,
+   "type": null
+  }
+ },
+ "gui": {},
+ "normalize": {
+  "--affine": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "affine",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "--format": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "'mrc'",
+   "dest": "format_",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--metadata": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "metadata",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "--niters": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "100",
+   "dest": "niters",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--sample": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "10",
+   "dest": "sample",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-a|--alpha": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "900",
+   "dest": "alpha",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "-b|--beta": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "1",
+   "dest": "beta",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "-d|--device": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-1",
+   "dest": "device",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-j|--num-threads": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "num_threads",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-o|--destdir": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "destdir",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-s|--scale": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "1",
+   "dest": "scale",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-t|--num-workers": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "num_workers",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-v|--verbose": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "verbose",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "files": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "files",
+   "nargs": "+",
+   "required": true,
+   "type": null
+  }
+ },
+ "particle_stack": {
+  "--image-ext": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "'.mrc'",
+   "dest": "image_ext",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--image-root": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "image_root",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--metadata": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "metadata",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--resize": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-1",
+   "dest": "resize",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--size": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "size",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--threshold": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-inf",
+   "dest": "threshold",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "-o|--output": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "output",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "file": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "file",
+   "nargs": null,
+   "required": true,
+   "type": null
+  }
+ },
+ "precision_recall_curve": {
+  "--images": {
+   "action": "_StoreAction",
+   "choices": [
+    "'target'",
+    "'predicted'",
+    "'union'"
+   ],
+   "default": "'target'",
+   "dest": "images",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--predicted": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "predicted",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--targets": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "targets",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-r|--assignment-radius": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "assignment_radius",
+   "nargs": null,
+   "required": true,
+   "type": "int"
+  }
+ },
+ "preprocess": {
+  "--affine": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "affine",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "--format": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "'mrc'",
+   "dest": "format_",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--metadata": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "metadata",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "--niters": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "100",
+   "dest": "niters",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--sample": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "10",
+   "dest": "sample",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-a|--alpha": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "900",
+   "dest": "alpha",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "-b|--beta": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "1",
+   "dest": "beta",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "-d|--device": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-1",
+   "dest": "device",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-j|--num-threads": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "num_threads",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-o|--destdir": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "destdir",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-s|--scale": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "1",
+   "dest": "scale",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-t|--num-workers": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "num_workers",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-v|--verbose": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "verbose",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "files": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "files",
+   "nargs": "+",
+   "required": true,
+   "type": null
+  }
+ },
+ "scale_coordinates": {
+  "-o|--output": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "output",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-s|--scale": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0.25",
+   "dest": "scale",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "file": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "file",
+   "nargs": null,
+   "required": true,
+   "type": null
+  }
+ },
+ "segment": {
+  "-d|--device": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "device",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-j|--num-threads": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "num_threads",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-m|--model": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "'resnet16'",
+   "dest": "model",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-o|--destdir": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "destdir",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-p|--patch-size": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "patch_size",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-v|--verbose": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "verbose",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "paths": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "paths",
+   "nargs": "+",
+   "required": true,
+   "type": null
+  }
+ },
+ "split": {
+  "--format": {
+   "action": "_StoreAction",
+   "choices": [
+    "'auto'",
+    "'coord'",
+    "'star'"
+   ],
+   "default": "'auto'",
+   "dest": "_from",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--suffix": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "''",
+   "dest": "suffix",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-o|--output": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "output",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-t|--threshold": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-inf",
+   "dest": "threshold",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "file": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "file",
+   "nargs": null,
+   "required": true,
+   "type": null
+  }
+ },
+ "star_particles_threshold": {
+  "-o|--output": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "output",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-t|--threshold": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-inf",
+   "dest": "threshold",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "file": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "file",
+   "nargs": null,
+   "required": true,
+   "type": null
+  }
+ },
+ "star_to_coordinates": {
+  "-o|--output": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "output",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "file": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "file",
+   "nargs": null,
+   "required": true,
+   "type": null
+  }
+ },
+ "train": {
+  "--autoencoder": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "autoencoder",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--bn": {
+   "action": "_StoreAction",
+   "choices": [
+    "'on'",
+    "'off'"
+   ],
+   "default": "'on'",
+   "dest": "bn",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--cross-validation-seed": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "42",
+   "dest": "cross_validation_seed",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--describe": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "describe",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "--dropout": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0.0",
+   "dest": "dropout",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--epoch-size": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "1000",
+   "dest": "epoch_size",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--fold": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "fold",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--format": {
+   "action": "_StoreAction",
+   "choices": [
+    "'auto'",
+    "'coord'",
+    "'csv'",
+    "'star'",
+    "'box'"
+   ],
+   "default": "'auto'",
+   "dest": "format_",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--image-ext": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "''",
+   "dest": "image_ext",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--l2": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0.0",
+   "dest": "l2",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--learning-rate": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0.0002",
+   "dest": "learning_rate",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--method": {
+   "action": "_StoreAction",
+   "choices": [
+    "'PN'",
+    "'GE-KL'",
+    "'GE-binomial'",
+    "'PU'"
+   ],
+   "default": "'GE-binomial'",
+   "dest": "method",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--minibatch-balance": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0.0625",
+   "dest": "minibatch_balance",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--minibatch-size": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "256",
+   "dest": "minibatch_size",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--natural": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "False",
+   "dest": "natural",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "--ngf": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "32",
+   "dest": "ngf",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--no-pretrained": {
+   "action": "_StoreFalseAction",
+   "choices": null,
+   "default": "True",
+   "dest": "pretrained",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "--num-epochs": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "10",
+   "dest": "num_epochs",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--num-workers": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "num_workers",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--pi": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "pi",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--pooling": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "pooling",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--preload": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "'auto'",
+   "dest": "preload",
+   "nargs": null,
+   "required": false,
+   "type": "add_arguments.<locals>.parse_str"
+  },
+  "--pretrained": {
+   "action": "_StoreTrueAction",
+   "choices": null,
+   "default": "True",
+   "dest": "pretrained",
+   "nargs": 0,
+   "required": false,
+   "type": null
+  },
+  "--save-prefix": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "save_prefix",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--slack": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-1",
+   "dest": "slack",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "--test-batch-size": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "1",
+   "dest": "test_batch_size",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--test-images": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "test_images",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--test-targets": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "test_targets",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--train-images": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "train_images",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--train-targets": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "train_targets",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--unit-scaling": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "2",
+   "dest": "unit_scaling",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "--units": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "32",
+   "dest": "units",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-d|--device": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "device",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-j|--num-threads": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "num_threads",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-k|--k-fold": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "k_fold",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-m|--model": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "'resnet8'",
+   "dest": "model",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-n|--num-particles": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "-1",
+   "dest": "num_particles",
+   "nargs": null,
+   "required": false,
+   "type": "float"
+  },
+  "-o|--output": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "output",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "-p|--patch-padding": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "48",
+   "dest": "patch_padding",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-r|--radius": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "3",
+   "dest": "radius",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-s|--patch-size": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "96",
+   "dest": "patch_size",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  }
+ },
+ "train_test_split": {
+  "--format": {
+   "action": "_StoreAction",
+   "choices": [
+    "'auto'",
+    "'coord'",
+    "'csv'",
+    "'star'",
+    "'box'"
+   ],
+   "default": "'auto'",
+   "dest": "format_",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--image-dir": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "image_dir",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--image-ext": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "'*'",
+   "dest": "image_ext",
+   "nargs": null,
+   "required": false,
+   "type": null
+  },
+  "--seed": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "0",
+   "dest": "seed",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "-n|--number": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "number",
+   "nargs": null,
+   "required": false,
+   "type": "int"
+  },
+  "file": {
+   "action": "_StoreAction",
+   "choices": null,
+   "default": "None",
+   "dest": "file",
+   "nargs": null,
+   "required": true,
+   "type": null
+  }
+ }
+}

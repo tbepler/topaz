@@ -1,0 +1,34 @@
+{
+  "_doc": "Each mutant re-introduces a real v0.3.x regression (the reverse of its fix commit). test/release/checks.py mutants applies each one to a copy of topaz/, runs the non-slow suite against it, and requires every catcher to fail with an assertion failure. A catcher is a substring matched against '<junit classname>::<test name>'.",
+  "mutants": [
+    {
+      "id": "M1",
+      "patch": "M1_pixels_given_radius_3d_grid.patch",
+      "fix_commit": "9029e08",
+      "bug": "pixels_given_radius always builds a 3D grid, inflating the 2D particle pixel count by 2r+1 (pi 7x too high at r=3)",
+      "catchers": [
+        "test_particle_geometry::test_pixels_given_radius[2d",
+        "test_particle_geometry::test_implementations_agree[2d",
+        "test_particle_geometry::test_calculate_pi[2d"
+      ]
+    },
+    {
+      "id": "M2",
+      "patch": "M2_kdtree_unpack_order.patch",
+      "fix_commit": "fc28858",
+      "bug": "KDTree.query result unpacked as (idx, dist), so negative crops are sampled on particles",
+      "catchers": [
+        "test_negative_sampling::test_negatives_avoid_positives["
+      ]
+    },
+    {
+      "id": "M3",
+      "patch": "M3_worker_init_fn_dropped.patch",
+      "fix_commit": "67cecc2",
+      "bug": "worker_init_fn not passed to the training DataLoader, so all workers emit identical batches",
+      "catchers": [
+        "test_training_setup::test_train_loader_passes_worker_init_fn"
+      ]
+    }
+  ]
+}
