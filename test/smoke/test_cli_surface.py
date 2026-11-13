@@ -27,7 +27,9 @@ def describe_action(action):
         'type': None if t is None else getattr(t, '__qualname__', repr(t)),
         'choices': None if action.choices is None else [repr(c) for c in action.choices],
         'nargs': action.nargs,
-        'required': action.required,
+        # argparse derives `required` for a positional from its nargs, and Python versions disagree: for nargs='*'
+        # it is True on 3.11 and False on 3.12.16 and 3.13.18. nargs is recorded above, so only options record it.
+        'required': action.required if action.option_strings else None,
         'action': type(action).__name__,
     }
 
