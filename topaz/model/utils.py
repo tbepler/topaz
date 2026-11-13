@@ -86,8 +86,7 @@ def segment_images(model, paths:List[str], output_dir:str, use_cuda:bool, verbos
             X = torch.from_numpy(image.copy()).unsqueeze(0).unsqueeze(0)
             if patch_size is not None:
                 # patches move on and off GPU as processed, returns numpy array
-                # use half of receptive field as padding
-                score = predict_in_patches(model, X, patch_size=patch_size*2, patch_padding=model.width//2, is_3d=is_3d, use_cuda= use_cuda)
+                score = predict_in_patches(model, X, patch_size=patch_size, is_3d=is_3d, use_cuda= use_cuda)
             else:
                 if use_cuda:
                     X = X.cuda()
@@ -108,9 +107,15 @@ def segment_images(model, paths:List[str], output_dir:str, use_cuda:bool, verbos
 
 
 def predict_in_patches(model, X, patch_size, is_3d=False, use_cuda=False):
-    ''' Predict on an image in patches and reassemble the image. Assumes batch and channel dimensions are present. '''
+    ''' Predict on an image in patches and reassemble the image. Assumes batch and channel dimensions are present.
+    patch_size is the region each patch contributes to the output and can be any positive size. Half the model's
+    receptive field is added to every side of it as padding, then trimmed from the scores, so the result matches
+    whole-image prediction. Larger patches are faster but use more memory. '''
+    if patch_size < 1:
+        raise ValueError(f'patch size must be positive, got {patch_size}')
     # use half of receptive field as padding
     patch_padding = model.width//2
+    patch_size = patch_size + 2*patch_padding # full size of each patch given to the model
     
     # Split image into smaller patches
     patches = get_patches(X, patch_size, patch_padding=patch_padding, is_3d=is_3d)
@@ -156,14 +161,9 @@ def get_patches(X, patch_size, patch_padding=0, is_3d=False):
                     k_end = min(k + patch_size, z_pad)
                     # k_end = min(k + patch_size, z)
                     patch = X[..., k:k_end, i:i_end, j:j_end]
-                    if patch.abs().sum() == 0:  # ignore patches that are all zero padding
-                        continue
                     patches.append(patch)
             else:
                 patch = X[..., i:i_end, j:j_end]
-                # ignore patches that are all zero padding
-                if patch.abs().sum() == 0:
-                    continue
                 patches.append(patch)
     return patches
 
